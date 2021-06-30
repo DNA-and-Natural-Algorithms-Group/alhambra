@@ -10,7 +10,7 @@ import pkg_resources
 import os.path
 from .ends import End, EndList
 import warnings
-from .seq import validnts, revcomp
+from .seq import _VALID_NTS, revcomp
 from . import seq as sq
 
 
@@ -82,7 +82,7 @@ def check_edotparen_sequence(edotparen, sequence):
                     "{} != WC({}) at strand {} loc {} (both from 0)".format(
                         v, vv, strand, strandloc), v, vv, strand, strandloc) from None
         elif s == ".":
-            assert v in validnts
+            assert v in _VALID_NTS
         elif s == "+":
             assert v == "+"
             strand += 1

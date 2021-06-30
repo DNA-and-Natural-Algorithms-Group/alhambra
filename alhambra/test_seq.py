@@ -1,14 +1,13 @@
 import unittest
 import alhambra.seq as seq
 import random
-import string
 
 class SeqTests(unittest.TestCase):
     seq1 = "aggagtacc"
     seq2 = "aggn"
     seq3 = "gngc"
     seq4 = "hggc"
-    defbases = frozenset(('a','g','t','c'))
+    defbases = frozenset(('a', 'g', 't', 'c', 'A', 'G', 'C', 'T'))
     ambbases = frozenset(seq._L_TO_N.keys()) - defbases
     allbases = frozenset(seq._L_TO_N.keys()) 
     def test_merge_correct(self):
@@ -56,12 +55,12 @@ class SeqTests(unittest.TestCase):
         s = list(
             ''.join(random.choices(tuple(self.allbases),
                                    k=n)) + \
-            ''.join(random.choices(tuple(string.whitespace),
+            ''.join(random.choices(tuple(seq._PUNC),
                                    k=random.randint(0,100))))
         random.shuffle(s)
-        self.assertEqual( seq.length(''.join(s)), n )
-        self.assertEqual( seq.length('\n\t'), 0 )
-        self.assertEqual( seq.length(''), 0 )
+        self.assertEqual(seq.dna_length(''.join(s)), n)
+        self.assertEqual(seq.dna_length('\n\t'), 0)
+        self.assertEqual(seq.dna_length(''), 0)
     def test_count_ambiguous(self):
         for _ in range(0,100):
             n = random.randint(0,1000)
@@ -70,7 +69,7 @@ class SeqTests(unittest.TestCase):
                                        k=n)) + \
                 ''.join(random.choices(tuple(self.defbases),
                                        k=random.randint(0,1000))) + \
-                ''.join(random.choices(tuple(string.whitespace),
+                ''.join(random.choices(tuple(seq._PUNC),
                                        k=random.randint(0,1000))))
             random.shuffle(s)
             self.assertEqual( seq.count_ambiguous(''.join(s)), n )
