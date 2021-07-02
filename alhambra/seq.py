@@ -200,10 +200,31 @@ class Seq:
     def n_ambiguous(self) -> int:
         return count_ambiguous(self.seq_str, _check_seq=False)
 
-    def merge(self, other: Union[Seq, str]) -> Seq:
+    def merge(self, other: Union[Seq, str, None]) -> Seq:
+        if other is None:
+            return self
         if not isinstance(other, Seq):
             other = Seq(other)
         return Seq(merge(self.seq_str, other.seq_str, _check_seq=False))
 
-    def __or__(self, other: Union[Seq, str]) -> Seq:
+    def __or__(self, other: Union[Seq, str, None]) -> Seq:
         return self.merge(other)
+
+    def __ror__(self, other: Union[Seq, str, None]) -> Seq:
+        return self.merge(other)
+
+    def __str__(self) -> str:
+        return self.seq_str
+
+    def __repr__(self) -> str:
+        return "Seq("+repr(self.seq_str)+")"
+
+    def __len__(self) -> int:
+        return self.dna_length
+
+    @property
+    def base_str(self) -> str:
+        return "".join(c for c in self.seq_str if c not in _PUNC)
+
+    def __getitem__(self, ix: Union[int, slice]) -> Seq:
+        raise NotImplementedError("Seq getitem needs to handle whitespace.")

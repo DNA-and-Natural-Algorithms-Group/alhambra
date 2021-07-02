@@ -1,5 +1,6 @@
-__version__ = '1.1.0'
-__all__ = ["TileSet", "Tile", "TileList", "End", "EndList", "TileStructure"]
+__version__ = '2.0.0-dev.1'
+__all__ = ["TileSet", "Tile", "TileList",
+           "End", "EndList", "TileStructure"]
 
 from .tilesets import TileSet
 from .tiles import Tile, TileList

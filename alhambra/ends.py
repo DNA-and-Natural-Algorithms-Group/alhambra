@@ -1,3 +1,4 @@
+from __future__ import annotations
 import warnings
 from ruamel.yaml.comments import CommentedMap
 from .util import NamedList

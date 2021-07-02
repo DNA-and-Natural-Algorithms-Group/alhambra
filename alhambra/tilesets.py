@@ -1,3 +1,4 @@
+from typing import Sequence
 import ruamel.yaml as yaml
 from ruamel.yaml.comments import CommentedMap
 from ruamel.yaml.representer import RoundTripRepresenter
@@ -106,7 +107,7 @@ class TileSet(CommentedMap):
             return yaml.round_trip_dump(self, name_or_stream)
 
     @property
-    def tiles(self):
+    def tiles(self) -> TileList:
         """Property returning the `TileList` of tiles in the TileSet
 
         Returns
@@ -118,14 +119,14 @@ class TileSet(CommentedMap):
         return self['tiles']
 
     @tiles.setter
-    def tiles(self, val):
+    def tiles(self, val: TileList):
         if isinstance(val, TileList):
             self['tiles'] = val
         else:
             self['tiles'] = TileList(val)
 
     @property
-    def allends(self):
+    def allends(self) -> EndList:
         """All ends in the system, both from ends and tiles.
 
         Returns
@@ -1448,8 +1449,8 @@ class TileSet(CommentedMap):
     #    return sensitivity.sensitivity_classes(
     #        ts, count=False, _maxorder=_maxorder)
 
-    def generate_xgrow_dict(ts, perfect=False, rotate=False, energetics=None,
-                            labelsonly=False, onlyreal=True):
+    def generate_xgrow_dict(self, perfect: bool = False, rotate: bool = False, energetics=None,
+                            labelsonly: bool = False, onlyreal: bool = True):
         """Generate a Xgrow tileset dict.
 
         Parameters
@@ -1484,7 +1485,7 @@ class TileSet(CommentedMap):
         doubles = []
         vdoubleends = []
         vdoubles = []
-        ts = copy.deepcopy(ts)
+        ts = copy.deepcopy(self)
         if ts.seed:
             seedtype = seeds.seedtypes[ts.seed['type']]
             newtiles.append({
