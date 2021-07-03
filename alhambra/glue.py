@@ -1,13 +1,26 @@
-
 from __future__ import annotations
 
 from .seq import Seq
-from typing import Any, Literal, Optional, Type, TypeVar, Union
+from typing import (
+    Any,
+    Generic,
+    List,
+    Literal,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Protocol,
+    Type,
+    TypeVar,
+    Union,
+)
 from warnings import warn
 import copy
 from enum import Enum
+import collections.abc
+from .classes import UpdateListD
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Use(Enum):
@@ -47,34 +60,41 @@ class Glue:
     name: Optional[str]
     note: Optional[str]
     use: Optional[Use]
-    __slots__ = ('name', 'use', 'note')
+    __slots__ = ("name", "use", "note")
 
-    def __init__(self, name: Optional[str] = None,
-                 note: Optional[str] = None,
-                 use: Optional[Use] = None):
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        note: Optional[str] = None,
+        use: Optional[Use] = None,
+    ):
         self.name = name
         self.note = note
         self.use = use
 
     def _into_complement(self):
         if self.name is not None:
-            if self.name[-1] == '*':
+            if self.name[-1] == "*":
                 self.name = self.name[:-1]
             else:
-                self.name = self.name+'*'
+                self.name = self.name + "*"
 
     def copy(self: T) -> T:
         return copy.copy(self)
 
-    @property
-    def xgname(self) -> str:
+    def ident(self) -> str:
         if self.name:
-            if self.name[-1] == "*":
-                return self.name[:-1]+"_c"
-            else:
-                return self.name
+            return self.name
         else:
             raise ValueError
+
+    def basename(self) -> str:
+        if self.name is None:
+            raise ValueError
+        if self.name[-1] == "*":
+            return self.name[:-1]
+        else:
+            return self.name
 
     @property
     def complement(self) -> Glue:
@@ -95,8 +115,9 @@ class Glue:
         return self.merge(other)
 
     def as_dict(self) -> dict[str, Any]:
-        return {k: v for k in ['name', 'use', 'note']
-                if (v := getattr(self, k)) is not None}
+        return {
+            k: v for k in ["name", "use", "note"] if (v := getattr(self, k)) is not None
+        }
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> Glue:
@@ -115,9 +136,9 @@ class GlueFactory:
     def from_dict(self, d: str | dict[str, Any]) -> Glue:
         if isinstance(d, str):
             return Glue(d)
-        if 'type' in d:
-            c = self.types[d['type']]
-            del(d['type'])
+        if "type" in d:
+            c = self.types[d["type"]]
+            del d["type"]
             return c(**d)
         else:
             return Glue(**d)
@@ -128,19 +149,20 @@ glue_factory = GlueFactory()
 
 class SSGlue(Glue):
     _sequence: Seq
-    __slots__ = ('_sequence',)
+    __slots__ = ("_sequence",)
 
-    def __init__(self,
-                 name: Optional[str] = None,
-                 length: Union[None, int, str, Seq] = None,
-                 sequence: Union[None, str, Seq] = None,
-                 note: Optional[str] = None,
-                 use: Optional[Use] = None,
-                 ):
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        length: Union[None, int, str, Seq] = None,
+        sequence: Union[None, str, Seq] = None,
+        note: Optional[str] = None,
+        use: Optional[Use] = None,
+    ):
         super().__init__(name, note, use)
 
         if isinstance(length, int):
-            lseq = Seq('N'*length)
+            lseq = Seq("N" * length)
         elif isinstance(length, str):
             lseq = Seq(length)
         elif isinstance(length, Seq):
@@ -165,19 +187,18 @@ class SSGlue(Glue):
     def sequence(self) -> Seq:
         return self._sequence
 
-    @property
-    def xgname(self) -> str:
+    def ident(self) -> str:
         if self.name:
-            return super().xgname
+            return super().ident()
         if self.sequence:
-            return f"SS_{self.sequence.base_str}"
+            return f"SSGlue_{self.sequence.base_str}"
         else:
             raise ValueError
 
     @sequence.setter
     def sequence(self, seq: Seq | str | None):  # type: ignore
         if seq is None:
-            self._sequence = Seq('N' * self.dna_length)
+            self._sequence = Seq("N" * self.dna_length)
             return
         elif not isinstance(seq, Seq):
             seq = Seq(seq)
@@ -208,12 +229,12 @@ class SSGlue(Glue):
         s = f"SSGlue({repr(self.name)}, {self.dna_length}"
         if not self.sequence.is_null:
             s += f", {repr(self.sequence.seq_str)}"
-        return s+")"
+        return s + ")"
 
     def as_dict(self) -> dict[str, Any]:
         d = super().as_dict()
-        d['type'] = self.__class__.__name__
-        d['sequence'] = self.sequence.seq_str
+        d["type"] = self.__class__.__name__
+        d["sequence"] = self.sequence.seq_str
         return d
 
     @property
@@ -232,9 +253,9 @@ glue_factory.register(SSGlue)
 
 
 class DXGlue(Glue):
-    etype: Literal['TD', 'DT']
+    etype: Literal["TD", "DT"]
     _fullseq: Optional[Seq]
-    __slots__ = ('etype', '_fullseq')
+    __slots__ = ("etype", "_fullseq")
 
     def _into_complement(self):
         if self.fullseq is not None:
@@ -261,9 +282,9 @@ class DXGlue(Glue):
     def seq(self) -> Optional[str]:
         if not self.fseq:
             return None
-        if self.etype == 'TD':
+        if self.etype == "TD":
             return self.fseq[1:]
-        elif self.etype == 'DT':
+        elif self.etype == "DT":
             return self.fseq[:-1]
 
     @property
@@ -271,16 +292,16 @@ class DXGlue(Glue):
         """The complement end sequences of the End, as a string."""
         if not self._fullseq:
             return None
-        if self.etype == 'TD':
+        if self.etype == "TD":
             return self._fullseq.revcomp.base_str[1:]
-        elif self.etype == 'DT':
+        elif self.etype == "DT":
             return self._fullseq.revcomp.base_str[:-1]
 
     def merge(self, other: Glue) -> DXGlue:
         out = self.copy()
         if type(other) not in [Glue, DXGlue]:
             raise ValueError
-        for k in ['note', 'name', 'etype']:
+        for k in ["note", "name", "etype"]:
             if (v := getattr(out, k, None)) is not None:
                 if (nv := getattr(other, k, None)) is not None:
                     if nv != v:
@@ -294,3 +315,39 @@ class DXGlue(Glue):
             if out.use and other.use:
                 out.use = out.use | other.use
         return out
+
+
+class GlueList(UpdateListD[Glue]):
+    def merge_complements(self):
+        newitems: dict[str, Glue] = {}
+        for v in self:
+            c = v.complement
+            kc = c.ident()
+            if kc in self.data:
+                self.data[kc] = self.data[kc].merge(c)
+            else:
+                newitems[kc] = c
+        self.data.update(newitems)
+
+    def merge_glue(self, g: Glue) -> Glue:
+        if g.ident() in self.data:
+            g = self.data[g.ident()].merge(g)
+        c = g.complement
+        if c.ident() in self.data:
+            g = self.data[c.ident()].complement.merge(g)
+        return g
+
+    def merge_glue_and_update_list(self, g: Glue) -> Glue:
+        kg = g.ident()
+        if kg in self.data:
+            g = self.data[kg].merge(g)
+            self.data[kg] = g
+        c = g.complement
+        kc = c.ident()
+        if kc in self.data:
+            c = self.data[kc].merge(c)
+            self.data[kc] = c
+            g = c.complement
+            if kg in self.data:
+                self.data[kg] = g
+        return g
