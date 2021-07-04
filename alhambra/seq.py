@@ -3,44 +3,47 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Tuple, Union
 
-_L_TO_N = {'A': frozenset((0,)),
-           'B': frozenset((1, 2, 3)),
-           'C': frozenset((1,)),
-           'D': frozenset((0, 2, 3)),
-           'G': frozenset((2,)),
-           'H': frozenset((0, 1, 3)),
-           'K': frozenset((2, 3)),
-           'M': frozenset((0, 1)),
-           'N': frozenset((0, 1, 2, 3)),
-           'R': frozenset((0, 2)),
-           'S': frozenset((1, 2)),
-           'T': frozenset((3,)),
-           'V': frozenset((0, 1, 2)),
-           'W': frozenset((0, 3)),
-           'Y': frozenset((1, 3))}
+_L_TO_N = {
+    "A": frozenset((0,)),
+    "B": frozenset((1, 2, 3)),
+    "C": frozenset((1,)),
+    "D": frozenset((0, 2, 3)),
+    "G": frozenset((2,)),
+    "H": frozenset((0, 1, 3)),
+    "K": frozenset((2, 3)),
+    "M": frozenset((0, 1)),
+    "N": frozenset((0, 1, 2, 3)),
+    "R": frozenset((0, 2)),
+    "S": frozenset((1, 2)),
+    "T": frozenset((3,)),
+    "V": frozenset((0, 1, 2)),
+    "W": frozenset((0, 3)),
+    "Y": frozenset((1, 3)),
+}
 
 _N_TO_L = {v: i for i, v in _L_TO_N.items()}
 
 
 # X as synonym for N is allowed but not reversible
-_L_TO_N['X'] = frozenset((0, 1, 2, 3))
+_L_TO_N["X"] = frozenset((0, 1, 2, 3))
 
 # Additional convenience: uppercase letters
 _L_TO_N |= {k.lower(): v for k, v in _L_TO_N.items()}
 
-_WC = {k: _N_TO_L[frozenset(3-v for v in s)] for k, s in _L_TO_N.items()
-       if k}
-_WC |= {k: _N_TO_L[frozenset(3-v for v in s)].lower() for k, s in _L_TO_N.items()
-        if k.islower()}
-_WC['X'] = 'X'
-_WC['x'] = 'x'
+_WC = {k: _N_TO_L[frozenset(3 - v for v in s)] for k, s in _L_TO_N.items() if k}
+_WC |= {
+    k: _N_TO_L[frozenset(3 - v for v in s)].lower()
+    for k, s in _L_TO_N.items()
+    if k.islower()
+}
+_WC["X"] = "X"
+_WC["x"] = "x"
 
-_PUNC = '-+ \n\t'
+_PUNC = "-+ \n\t"
 
 _WC_WITH_PUNC = _WC | {x: x for x in _PUNC}
 
-_AMBBASES = frozenset(
-    _L_TO_N.keys() - {'a', 'c', 'g', 't', 'A', 'C', 'G', 'T'})
+_AMBBASES = frozenset(_L_TO_N.keys() - {"a", "c", "g", "t", "A", "C", "G", "T"})
 
 _VALID_NTS = _L_TO_N.keys()
 
@@ -59,8 +62,8 @@ def is_null(seq_str: str, _check_seq: bool = True) -> bool:
     if len(seq_str) == 0:
         return True
     if _check_seq:
-        check_seq(seq_str)        # fixme: do we need this?
-    return set(seq_str.lower()).issubset('nx'+_PUNC)
+        check_seq(seq_str)  # fixme: do we need this?
+    return set(seq_str.lower()).issubset("nx" + _PUNC)
 
 
 def is_definite(seq_str: str, _check_seq: bool = True) -> bool:
@@ -73,14 +76,13 @@ def is_definite(seq_str: str, _check_seq: bool = True) -> bool:
         check_seq(seq_str)
     if set(seq_str).issubset(_PUNC):
         return False
-    return set(seq_str).issubset('acgtACGT'+_PUNC)
+    return set(seq_str).issubset("acgtACGT" + _PUNC)
 
 
 def check_seq(seq_str: str):
     """Raises an error (`InvalidSequence`) if the sequence has invalid elements."""
     if not set(seq_str).issubset(_VALID_WITH_PUNC):
-        invalids = [(i, v) for i, v in enumerate(seq_str)
-                    if v not in _VALID_WITH_PUNC]
+        invalids = [(i, v) for i, v in enumerate(seq_str) if v not in _VALID_WITH_PUNC]
         raise InvalidSequence(seq_str, invalids)
 
 
@@ -108,7 +110,7 @@ def merge(seq1: str, seq2: str, _check_seq: bool = True) -> str:
         check_seq(seq2)
 
     if dna_length(seq1) != dna_length(seq2):
-        raise MergeConflictError(seq1, seq2, 'length', len(seq1), len(seq2))
+        raise MergeConflictError(seq1, seq2, "length", len(seq1), len(seq2))
 
     # Whitespace and capitalization of the *first* sequence is preserved.
     out = []
@@ -128,8 +130,7 @@ def merge(seq1: str, seq2: str, _check_seq: bool = True) -> str:
             cn = _N_TO_L[_L_TO_N[c1] & _L_TO_N[c2]]
         except KeyError as e:
             if e.args[0] == frozenset():
-                raise MergeConflictError(
-                    seq1, seq2, (i1, i2), c1, c2) from None
+                raise MergeConflictError(seq1, seq2, (i1, i2), c1, c2) from None
             else:
                 raise e
         if c1.isupper():
@@ -138,7 +139,7 @@ def merge(seq1: str, seq2: str, _check_seq: bool = True) -> str:
             out.append(cn.lower())
         i1 += 1
         i2 += 1
-    return ''.join(out)
+    return "".join(out)
 
 
 @dataclass
@@ -153,6 +154,7 @@ class MergeConflictError(ValueError):
     Merge of items failed because of conflicting information.
     Arguments are (item1, item2, location or property, value1, value2)
     """
+
     item1: str
     item2: str
     location: Union[str, Tuple[int, int], int]
@@ -174,11 +176,11 @@ class Seq:
 
     def __init__(self, seq_str: Union[Seq, str]) -> None:
         if isinstance(seq_str, Seq):
-            object.__setattr__(self, 'seq_str', seq_str.seq_str)
+            object.__setattr__(self, "seq_str", seq_str.seq_str)
             # fixme: could we pass through instead?
         else:
             check_seq(seq_str)
-            object.__setattr__(self, 'seq_str', seq_str)
+            object.__setattr__(self, "seq_str", seq_str)
 
     @property
     def revcomp(self) -> Seq:
@@ -217,7 +219,7 @@ class Seq:
         return self.seq_str
 
     def __repr__(self) -> str:
-        return "Seq("+repr(self.seq_str)+")"
+        return "Seq(" + repr(self.seq_str) + ")"
 
     def __len__(self) -> int:
         return self.dna_length
