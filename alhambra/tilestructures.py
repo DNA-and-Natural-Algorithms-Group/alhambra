@@ -1,8 +1,8 @@
+from abc import ABCMeta, abstractmethod
 import copy
 
-import string
 import re
-import collections
+from typing import Literal, Optional, Union
 import cssutils
 from lxml import etree
 # Color dictionary for xgrow colors...
@@ -10,9 +10,8 @@ import pkg_resources
 import os.path
 from .ends import End, EndList
 import warnings
-from .seq import _VALID_NTS, revcomp
 from . import seq as sq
-
+from .edotparen import check_edotparen_consistency, check_edotparen_sequence
 
 import logging
 cssutils.log.setLevel(logging.FATAL)
@@ -23,91 +22,17 @@ xcolors = {" ".join(y[3:]): "rgb({},{},{})".format(y[0], y[1], y[2])
            for y in [x.decode().split() for x in rgbv]}
 del (rgbv)
 
-edp_closetoopen = {
-    x: y
-    for x, y in zip(string.ascii_lowercase, string.ascii_uppercase)
-}
-edp_closetoopen.update({')': '(', ']': '[', '}': '{'})
+class TileStructure(object, metaclass=ABCMeta):
+    @property
+    @abstractmethod
+    def edotparen(self) -> Union[str, None]:
+        ...
 
+    @property
+    @abstractmethod
+    def _endlocs(self) -> list[tuple[int, Optional[int], Optional[int]]]:
+        ...
 
-def check_edotparen_consistency(expr):
-    expr = expand_compact_edotparen(expr)
-    expr = re.sub("\s+", "", expr)
-    counts = collections.Counter()
-    strand = 0
-    strandloc = 0
-    for s in expr:
-        if s in edp_closetoopen.values():
-            counts[s] += 1
-        elif s in edp_closetoopen.keys():
-            try:
-                counts[edp_closetoopen[s]] -= 1
-            except KeyError:
-                raise ValueError("Opening not found", s, strand, strandloc)
-        elif s == ".":
-            pass
-        elif s == "+":
-            strand += 1
-            strandloc = 0
-            continue
-        else:
-            raise ValueError("Unknown char", s, strand, strandloc)
-        strandloc += 1
-    if max(counts.values()) > 0:
-        raise ValueError(counts)
-
-
-def check_edotparen_sequence(edotparen, sequence):
-    expr = re.sub("\s+", "", expand_compact_edotparen(edotparen))
-    seq = re.sub("\s+", "", sequence).lower()
-    if len(expr) != len(seq):
-        raise ValueError("Unequal lengths")
-    stacks = {}
-    strand = 0
-    strandloc = 0
-    for s, v in zip(expr, seq):
-        if s in edp_closetoopen.values():
-            if s not in stacks.keys():
-                stacks[s] = []
-            stacks[s].append(v)
-        elif s in edp_closetoopen.keys():
-            ss = edp_closetoopen[s]
-            if ss not in stacks.keys():
-                raise ValueError("Opening not found", s, strand, strandloc)
-            vv = stacks[ss].pop()
-            try:
-                sq.merge(v, revcomp(vv))
-            except sq.MergeConflictError as e:
-                raise ValueError(
-                    "{} != WC({}) at strand {} loc {} (both from 0)".format(
-                        v, vv, strand, strandloc), v, vv, strand, strandloc) from None
-        elif s == ".":
-            assert v in _VALID_NTS
-        elif s == "+":
-            assert v == "+"
-            strand += 1
-            strandloc = 0
-            continue
-        else:
-            raise ValueError("Unknown char", s, strand, strandloc)
-        strandloc += 1
-    if max(len(stack) for stack in stacks.values()) > 0:
-        raise ValueError(stacks)
-
-
-def expand_compact_edotparen(expr):
-    return re.sub(r"(\d+)([\[\]\(\)\{\}A-Za-z\.])",
-                  lambda m: int(m.group(1)) * m.group(2),
-                  expr)
-
-
-def prettify_edotparen(expr):
-    # This is evil:
-    return re.sub(r"(([\[\]\(\)\{\}A-Za-z\.])\2+)",
-                  lambda m: "{}{}".format(len(m.group(1)), m.group(2)), expr)
-
-
-class TileStructure(object):
     def check_consistent(self):
         if self.edotparen:
             check_edotparen_consistency(self.edotparen)
@@ -127,6 +52,15 @@ class TileStructure(object):
 
 
 class tile_daoe(TileStructure):
+    @property
+    @abstractmethod
+    def _endtypes(self) -> list[Literal['DT', 'TD', 'hairpin']]:
+        ...
+
+    @abstractmethod
+    def _seqdiagseqstrings(self, tile) -> list[str]:
+        ...
+
     def sequence_diagram(self, tile):
         ttype = tile.structure.name
         from lxml import etree
@@ -169,10 +103,14 @@ class tile_daoe(TileStructure):
 
             if endtype in ('blunt', 'inert', 'hairpin'):
                 continue
-            
+
             if endtype == 'DT':
+                if not start:
+                    raise ValueError
                 sl = slice(start - 1, end)
             elif endtype == 'TD':
+                if not end:
+                    raise ValueError
                 sl = slice(start, end + 1)
             else:
                 sl = None
@@ -191,7 +129,7 @@ class tile_daoe(TileStructure):
                 endname = endname[:-1]
                 isc = True
                 if seq:
-                    seq = revcomp(seq)
+                    seq = sq.revcomp(seq)
 
             e = End({'name': endname, 'type': endtype})
 
@@ -211,7 +149,7 @@ class tile_daoe(TileStructure):
                     use = 0b01 ^ m
                 e.use = use
 
-            es.merge(EndList([e]), in_place=True)  # FIXME
+            es.update(EndList([e]))  # FIXME
         return es
 
     def orderableseqs(self, tile):
@@ -247,7 +185,7 @@ class tile_daoe(TileStructure):
 
         if not tileset:
             return (tilediag, 1)
-        
+
         for endn, loc in zip(tile.ends,
                              self._a_endlocs):
             if endn in tileset.ends.keys():
@@ -282,8 +220,8 @@ class tile_daoe_single(tile_daoe):
     double = False
     singleends = ((0, 1, 2, 3),)
     _dirs = (0, 1, 2, 3)
-        
-    def _seqdiagseqstrings(self, tile):
+
+    def _seqdiagseqstrings(self, tile) -> list[str]:
         s = tile.strands
         return [
             s[0][:5] + "--" + s[0][5:13],
@@ -318,7 +256,7 @@ class tile_daoe_5up(tile_daoe_single):
         return [(tile_daoe_3up, (3, 2, 1, 0)),
                 (tile_daoe_5up, (1, 0, 3, 2)),
                 (tile_daoe_3up, (2, 3, 0, 1))]
-    
+
     def orderableseqs(self, tile):
         seqs = copy.deepcopy(tile.strands)
         if tile.get('label', None) == 'both':
@@ -333,6 +271,7 @@ class tile_daoe_5up(tile_daoe_single):
         return [("{}-{}".format(tile.name, i+1), seq)
                 for i, seq in enumerate(seqs)]
 
+
 class tile_daoe_3up(tile_daoe_single):
     _orient = ('5', '3')
     _endtypes = ['DT', 'DT', 'TD', 'TD']
@@ -345,7 +284,7 @@ class tile_daoe_3up(tile_daoe_single):
         return [(tile_daoe_5up, (3, 2, 1, 0)),
                 (tile_daoe_3up, (1, 0, 3, 2)),
                 (tile_daoe_5up, (2, 3, 0, 1))]
-    
+
     def orderableseqs(self, tile):
         seqs = copy.deepcopy(tile.strands)
         if tile.get('label', None) == 'both':
@@ -370,9 +309,11 @@ class tile_daoe_5up_3h(tile_daoe_5up):
     _orient = ('3', '5')
     _endtypes = ['TD', 'TD', 'hairpin', 'DT']
 
+
 class tile_daoe_5up_3b(tile_daoe_5up):
     _orient = ('3', '5')
     _endtypes = ['TD', 'TD', 'hairpin', 'DT']
+
 
 class tile_daoe_5up_4h(tile_daoe_5up):
     _orient = ('3', '5')
@@ -391,7 +332,7 @@ class tile_daoe_5up_2h(tile_daoe_5up):
         return [(tile_daoe_3up_3h, (3, 2, 1, 0)),
                 (tile_daoe_5up_1h, (1, 0, 3, 2)),
                 (tile_daoe_3up_4h, (2, 3, 0, 1))]
-    
+
     def _short_bound_full(self, tile):
         s = tile.strands
         return [s[0][5:-5], s[3][18:-5]]
@@ -418,6 +359,7 @@ class tile_daoe_5up_2h(tile_daoe_5up):
             (s[3][:-6:-1] + "--" + s[3][-6:-14:-1])[::-1]
         ]
 
+
 class tile_daoe_3up_1h(tile_daoe_3up):
     _endtypes = ['hairpin', 'DT', 'TD', 'TD']
 
@@ -425,9 +367,10 @@ class tile_daoe_3up_1h(tile_daoe_3up):
 class tile_daoe_3up_3h(tile_daoe_3up):
     _endtypes = ['DT', 'DT', 'hairpin', 'TD']
 
-    
+
 class tile_daoe_3up_4h(tile_daoe_3up):
     _endtypes = ['DT', 'DT', 'TD', 'hairpin']
+
 
 class tile_daoe_3up_2h(tile_daoe_3up):
     def _short_bound_full(self, tile):
@@ -444,7 +387,7 @@ class tile_daoe_3up_2h(tile_daoe_3up):
         return [(tile_daoe_5up_3h, (3, 2, 1, 0)),
                 (tile_daoe_3up_1h, (1, 0, 3, 2)),
                 (tile_daoe_5up_4h, (2, 3, 0, 1))]
-    
+
     _endtypes = ['DT', 'hairpin', 'TD', 'TD']
     _endlocs = [(0, 21, None), (3, 21, None), (3, 0, 5), (0, 0, 5)]
 
@@ -473,7 +416,7 @@ class tile_daoe_doublehoriz(tile_daoe):
                   'southwest', 'west']
     singleends = ((0, None, 4, 5), (1, 2, 3, None))
     double = 'h'
-        
+
 
 class tile_daoe_doublevert(tile_daoe):
     _dirs = (0, 1, 1, 2, 3, 3)
@@ -483,19 +426,19 @@ class tile_daoe_doublevert(tile_daoe):
     singleends = ((0, 1, None, 5), (None, 2, 3, 4))
     double = 'v'
 
+
 class tile_daoe_doublehoriz_35up(tile_daoe_doublehoriz):
     _endtypes = ['DT', 'TD', 'TD', 'DT', 'TD', 'TD']
     _orient = ('5', '5')
     _endlocs = [(0, -5, None), (2, 0, 5), (5, 0, 5), (5, -5, None),
                 (3, 0, 5), (0, 0, 5)]
-    
+
     @property
     def rotations(self):
         return [(tile_daoe_doublehoriz_35up, (3, 4, 5, 0, 1, 2)),
                 (tile_daoe_doublevert_53up, (5, 4, 3, 2, 1, 0)),
                 (tile_daoe_doublevert_53up, (2, 1, 0, 5, 4, 3))]
 
-    
     def _short_bound_full(self, tile):
         s = tile.strands
         el = self._endlocs
@@ -534,6 +477,7 @@ class tile_daoe_doublehoriz_35up(tile_daoe_doublehoriz):
                 (s[5][0:5] + "--" + s[5][5:13])[::-1],
                 s[5][13:21] + "--" + s[5][21:26]]
     edotparen = '5.16(5.+8)16[16{8)+5.29(16]16}8(+5.29)16[16{8)+8(16]16}8(+5.16)5.'
+
 
 class tile_daoe_doublehoriz_53up(tile_daoe_doublehoriz):
 
@@ -612,6 +556,7 @@ class tile_daoe_doublevert_35up(tile_daoe_doublevert):
     _endlocs = [(0, -5, None), (3, -5, None), (5, 0, 5),
                 (5, -5, None), (2, -5, None), (0, 0, 5)]
 
+
 class tile_daoe_doublevert_53up(tile_daoe_doublevert):
     @property
     def rotations(self):  # FIXME: check this
@@ -644,15 +589,11 @@ class tile_daoe_doublevert_53up(tile_daoe_doublevert):
     _orient = ('5', '5')
     _endlocs = [(0, 0, 5), (3, 0, 5), (5, -5, None),
                 (5, 0, 5), (2, 0, 5), (0, -5, None)]
-    
+
 
 class tile_daoe_doublehoriz_35up_1h2i(tile_daoe_doublehoriz_35up):
     edotparen = '5.16(7(4.7)+8)16[16{8)+5(29(16]16}8(+5.29)16[16{8)5)+8(16]16}8(+5.16)5.'
-
-    def __init__(self):
-        self._endtypes = copy.copy(self._endtypes)
-        self._endtypes[0] = 'hairpin'
-        self._endtypes[1] = 'blunt'
+    _endtypes = ['hairpin', 'hairpin', 'TD', 'DT', 'TD', 'TD']
 
     def _seqdiagseqstrings(self, tile):
         s = tile.strands
@@ -677,11 +618,7 @@ class tile_daoe_doublehoriz_35up_1h2i(tile_daoe_doublehoriz_35up):
 
 class tile_daoe_doublehoriz_35up_4h5i(tile_daoe_doublehoriz_35up):
     edotparen = '5.16(5.+8)16[16{8)+5.29(16]16}8(5(+5)29)16[16{8)+8(16]16}8(+5.16)7(4.7)'
-
-    def __init__(self):
-        self._endtypes = copy.copy(self._endtypes)
-        self._endtypes[3] = 'hairpin'
-        self._endtypes[4] = 'blunt'
+    _endtypes = ['DT', 'TD', 'TD', 'hairpin', 'blunt', 'TD']
 
     def _seqdiagseqstrings(self, tile):
         s = tile.strands
@@ -705,10 +642,7 @@ class tile_daoe_doublehoriz_35up_4h5i(tile_daoe_doublehoriz_35up):
 
 
 class tile_daoe_doublehoriz_35up_2h3h(tile_daoe_doublehoriz_35up):
-    def __init__(self):
-        self._endtypes = copy.copy(self._endtypes)
-        self._endtypes[1] = 'hairpin'
-        self._endtypes[2] = 'hairpin'
+    _endtypes = ['DT', 'hairpin', 'hairpin', 'DT', 'TD', 'TD']
 
     _endlocs = [(0, -5, None), (2, 0, 18), (5, 0, 18), (5, -5, None),
                 (3, 0, 5), (0, 0, 5)]
@@ -742,11 +676,9 @@ class tile_daoe_doublehoriz_35up_2h3h(tile_daoe_doublehoriz_35up):
             s[5][13:21] + "--" + s[5][21:26]
         ]
 
-class tile_daoe_doublehoriz_53up_2h3h(tile_daoe_doublehoriz_35up):
-    def __init__(self):
-        self._endtypes = copy.copy(self._endtypes)
-        self._endtypes[1] = 'hairpin'
-        self._endtypes[2] = 'hairpin'
+
+class tile_daoe_doublehoriz_53up_2h3h(tile_daoe_doublehoriz_53up):
+    _endtypes = ['TD', 'hairpin', 'hairpin', 'TD', 'DT', 'DT']
 
     _endlocs = [(0, -5, None), (2, 0, 18), (5, 0, 18), (5, -5, None),
                 (3, 0, 5), (0, 0, 5)]
@@ -782,10 +714,7 @@ class tile_daoe_doublehoriz_53up_2h3h(tile_daoe_doublehoriz_35up):
 
 
 class tile_daoe_doublevert_35up_4h5h(tile_daoe_doublevert_35up):
-    def __init__(self):
-        self._endtypes = copy.copy(self._endtypes)
-        self._endtypes[3] = 'hairpin'
-        self._endtypes[4] = 'hairpin'
+    _endtypes = ['DT', 'DT', 'TD', 'hairpin', 'hairpin', 'TD']
 
     _endlocs = [(0, -5, None), (3, -5, None), (5, 0, 5),
                 (5, -18, None), (2, -18, None), (0, 0, 5)]
@@ -825,11 +754,9 @@ class tile_daoe_doublevert_35up_4h5h(tile_daoe_doublevert_35up):
             (s[5][30:32] + '-' + s[5][32:34] + '-' + s[5][34:39])[::-1]  # hp5
         ]
 
+
 class tile_daoe_doublevert_53up_4h5h(tile_daoe_doublevert_53up):
-    def __init__(self):
-        self._endtypes = copy.copy(self._endtypes)
-        self._endtypes[3] = 'hairpin'
-        self._endtypes[4] = 'hairpin'
+    _endtypes = ['TD', 'TD', 'DT', 'hairpin', 'hairpin', 'DT']
 
 
 tilestructures = {
@@ -846,7 +773,7 @@ tilestructures = {
     'tile_daoe_3up_4h': tile_daoe_3up_4h,
     'tile_daoe_doublehoriz_53up': tile_daoe_doublehoriz_53up,
     'tile_daoe_doublehoriz_53up_2h3h': tile_daoe_doublehoriz_53up_2h3h,
-    'tile_daoe_doublehoriz_35up': tile_daoe_doublehoriz_35up,    
+    'tile_daoe_doublehoriz_35up': tile_daoe_doublehoriz_35up,
     'tile_daoe_doublehoriz_35up_2h3h': tile_daoe_doublehoriz_35up_2h3h,
     'tile_daoe_doublehoriz_35up_1h2i': tile_daoe_doublehoriz_35up_1h2i,
     'tile_daoe_doublehoriz_35up_4h5i': tile_daoe_doublehoriz_35up_4h5i,
@@ -881,5 +808,3 @@ def gettile(tset, tname):
     foundtiles = [x for x in tset['tiles'] if x['name'] == tname]
     assert len(foundtiles) == 1
     return foundtiles[0]
-
-

@@ -60,17 +60,20 @@ class Glue:
     name: Optional[str]
     note: Optional[str]
     use: Optional[Use]
-    __slots__ = ("name", "use", "note")
+    abstractstrength: Optional[int]
+    __slots__ = ("name", "use", "note", "abstractstrength")
 
     def __init__(
         self,
         name: Optional[str] = None,
         note: Optional[str] = None,
         use: Optional[Use] = None,
+        abstractstrength: Optional[int] = None,
     ):
         self.name = name
         self.note = note
         self.use = use
+        self.abstractstrength = abstractstrength
 
     def _into_complement(self):
         if self.name is not None:
@@ -162,7 +165,7 @@ class SSGlue(Glue):
         super().__init__(name, note, use)
 
         if isinstance(length, int):
-            lseq = Seq("N" * length)
+            lseq: Seq | None = Seq("N" * length)
         elif isinstance(length, str):
             lseq = Seq(length)
         elif isinstance(length, Seq):
@@ -187,14 +190,6 @@ class SSGlue(Glue):
     def sequence(self) -> Seq:
         return self._sequence
 
-    def ident(self) -> str:
-        if self.name:
-            return super().ident()
-        if self.sequence:
-            return f"SSGlue_{self.sequence.base_str}"
-        else:
-            raise ValueError
-
     @sequence.setter
     def sequence(self, seq: Seq | str | None):  # type: ignore
         if seq is None:
@@ -205,6 +200,14 @@ class SSGlue(Glue):
         if self.dna_length is not None:
             assert seq.dna_length == self.dna_length
         self._sequence = seq
+
+    def ident(self) -> str:
+        if self.name:
+            return super().ident()
+        if self.sequence:
+            return f"SSGlue_{self.sequence.base_str}"
+        else:
+            raise ValueError
 
     def _into_complement(self):
         if self.sequence is not None:
@@ -301,7 +304,7 @@ class DXGlue(Glue):
         out = self.copy()
         if type(other) not in [Glue, DXGlue]:
             raise ValueError
-        for k in ["note", "name", "etype"]:
+        for k in ["note", "name", "etype", "abstractstrength"]:
             if (v := getattr(out, k, None)) is not None:
                 if (nv := getattr(other, k, None)) is not None:
                     if nv != v:
@@ -315,6 +318,22 @@ class DXGlue(Glue):
             if out.use and other.use:
                 out.use = out.use | other.use
         return out
+
+    def __str__(self):
+        if self.fseq and self.seq and self.comp:
+            if self.etype == "DT":
+                s = self.seq[0] + "-" + self.seq[1:]
+                c = self.comp[0] + "-" + self.comp[1:]
+            elif self.etype == "TD":
+                s = self.seq[:-1] + "-" + self.seq[-1]
+                c = self.comp[:-1] + "-" + self.comp[-1]
+            else:
+                raise ValueError
+            return "<dxend {} ({}{}): {} | {}>".format(
+                self.name, self.etype, len(self.seq), s, c
+            )
+        else:
+            return "<dxend {} ({})>".format(self.name, getattr(self, "etype", "?"))
 
 
 class GlueList(UpdateListD[Glue]):

@@ -28,6 +28,7 @@ class IdentMergeableItem(Protocol):
     def copy(self: T_NMI) -> T_NMI:
         ...
 
+
 T = TypeVar("T", bound="UpdateListD")
 
 
@@ -41,6 +42,9 @@ class UpdateListD(Generic[T_NMI]):
     def __setitem__(self, k: str, v: T_NMI):
         self.data[k] = v
 
+    def __contains__(self, kv: str) -> bool:
+        return kv in self.data.keys()
+
     @overload
     def __getitem__(self, k: str | SupportsIndex) -> T_NMI:
         ...
@@ -48,9 +52,6 @@ class UpdateListD(Generic[T_NMI]):
     @overload
     def __getitem__(self: T, k: slice) -> T:
         ...
-
-    def __contains__(self, kv: str) -> bool:
-        return (kv in self.data.keys())
 
     def __getitem__(self: T, k: str | SupportsIndex | slice) -> T_NMI | T:
         # How easy! It's just a string!
@@ -65,24 +66,24 @@ class UpdateListD(Generic[T_NMI]):
                     return self.data[k]
                 except KeyError:
                     raise KeyError(k) from None
-        
+
         m = self.data.values()
         if isinstance(k, SupportsIndex):
-            m = iter(m)
+            mi = iter(m)
             for _ in range(0, k):
-                next(m)
-            return next(m)
+                next(mi)
+            return next(mi)
         else:
             if k.step and k.step < 0:
-                m = reversed(m)
+                mi = reversed(m)
                 step = -k.step
             else:
-                m = iter(m)
+                mi = iter(m)
                 if k.step:
                     step = k.step
                 else:
                     step = 1
-            mi = iter(enumerate(m))
+            mi = iter(enumerate(mi))  # was mi, m, last m use
             r = []
             if isinstance(k, slice):
                 if isinstance(k.start, SupportsIndex):
@@ -121,7 +122,7 @@ class UpdateListD(Generic[T_NMI]):
         for k, v in list(self.data.items()):
             if v.ident() != k:
                 del self.data[k]
-                self.data[v.ident()] = v #FIXME
+                self.data[v.ident()] = v  # FIXME
 
     def add(self, v: T_NMI):
         k = v.ident()
@@ -139,7 +140,7 @@ class UpdateListD(Generic[T_NMI]):
     def __repr__(self) -> str:
         return self.__class__.__name__ + "(" + list(self.data.values()).__repr__() + ")"
 
-    def update(self: T, d: T):
+    def update(self, d: Iterable[T_NMI]):
         for v in d:
             self.add(v)
 
@@ -152,25 +153,24 @@ class UpdateListD(Generic[T_NMI]):
     def copy(self: T) -> T:
         return self.__class__(self.data.copy().values())
 
-    def __or__(self: T, other: T) -> T:
+    def __or__(self: T, other: Iterable[T_NMI]) -> T:
         a = self.copy()
         a.update(other)
         return a
 
-    def __ior__(self: T, other: T) -> T:
+    def __ior__(self: T, other: Iterable[T_NMI]) -> T:
         self.refreshnames()
         self.update(other)
         return self
 
-    def __sub__(self: T, other: T) -> T:
+    def __sub__(self: T, other: Iterable[T_NMI]) -> T:
         self.refreshnames()
         out = self.copy()
         for v in other:
-            if v.name in out:
+            if v.ident() in out:
                 # out[v.name].merge(v)  # FIXME
-                del(out[v.name])
+                del out[v.ident()]
         return out
-
 
     def search(self: T, regex: str, match: bool = False) -> T:
         r = re.compile(regex)

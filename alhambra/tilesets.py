@@ -18,7 +18,7 @@ from . import seeds
 from . import util
 from . import seq
 from . import sensitivitynew as sensitivity
-from . import fastreduce
+#from . import fastreduce # FIXME
 
 # Need to disable this for now
 from peppercompiler import compiler as compiler
@@ -139,7 +139,7 @@ class TileSet(CommentedMap):
 
         TileSet.ends
         TileSet.tiles.endlist"""
-        return self.ends.merge(self.tiles.endlist())
+        return self.ends.merge(self.tiles.glues_from_tiles())
 
     def ends():
         doc = """The EndList of specified ends in the TileSet (not including
@@ -368,7 +368,7 @@ class TileSet(CommentedMap):
         # ** ends in the tile list must be consistent (must merge)
         # ** there must be no more than one tile with each name
         self.tiles.check_consistent()
-        endsfromtiles = self.tiles.endlist()
+        endsfromtiles = self.tiles.glues_from_tiles()
 
         # ** WARN if any end that appears does not have a complement used or vice versa
         # ** WARN if there are tiles with no name
@@ -411,7 +411,7 @@ class TileSet(CommentedMap):
             'nends':
             len(self.ends),
             'ntends':
-            len(self.tiles.endlist()),
+            len(self.tiles.glues_from_tiles()),
             'tns':
             " ".join(x.name for x in self.tiles if x.name),
             'ens':
@@ -599,7 +599,7 @@ class TileSet(CommentedMap):
         ends = EndList()
 
         if newtileset.ends:
-            ends.merge(newtileset.ends, fail_immediate=False, in_place=True)
+            ends.update(newtileset.ends, fail_immediate=False)
 
         # This is the endlist from the tiles themselves.
         if newtileset.tiles:  # maybe you just want ends?
@@ -608,9 +608,9 @@ class TileSet(CommentedMap):
             # FIXME: implement
             # tilestructures.check_end_usage(newtileset.tiles, ends)
 
-            endlist_from_tiles = newtileset.tiles.endlist()
+            endlist_from_tiles = newtileset.tiles.glues_from_tiles()
 
-        ends.merge(endlist_from_tiles, in_place=True)
+        ends.update(endlist_from_tiles)
 
         # Ensure that if there are any resulting completely-undefined ends, they
         # have their sequences removed.
@@ -800,7 +800,7 @@ class TileSet(CommentedMap):
         # Ensure that the old and new sets have consistent end definitions,
         # and that the tile definitions still fit.
         tileset.ends.merge(ends)
-        newtileset.tiles.endlist().merge(ends)
+        newtileset.tiles.glues_from_tiles().merge(ends)
 
         newendnames = [e.name for e in newTD] + [e.name for e in newDT]
         info['newends'] = newendnames
@@ -959,7 +959,7 @@ class TileSet(CommentedMap):
         ends = EndList()
 
         if newtileset.ends:
-            ends.merge(newtileset.ends, fail_immediate=False, in_place=True)
+            ends.update(newtileset.ends, fail_immediate=False)
 
         # This is the endlist from the tiles themselves.
         if newtileset.tiles:  # maybe you just want ends?
@@ -968,9 +968,9 @@ class TileSet(CommentedMap):
             # FIXME: implement
             # tilestructures.check_end_usage(newtileset.tiles, ends)
 
-            endlist_from_tiles = newtileset.tiles.endlist()
+            endlist_from_tiles = newtileset.tiles.glues_from_tiles()
 
-        ends.merge(endlist_from_tiles, in_place=True)
+        ends.update(endlist_from_tiles)
 
         # Ensure that if there are any resulting completely-undefined ends, they
         # have their sequences removed.
@@ -1107,7 +1107,7 @@ class TileSet(CommentedMap):
         # Ensure that the old and new sets have consistent end definitions,
         # and that the tile definitions still fit.
         tileset.ends.merge(ends)
-        newtileset.tiles.endlist().merge(ends)
+        newtileset.tiles.glues_from_tiles().merge(ends)
 
         newendnames = [e.name for e in newTD] + [e.name for e in newDT]
         info['newends'] = newendnames
@@ -1229,7 +1229,7 @@ class TileSet(CommentedMap):
 
         # Ensure:
         tileset.ends.merge(
-            tileset_with_strands.tiles.endlist())  # Ends still fit
+            tileset_with_strands.tiles.glues_from_tiles())  # Ends still fit
         for tile in tileset_with_strands.tiles:
             oldtile = tileset.tiles[tile.name]
             if 'fullseqs' in oldtile.keys():

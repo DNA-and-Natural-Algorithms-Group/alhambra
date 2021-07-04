@@ -1,10 +1,10 @@
 from __future__ import annotations
+from abc import ABCMeta, abstractmethod
 import copy
 from dataclasses import dataclass
 from typing import (
     Any,
     List,
-    Literal,
     MutableSequence,
     Optional,
     ClassVar,
@@ -15,16 +15,19 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 from enum import Enum
 import scadnano
 
 from .seq import Seq
-from .glue import Glue, SSGlue, GlueList
+from .glue import DXGlue, Glue, SSGlue, GlueList
 from .classes import UpdateListD
 import xgrow.tileset as xgt
 
 Color = str
+
+T = TypeVar("T")
 
 
 class D(Enum):
@@ -59,16 +62,24 @@ class EdgeView(MutableSequence[Glue]):
         self._edges = _edges
         self._tile = _tile
 
-    def __getitem__(self, k: SupportsIndex) -> Glue:
+    @overload
+    def __getitem__(self, k: int) -> Glue:
+        ...
+
+    @overload
+    def __getitem__(self, k: slice) -> list[Glue]:
+        ...
+
+    def __getitem__(self, k: int | slice) -> Glue | list[Glue]:
         return self._edges.__getitem__(k)
 
-    def __setitem__(self, k: int, v: Glue):
+    def __setitem__(self, k: int, v: Glue) -> None:
         self._tile.set_edge(k, v)
 
     def insert(self, index: int, value: Glue) -> None:
         return self._edges.insert(index, value)
 
-    def __delitem__(self, k: SupportsIndex | slice) -> None:
+    def __delitem__(self, k: int) -> None:
         self._edges.__delitem__(k)
 
     def __len__(self) -> int:
@@ -156,7 +167,9 @@ class Tile:
             if (v := getattr(self, k)) is not None
         }
         if self.edges is not None:
-            b["edges"] = [(x.name if x.name in refglues else x.as_dict()) for x in self.edges]
+            b["edges"] = [
+                (x.name if x.name in refglues else x.as_dict()) for x in self.edges
+            ]
             # fixme: deal with None
         return b
 
@@ -220,23 +233,26 @@ class HDupleTile(Tile):
 
 
 class BaseSSTile(Tile):
-    _edges: List[SSGlue]
+    _edges: List[Glue]  # actually SSGlue
 
-    def to_dict(self, refglues: set[str]=set()) -> dict[str, Any]:
+    def to_dict(self, refglues: set[str] = set()) -> dict[str, Any]:
         d = super().to_dict(refglues=refglues)
         d["type"] = self.__class__.__name__
         d["sequence"] = self.sequence.seq_str
         return d
 
     @property
-    def _base_domains(self) -> ClassVar[List[SSGlue]]:
+    @abstractmethod
+    def _base_domains(self) -> List[SSGlue]:
         ...
 
     @property
-    def _base_edges(self) -> ClassVar[List[SSGlue]]:
+    @abstractmethod
+    def _base_edges(self) -> List[SSGlue]:
         ...
 
     @property
+    @abstractmethod
     def domains(self) -> List[SSGlue]:
         ...
 
@@ -281,7 +297,9 @@ class BaseSSTile(Tile):
         # fixme: should we check whitespace?
         for base_domain, domain in zip(self._base_domains, self.domains):
             base_domain.sequence | base_str[pos : pos + base_domain.dna_length]  # noqa
-            domain.sequence = seq.base_str[pos : pos + base_domain.dna_length]  # noqa
+            domain.sequence = Seq(
+                seq.base_str[pos : pos + base_domain.dna_length]
+            )  # noqa
             pos += base_domain.dna_length
 
     @property
@@ -315,7 +333,7 @@ class BaseSSTile(Tile):
 
 
 class BaseSSTSingle(SingleTile, BaseSSTile):
-    _edges: List[SSGlue]
+    _edges: List[Glue]
 
     @property
     def domains(self) -> List[SSGlue]:
@@ -348,217 +366,6 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
         return s.strand
 
 
-class FlatishSingleTile9(BaseSSTSingle):
-    _base_domains: ClassVar[List[SSGlue]] = [SSGlue(length=x) for x in [12, 9, 11, 10]]
-    _scadnano_offsets = ((-1, -12), (-1, 9), (1, 11), (1, -10))
-
-
-class FlatishSingleTile10(BaseSSTSingle):
-    _base_domains: ClassVar[List[SSGlue]] = [SSGlue(length=x) for x in [11, 10, 12, 9]]
-    _scadnano_offsets = ((-1, -11), (-1, 10), (1, 12), (1, -9))
-
-
-# @dataclass(init=False)
-# class FlatishHDupleTile12_E2(HDupleTile, BaseFlatishTile):
-#     _base_edges: ClassVar[List[FlatishGlue]] = [
-#         FlatishGlue(length=x) for x in [12, 9, 11, 10]]
-#     _fixed: ClassVar[List[Optional[str]]] = [
-#         None, 8*'T', None, None, None, 8*'T', None, None]
-
-
-# @dataclass(init=False)
-# class FlatishHDupleTile11_E2(HDupleTile, BaseFlatishTile):
-#     _base_edges: ClassVar[List[FlatishGlue]] = [
-#         FlatishGlue(length=x) for x in [12, 9, 11, 10]]
-#     _fixed: ClassVar[List[Optional[str]]] = [
-#         None, 8*'T', None, None, None, 8*'T', None, None]
-
-_STANDARD_LOOP = SSGlue("loop", 8 * "T")
-
-
-def _add_domain_from_glue(s: scadnano.StrandBuilder, g: SSGlue, d: Literal[1, -1]):
-    s.move(g.dna_length * d)
-    if g.name is not None:
-        s.with_domain_name(g.name)
-    return s
-
-
-def _add_loopout_from_glue(s: scadnano.StrandBuilder, g: SSGlue, d: Literal[1, -1]):
-    s.loopout(s.current_helix + d, g.dna_length)
-    if g.name is not None:
-        s.with_domain_name(g.name)
-    return s
-
-
-T = TypeVar("T")
-
-
-def _reorder(seq: Sequence[T], ord: Sequence[int]) -> Sequence[T]:
-    return [seq[i] for i in ord]
-
-
-class FlatishVDupleTile10_E2(VDupleTile, BaseSSTile):
-    _base_domains: ClassVar[List[SSGlue]] = [
-        SSGlue(length=12),
-        _STANDARD_LOOP,
-        SSGlue(length=11),
-        SSGlue(length=10),
-        SSGlue(length=12),
-        _STANDARD_LOOP,
-        SSGlue(length=11),
-        SSGlue(length=10),
-    ]
-    _base_edges = _reorder(_base_domains, [3, 2, 0, 7, 6, 4])
-    _scadnano_offsets = ((-1, -11), (-1, 10), (0, 21), (2, 23), (2, 1), (1, -9))
-
-    @property
-    def domains(self):
-        e = self.edges
-        return [e[2], _STANDARD_LOOP, e[1], e[0], e[5], _STANDARD_LOOP, e[4], e[3]]
-
-    def to_scadnano(
-        self, design: scadnano.Design, helix: int, offset: int
-    ) -> scadnano.Strand:
-        s = design.strand(helix, offset + 33)
-        domiter = iter(self.domains)
-        _add_domain_from_glue(s, next(domiter), -1)
-        _add_loopout_from_glue(s, next(domiter), -1)
-        _add_domain_from_glue(s, next(domiter), -1)
-        _add_domain_from_glue(s, next(domiter), -1)
-        s.cross(s.current_helix + 1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_loopout_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
-
-        if self.name is not None:
-            s.with_name(self.name)
-
-        s.with_sequence(self.sequence.base_str)
-        return s.strand
-
-
-class FlatishVDupleTile9_E2(VDupleTile, BaseSSTile):
-    _base_domains: ClassVar[List[SSGlue]] = [
-        SSGlue(length=11),
-        _STANDARD_LOOP,
-        SSGlue(length=12),
-        SSGlue(length=9),
-        SSGlue(length=11),
-        _STANDARD_LOOP,
-        SSGlue(length=12),
-        SSGlue(length=9),
-    ]
-    _base_edges = _reorder(_base_domains, [3, 2, 0, 7, 6, 4])
-    _scadnano_offsets = ((-1, -12), (-1, 9), (0, 21), (2, 23), (2, 2), (1, -10))
-
-    @property
-    def domains(self):
-        e = self.edges
-        return [e[2], _STANDARD_LOOP, e[1], e[0], e[5], _STANDARD_LOOP, e[4], e[3]]
-
-    def to_scadnano(
-        self, design: scadnano.Design, helix: int, offset: int
-    ) -> scadnano.Strand:
-        s = design.strand(helix, offset + 32)
-        domiter = iter(self.domains)
-        _add_domain_from_glue(s, next(domiter), -1)
-        _add_loopout_from_glue(s, next(domiter), -1)
-        _add_domain_from_glue(s, next(domiter), -1)
-        _add_domain_from_glue(s, next(domiter), -1)
-        s.cross(s.current_helix + 1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_loopout_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
-
-        if self.name is not None:
-            s.with_name(self.name)
-
-        s.with_sequence(self.sequence.base_str)
-        return s.strand
-
-
-class FlatishHDupleTile9_E(HDupleTile, BaseSSTile):
-    _base_domains: ClassVar[List[SSGlue]] = [
-        SSGlue(length=11),
-        SSGlue(length=10),
-        _STANDARD_LOOP,
-        SSGlue(length=9),
-        SSGlue(length=11),
-        SSGlue(length=10),
-        _STANDARD_LOOP,
-        SSGlue(length=9),
-    ]
-    _base_edges = _reorder(_base_domains, [3, 1, 0, 7, 5, 4])
-
-    @property
-    def domains(self):
-        e = self.edges
-        return [e[2], e[1], _STANDARD_LOOP, e[0], e[5], e[4], _STANDARD_LOOP, e[3]]
-
-    def to_scadnano(
-        self, design: scadnano.Design, helix: int, offset: int
-    ) -> scadnano.Strand:
-        s = design.strand(helix, offset + 30)
-        domiter = iter(self.domains)
-        _add_domain_from_glue(s, next(domiter), -1)
-        _add_domain_from_glue(s, next(domiter), -1)
-        _add_loopout_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), -1)
-        s.cross(s.current_helix + 1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_loopout_from_glue(s, next(domiter), -1)
-        _add_domain_from_glue(s, next(domiter), +1)
-
-        if self.name is not None:
-            s.with_name(self.name)
-
-        s.with_sequence(self.sequence.base_str)
-        return s.strand
-
-
-class FlatishHDupleTile10_E(HDupleTile, BaseSSTile):
-    _base_domains: ClassVar[List[SSGlue]] = [
-        SSGlue(length=12),
-        SSGlue(length=9),
-        _STANDARD_LOOP,
-        SSGlue(length=10),
-        SSGlue(length=12),
-        SSGlue(length=9),
-        _STANDARD_LOOP,
-        SSGlue(length=10),
-    ]
-    _base_edges = _reorder(_base_domains, [3, 1, 0, 7, 5, 4])
-
-    @property
-    def domains(self):
-        e = self.edges
-        return [e[2], e[1], _STANDARD_LOOP, e[0], e[5], e[4], _STANDARD_LOOP, e[3]]
-
-    def to_scadnano(
-        self, design: scadnano.Design, helix: int, offset: int
-    ) -> scadnano.Strand:
-        s = design.strand(helix, offset + 31)
-        domiter = iter(self.domains)
-        _add_domain_from_glue(s, next(domiter), -1)
-        _add_domain_from_glue(s, next(domiter), -1)
-        _add_loopout_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), -1)
-        s.cross(s.current_helix + 1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_loopout_from_glue(s, next(domiter), -1)
-        _add_domain_from_glue(s, next(domiter), +1)
-
-        if self.name is not None:
-            s.with_name(self.name)
-
-        s.with_sequence(self.sequence.base_str)
-        return s.strand
-
-
 class TileFactory:
     types: dict[str, Type[Tile]]
 
@@ -582,22 +389,64 @@ class TileFactory:
 
 
 tile_factory = TileFactory()
-for ttype in [
-    Tile,
-    FlatishSingleTile10,
-    FlatishSingleTile9,
-    FlatishHDupleTile10_E,
-    FlatishHDupleTile9_E,
-    FlatishVDupleTile10_E2,
-    FlatishVDupleTile9_E2,
-]:
+for ttype in [Tile]:
     tile_factory.register(ttype)
 
 
 class TileList(UpdateListD[Tile]):
-
     def glues_from_tiles(self) -> GlueList:
         gl = GlueList()
         for tile in self:
             gl |= tile.edges
         return gl
+
+
+class DAOETile(Tile):
+    _edges: List[Glue]  # actually dxglue
+
+    def to_dict(self, refglues: set[str] = set()) -> dict[str, Any]:
+        d = super().to_dict(refglues=refglues)
+        d["type"] = self.__class__.__name__
+        return d
+
+
+class DAOESingle(SingleTile, DAOETile, metaclass=ABCMeta):
+    @property
+    @abstractmethod
+    def _endlocs(self) -> list[tuple[int, slice]]:
+        ...
+
+    @property
+    @abstractmethod
+    def _baseglues(self) -> List[DXGlue]:
+        ...
+
+
+class DAOESingle5p(DAOESingle):
+    _baseglues: ClassVar[List[DXGlue]] = [
+        DXGlue("TD", length=5),
+        DXGlue("TD", length=5),
+        DXGlue("DT", length=5),
+        DXGlue("DT", length=5),
+    ]
+    _gluelocs = [
+        (0, slice(0, 5)),
+        (3, slice(0, 5)),
+        (3, slice(21, None)),
+        (0, slice(21, None)),
+    ]
+
+
+class DAOESingle3p(DAOESingle):
+    _baseglues: ClassVar[List[DXGlue]] = [
+        DXGlue("DT", length=5),
+        DXGlue("DT", length=5),
+        DXGlue("TD", length=5),
+        DXGlue("TD", length=5),
+    ]
+    _gluelocs = [
+        (0, slice(21, None)),
+        (3, slice(21, None)),
+        (3, slice(0, 5)),
+        (0, slice(0, 5)),
+    ]

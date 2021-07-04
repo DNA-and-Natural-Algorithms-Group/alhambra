@@ -51,7 +51,7 @@ class TileSet(Serializable):
         d = {}
 
         allglues = self.glues | self.tiles.glues_from_tiles()
-        refglues = set(allglues.data.keys()) # FIXME
+        refglues = set(allglues.data.keys())  # FIXME
 
         if self.tiles:
             d["tiles"] = [t.to_dict(refglues=refglues) for t in self.tiles.aslist()]

@@ -190,7 +190,7 @@ class TileList(NamedList):
         for tile in self:
             tile.check_consistent()
 
-    def endlist(self, fail_immediate=True):
+    def glues_from_tiles(self, fail_immediate: bool = True) -> EndList:
         """Extract sticky ends from the list of tiles.
 
     Parameters
@@ -208,7 +208,7 @@ class TileList(NamedList):
 
         for tile in self:
             try:
-                endlist = endlist.merge(tile.endlist, in_place=True)
+                endlist.update(tile.endlist)
             except BaseException as e:
                 if fail_immediate:
                     raise ValueError(tile.name) from e

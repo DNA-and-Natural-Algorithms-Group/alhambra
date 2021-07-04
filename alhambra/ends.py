@@ -8,73 +8,68 @@ from . import seq
 import stickydesign as sd
 import stickydesign.stickydesign2 as sd2
 from .util import DEFAULT_SD2_MULTIMODEL_ENERGETICS, DEFAULT_MM_ENERGETICS_NAMES
+from ruamel.yaml.representer import RoundTripRepresenter
 
 
 class End(CommentedMap):
     """A class representing a single end of some type, with or without a sequence."""
     def __str__(self):
-        if self.fseq:
+        if self.fseq and self.seq and self.comp:
             if self.etype == 'DT':
                 s = self.seq[0]+'-'+self.seq[1:]
                 c = self.comp[0]+'-'+self.comp[1:]
             elif self.etype == 'TD':
                 s = self.seq[:-1]+'-'+self.seq[-1]
                 c = self.comp[:-1]+'-'+self.comp[-1]
+            else:
+                raise ValueError(self.etype)
             return "<end {} ({}{}): {} | {}>".format(
                 self['name'], self['type'], len(self.seq), s, c)
         else:
             return "<end {} ({})>".format(
                 self['name'], self.get('type', '?'))
 
-    def fseq():
+    @property
+    def fseq(self) -> str:
         """The fseq / full sequence of the End, including the adjacent base on the end
         and the complement of the adjacent base on the complement."""
-        def fget(self):
-            return self.get('fseq', None)
-    
-        def fset(self, value):
-            if self.get('fseq', None) and len(value) != len(self['fseq']):
-                warnings.warn("Changing end length")
-            self['fseq'] = value
-    
-        def fdel(self):
-            del self['fseq']
-        return locals()
-    fseq = property(**fseq())
+        return self.get('fseq', None)
 
-    def name():
+    @fseq.setter
+    def fseq(self, value):
+        if self.get('fseq', None) and len(value) != len(self['fseq']):
+            warnings.warn("Changing end length")
+        self['fseq'] = value
 
-        def fget(self):
-            return self['name']
-    
-        def fset(self, value):
-            self['name'] = value
-    
-        return locals()
-    name = property(**name())
+    @fseq.deleter
+    def fseq(self):
+        del self['fseq']
 
-    def use():
-        def fget(self):
-            return self.get('use', 0b0)
-    
-        def fset(self, value):
-            self['use'] = value
-    
-        return locals()
-    use = property(**use())
+    @property
+    def name(self) -> str:
+        return self['name']
 
-    def strength():
+    @name.setter
+    def name(self, value):
+        self['name'] = value
+
+    @property
+    def use(self) -> int:
+        return self.get('use', 0b0)
+
+    @use.setter
+    def use(self, value: int):
+        self['use'] = value
+
+    @property
+    def strength(self) -> int:
         """The strength of the End (as int)"""
-        def fget(self):
-            return self.get('strength', 1)
-    
-        def fset(self, value):
-            self['strength'] = value
-    
-        return locals()
-    strength = property(**strength())
-    
-    
+        return self.get('strength', 1)
+
+    @strength.setter
+    def strength(self, value: int):
+        self['strength'] = value
+
     @property
     def seq(self):
         """The end sequence (of just the end) of the End, as a string."""
@@ -100,7 +95,7 @@ class End(CommentedMap):
         """The end type of the end."""
         return self['type']
 
-    def merge(end1, end2):
+    def merge(self: End, end2: End) -> End:
         """Given ends end1 and end2, assuming they describe the same sticky
     end, merge them into a single end, combining information from each and
     enforcing that the two input ends consistently make a single output
@@ -108,7 +103,7 @@ class End(CommentedMap):
         """
         # Of things in the ends: fseq might need special care, everything
         # else just needs to match.
-        out = copy.deepcopy(end1)
+        out = copy.deepcopy(self)
         for i, v in end2.items():
             if i in out.keys() and i == 'fseq':
                 # we merge sequences
@@ -122,6 +117,7 @@ class End(CommentedMap):
             elif i not in out.keys():
                 out[i] = copy.deepcopy(v)
         return out
+
 
 class EndList(NamedList):
     """A list of End instances, which can be merged together, converted to
@@ -148,11 +144,11 @@ class EndList(NamedList):
         list of stickydesign.endarray
             the endarrays of ends in the system.
         """
-        
+
         endtypes = {x['type'] for x in self}
         endtypes = endtypes - {'hp', 'hairpin'}
         return list(sd.endarray([x['fseq'] for x in self if x['type'] == y], y)
-                     for y in endtypes)
+                    for y in endtypes)
 
     @property
     def _epas(self):
@@ -163,13 +159,11 @@ class EndList(NamedList):
         return list(epat[y]([x.fseq for x in self if x['type'] == y])
                     for y in endtypes)
 
-
     @property
     def _epans(self):
         """Return stickydesign2 EndPairArrays"""
         endtypes = {x['type'] for x in self}
         endtypes = endtypes - {'hp', 'hairpin'}
-        epat = {'TD': sd2.EndPairArrayTD, 'DT': sd2.EndPairArrayDT}
         return list(list([x.name for x in self if x['type'] == y])
                     for y in endtypes)
 
@@ -177,10 +171,40 @@ class EndList(NamedList):
                      modelnames=DEFAULT_MM_ENERGETICS_NAMES):
         import stickydesign.stickydesign2.plots as s2pl
         return s2pl._pandas_data(self._epas, self._epans, models, modelnames)
-    
-    def merge(endlist1, endlist2, fail_immediate=False,
-              in_place=False):
-        """\
+
+    def update(self: EndList, endlist2: EndList, fail_immediate=False):
+        # Check consistency of each NamedList
+        self.check_consistent()
+        try:
+            endlist2.check_consistent()
+        except AttributeError:
+            pass
+
+        exceptions = []
+        errors = []
+
+        for end in endlist2:
+            if end.name in self.keys():
+                try:
+                    self[end.name] = self[end.name].merge(end)
+                except ValueError as e:
+                    if fail_immediate:
+                        raise e
+                    else:
+                        exceptions.append(e)
+                        errors.append((end.name, self[end.name], end))
+            else:
+                self.append(copy.deepcopy(end))
+
+        if errors:
+            errorstring = " ".join([e[0] for e in errors])
+            raise ValueError("Errors merging {}".format(errorstring),
+                             exceptions, errors, self)
+
+        return self
+
+    def merge(self, endlist2: EndList, fail_immediate=False) -> EndList:
+        """
         Given end lists `endlist1` and `endlist2`, merge the two lists, using
         `merge_ends` to merge any named ends that are present in both.
 
@@ -203,7 +227,7 @@ class EndList(NamedList):
 
         Returns
         -------
-        
+
         EndList
             a merged list of sticky ends
 
@@ -218,43 +242,9 @@ class EndList(NamedList):
         [failed_name,failed_end1,failed_end2) ...],out)
 
         """
-        # Check consistency of each NamedList
-        endlist1.check_consistent()
-        try:
-            endlist2.check_consistent()
-        except AttributeError:
-            pass
-
-        if not in_place:
-            out = copy.deepcopy(endlist1)
-        else:
-            out = endlist1
-
-        exceptions = []
-        errors = []
-
-        for end in endlist2:
-            if end.name in out.keys():
-                try:
-                    out[end.name] = out[end.name].merge(end)
-                except ValueError as e:
-                    if fail_immediate:
-                        raise e
-                    else:
-                        exceptions.append(e)
-                        errors.append((end.name, out[end.name], end))
-            else:
-                out.append(copy.deepcopy(end))
-
-        if errors:
-            errorstring = " ".join([e[0] for e in errors])
-            raise ValueError("Errors merging {}".format(errorstring),
-                             exceptions, errors, out)
-
-        return out
+        return copy.deepcopy(self).update(endlist2)
 
 
-from ruamel.yaml.representer import RoundTripRepresenter
 RoundTripRepresenter.add_representer(EndList,
                                      RoundTripRepresenter.represent_list)
 RoundTripRepresenter.add_representer(End,
