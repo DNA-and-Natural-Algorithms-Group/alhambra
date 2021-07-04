@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 import time
-from typing import Generic, MutableMapping, Protocol, TypeVar
+from typing import Generic, MutableMapping, Protocol, TypeVar, Union
 
 from ruamel.yaml.comments import CommentedSeq
 from ruamel.yaml.representer import RoundTripRepresenter
@@ -66,7 +66,10 @@ def setup_multi(method, ncores=None):
         MAPPER = MPOBJECT.map
 
 
-class NamedList(CommentedSeq):
+T = TypeVar("T")
+
+
+class NamedList(CommentedSeq, Generic[T]):
     """A class for a list of dicts, where some dicts have a 'name' item
     which should be unique, but others might not.  Indexing works with
     either number or name.  Note that updating dicts may make the list
@@ -77,7 +80,7 @@ class NamedList(CommentedSeq):
     def __init__(self, x=[]):
         CommentedSeq.__init__(self, x)
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: Union[int, str]) -> T:
         if isinstance(i, str):
             r = [x for x in self if x.get("name", None) == i]
             if len(r) > 1:
@@ -110,7 +113,7 @@ class NamedList(CommentedSeq):
             badcounts = {n: v for n, v in namecounts.items() if v > 1}
             raise ValueError("Inconsistent NamedList.", badcounts)
 
-    def __setitem__(self, i, v):
+    def __setitem__(self, i: Union[str, int], v: T):
         if isinstance(i, str):
             r = [(ii, x) for ii, x in enumerate(self) if x.get("name", None) == i]
             if len(r) > 1:
@@ -122,7 +125,7 @@ class NamedList(CommentedSeq):
         else:
             CommentedSeq.__setitem__(self, i, v)
 
-    def __delitem__(self, i):
+    def __delitem__(self, i: Union[str, int]):
         if isinstance(i, str):
             r = [ii for ii, x in enumerate(self) if x.get("name", None) == i]
             if len(r) > 1:

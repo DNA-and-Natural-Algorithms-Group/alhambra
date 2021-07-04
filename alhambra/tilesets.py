@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Optional, Sequence
 import ruamel.yaml as yaml
 from ruamel.yaml.comments import CommentedMap
 from ruamel.yaml.representer import RoundTripRepresenter
@@ -10,7 +10,9 @@ import re
 import pkg_resources
 import os
 
-from .tiles import TileList
+import xgrow.tileset as xgt
+
+from .tiles import TileList, Tile
 from .ends import EndList
 
 from . import tilestructures
@@ -19,7 +21,7 @@ from . import util
 from . import seq
 from . import sensitivitynew as sensitivity
 
-# from . import fastreduce # FIXME
+from . import fastreduce
 
 # Need to disable this for now
 from peppercompiler import compiler as compiler
@@ -68,11 +70,11 @@ class TileSet(CommentedMap):
     def __init__(self, val={}):
         CommentedMap.__init__(self, val)
 
-        self["ends"] = EndList(self.get("ends", []))
+        self.ends = EndList(self.get("ends", []))
         self["tiles"] = TileList(self.get("tiles", []))
 
     @classmethod
-    def from_file(cls, name_or_stream, *args, **kwargs):
+    def from_file(cls, name_or_stream, *args, **kwargs) -> "TileSet":
         """
         Class method to create a TileSet from a file or stream.
 
@@ -146,37 +148,34 @@ class TileSet(CommentedMap):
         TileSet.tiles.endlist"""
         return self.ends.merge(self.tiles.glues_from_tiles())
 
-    def ends():
-        doc = """The EndList of specified ends in the TileSet (not including
-                 ends that are only in tiles.
+    @property
+    def ends(self) -> EndList:
+        """The EndList of specified ends in the TileSet (not including
+        ends that are only in tiles.
 
-                 Returns
-                 -------
+        Returns
+        -------
 
-                 EndList
+        EndList
 
-                 See Also
-                 --------
+        See Also
+        --------
 
-                 TileSet.allends
+        TileSet.allends
 
-                 TileSet.tiles.endlist"""
+        TileSet.tiles.endlist"""
+        return self["ends"]
 
-        def fget(self):
-            return self["ends"]
+    @ends.setter
+    def ends(self, value):
+        self["ends"] = value
 
-        def fset(self, value):
-            self["ends"] = value
-
-        def fdel(self):
-            del self["ends"]
-
-        return locals()
-
-    ends = property(**ends())
+    @ends.deleter
+    def ends(self):
+        del self["ends"]
 
     @property
-    def seed(self):
+    def seed(self) -> Optional[dict[str, Any]]:
         """Information on the tileset's seed"""
         return self.get("seed", None)
 
@@ -221,7 +220,7 @@ class TileSet(CommentedMap):
 
         base.write(filename)
 
-    def create_sequence_diagrams(tileset, filename, *options):
+    def create_sequence_diagrams(self, filename, *options):
         """Write sequence tile diagrams in SVG for the TileSet.
 
         Parameters
@@ -244,7 +243,7 @@ class TileSet(CommentedMap):
         )
         baseroot = base.getroot()
         pos = 150
-        for tile in tileset.tiles:
+        for tile in self.tiles:
             if tile.is_fake:
                 continue
             group = tile.sequence_diagram()
@@ -255,7 +254,7 @@ class TileSet(CommentedMap):
 
         base.write(filename)
 
-    def create_adapter_sequences(tileset):
+    def create_adapter_sequences(self) -> "TileSet":
         """Generate adapter sequences for the TileSet, returning a new
         TileSet with the generated sequences included.
 
@@ -265,16 +264,16 @@ class TileSet(CommentedMap):
         TileSet
            TileSet with generated adapter sequences.
         """
-        seedclass = seeds.seedtypes[tileset["seed"]["type"]]
+        seedclass = seeds.seedtypes[self.seed["type"]]
         if seedclass.needspepper:
             warnings.warn(
                 "This set must have adapter sequences created during\
      regular sequence design. You can ignore this if you just created sequences."
             )
-            return tileset
-        return seedclass.create_adapter_sequences(tileset)
+            return self
+        return seedclass.create_adapter_sequences(self)
 
-    def create_layout_diagrams(tileset, xgrowarray, filename, scale=1, *options):
+    def create_layout_diagrams(self, xgrowarray, filename, scale=1, *options):
         """Create an SVG layout diagram from xgrow output.
 
         This currently uses the abstract diagram bases to create the
@@ -309,11 +308,11 @@ class TileSet(CommentedMap):
             elif "array" in xgrowarray:
                 xgrowarray = xgrowarray["array"]["tiles"]
 
-        for tile in tileset.tiles:
-            group, n = tile.abstract_diagram(tileset)
+        for tile in self.tiles:
+            group, n = tile.abstract_diagram(self)
             svgtiles[tile.name] = group
 
-        tilelist = tileset.generate_xgrow_dict(perfect=True)["tiles"]
+        tilelist = self.generate_xgrow_dict(perfect=True)["tiles"]
         tilen = [None] + [x["name"] for x in tilelist]
         firstxi = 10000
         firstyi = 10000
@@ -392,11 +391,11 @@ class TileSet(CommentedMap):
         # ** WARN if merge is not equal to the endlist
         # ** WARN if endlist has ends not used in tilelist
         # * ADAPTERS / SEEDS
-        if "seed" in self.keys():
+        if self.seed:
             # ** seeds must be of understood type
-            assert self["seed"]["type"] in seeds.seedtypes.keys()
+            assert self.seed["type"] in seeds.seedtypes.keys()
             # ** adapter locations must be valid
-            sclass = seeds.seedtypes[self["seed"]["type"]]
+            sclass = seeds.seedtypes[self.seed["type"]]
 
             sclass.check_consistent(self)
 
@@ -494,25 +493,22 @@ class TileSet(CommentedMap):
             tileset = TileSet(tileset)
 
         tileset.check_consistent()
-        tileset_with_ends_randomorder, new_ends = stickyends.create_sequences(
-            tileset, energetics=energetics, **stickyopts
+        tileset_with_ends_randomorder, new_ends = tileset.create_end_sequences(
+            energetics=energetics, **stickyopts
         )
-        tileset_with_ends_ordered = stickyends.reorder(
-            tileset_with_ends_randomorder,
-            newends=new_ends,
-            energetics=energetics,
-            **reorderopts
+        tileset_with_ends_ordered = tileset_with_ends_randomorder.reorder_ends(
+            newends=new_ends, energetics=energetics, **reorderopts
         )
-        tileset_with_strands = create_strand_sequences(
-            tileset_with_ends_ordered, name, includes=includes, **coreopts
+        tileset_with_strands = tileset_with_ends_ordered.create_strand_sequences(
+            name, includes=includes, **coreopts
         )
 
         if "guards" in tileset_with_strands.keys():
-            tileset_with_strands = create_guard_strand_sequences(tileset_with_strands)
+            tileset_with_strands = tileset_with_strands.create_guard_strand_sequences()
 
         # FIXME: this is temporary, until we have a better way of deciding.
         if "createseqs" in tileset_with_strands["seed"].keys():
-            tileset_with_strands = create_adapter_sequences(tileset_with_strands)
+            tileset_with_strands = tileset_with_strands.create_adapter_sequences()
 
         if not keeptemp:
             os.remove(name + ".fix")
@@ -526,7 +522,7 @@ class TileSet(CommentedMap):
         return tileset_with_strands
 
     def create_end_sequences(
-        tileset,
+        self,
         method="default",
         energetics=None,
         trials=100,
@@ -597,7 +593,7 @@ class TileSet(CommentedMap):
         # Steps for doing this:
 
         # Create a copy of the tileset.
-        newtileset = tileset.copy()
+        newtileset = self.copy()
 
         # Build a list of ends from the endlist in the tileset.  Do this
         # by creating a NamedList, then merging them into it.
@@ -811,7 +807,7 @@ class TileSet(CommentedMap):
 
         # Ensure that the old and new sets have consistent end definitions,
         # and that the tile definitions still fit.
-        tileset.ends.merge(ends)
+        self.ends.merge(ends)
         newtileset.tiles.glues_from_tiles().merge(ends)
 
         newendnames = [e.name for e in newTD] + [e.name for e in newDT]
@@ -1263,7 +1259,7 @@ class TileSet(CommentedMap):
             assert oldtile.ends == tile.ends
 
         # Check that old end sequences remain
-        tileset["ends"].merge(tileset_with_strands["ends"])
+        tileset.ends.merge(tileset_with_strands.ends)
 
         return tileset_with_strands
 
@@ -1278,7 +1274,7 @@ class TileSet(CommentedMap):
         fixedfile = open(basename + ".fix", "w")
         # We first need to create a fixed sequence list/file for pepper.
         # Add fixed sticky end and adjacent tile sequences.
-        for end in tileset["ends"]:
+        for end in tileset.ends:
             if "fseq" not in end.keys():
                 continue
             seq = end["fseq"][1:-1]
@@ -1307,7 +1303,7 @@ class TileSet(CommentedMap):
             if tile.is_fake:
                 continue
             e = [[], []]
-            for end in tile["ends"]:
+            for end in tile.ends:
                 if end == "hp":
                     continue
                     # skip hairpins, etc that aren't designed by stickydesign
@@ -1416,14 +1412,13 @@ class TileSet(CommentedMap):
 
     def run_xgrow(
         self,
-        xgrowparams={},
         perfect=False,
         rotate=False,
         energetics=None,
-        ui=False,
         output=None,
         labelsonly=False,
         onlyreal=True,
+        **xgrowparams
     ):
         """Run Xgrow for the system.
 
@@ -1473,9 +1468,8 @@ class TileSet(CommentedMap):
                 labelsonly=labelsonly,
                 onlyreal=onlyreal,
             ),
-            extraparams=xgrowparams,
             outputopts=output,
-            ui=ui,
+            **xgrowparams
         )
 
     # FIXME: NEED TO IMPLEMENT THIS WITH BETTER CODE
@@ -1555,11 +1549,11 @@ class TileSet(CommentedMap):
                 to_use = ts["seed"]["adapters"]
 
             for tile in to_use:
-                newtile = {}
+                newtile: dict[str, Any] = {}
                 if "ends" in tile.keys():
                     newtile["edges"] = (
                         ["origami"]
-                        + [re.sub("/", "_c", x) for x in tile["ends"]]
+                        + [re.sub("/", "_c", x) for x in tile.ends]
                         + ["origami"]
                     )
                 else:
@@ -1569,7 +1563,7 @@ class TileSet(CommentedMap):
                         + [
                             re.sub("/", "_c", x)
                             for x in mtile.ends[
-                                seedtype._mimicadapt[mtile.structure.name]["ends"]
+                                seedtype._mimicadapt[mtile.structure.name].ends
                             ]
                         ]
                         + ["origami"]
@@ -1598,11 +1592,11 @@ class TileSet(CommentedMap):
             rotatedtiles = []
             for tile in ts.tiles:
                 # only include rotated tiles that aren't identical (handles symmetric tiles)
-                trot = [t for t in tile.rotations if (t["ends"] != tile["ends"])]
+                trot = [t for t in tile.rotations if (t.ends != tile.ends)]
                 td = []
                 for i, tr in enumerate(trot):
                     for j in range(0, i):
-                        if tr["ends"] == trot[j]["ends"]:
+                        if tr.ends == trot[j].ends:
                             td.append(i)
                             break
                 for i in reversed(td):
@@ -1616,8 +1610,8 @@ class TileSet(CommentedMap):
             if re.match("tile_daoe_3up", tile.structure.name) or re.match(
                 "tile_daoe_5up", tile.structure.name
             ):
-                newtile = {}
-                newtile["edges"] = [re.sub("/", "_c", x) for x in tile["ends"]]
+                newtile = Tile()
+                newtile["edges"] = [re.sub("/", "_c", x) for x in tile.ends]
                 if "name" in tile:
                     newtile["name"] = tile["name"]
                 if "conc" in tile:
@@ -1632,16 +1626,16 @@ class TileSet(CommentedMap):
                 newtiles.append(newtile)
 
             if re.match("tile_daoe_doublehoriz", tile.structure.name):
-                newtile1 = {}
-                newtile2 = {}
+                newtile1: dict[str, Any] = {}
+                newtile2: dict[str, Any] = {}
                 newtile1["edges"] = (
-                    [re.sub("/", "_c", x) for x in tile["ends"][0:1]]
+                    [re.sub("/", "_c", x) for x in tile.ends[0:1]]
                     + [tile["name"] + "_db"]
-                    + [re.sub("/", "_c", x) for x in tile["ends"][4:]]
+                    + [re.sub("/", "_c", x) for x in tile.ends[4:]]
                 )
-                newtile2["edges"] = [
-                    re.sub("/", "_c", x) for x in tile["ends"][1:4]
-                ] + [tile["name"] + "_db"]
+                newtile2["edges"] = [re.sub("/", "_c", x) for x in tile.ends[1:4]] + [
+                    tile["name"] + "_db"
+                ]
                 newtile1["name"] = tile["name"] + "_left"
                 newtile2["name"] = tile["name"] + "_right"
 
@@ -1669,12 +1663,12 @@ class TileSet(CommentedMap):
                 newtile1 = {}
                 newtile2 = {}
                 newtile1["edges"] = (
-                    [re.sub("/", "_c", x) for x in tile["ends"][0:2]]
+                    [re.sub("/", "_c", x) for x in tile.ends[0:2]]
                     + [tile["name"] + "_db"]
-                    + [re.sub("/", "_c", x) for x in tile["ends"][5:]]
+                    + [re.sub("/", "_c", x) for x in tile.ends[5:]]
                 )
                 newtile2["edges"] = [tile["name"] + "_db"] + [
-                    re.sub("/", "_c", x) for x in tile["ends"][2:5]
+                    re.sub("/", "_c", x) for x in tile.ends[2:5]
                 ]
                 newtile1["name"] = tile["name"] + "_top"
                 newtile2["name"] = tile["name"] + "_bottom"
@@ -1751,14 +1745,12 @@ class TileSet(CommentedMap):
 
         else:
             if "ends" not in ts.keys():
-                ts["ends"] = []
-            endsinlist = set(e["name"] for e in ts["ends"])
+                ts.ends = []
+            endsinlist = set(e["name"] for e in ts.ends)
             endsintiles = set()
             for tile in ts.tiles:
-                endsintiles.update(
-                    re.sub("/", "", e) for e in tile["ends"] if e != "hp"
-                )
-            for end in ts["ends"] + list({"name": e} for e in endsintiles):
+                endsintiles.update(re.sub("/", "", e) for e in tile.ends if e != "hp")
+            for end in ts.ends + list({"name": e} for e in endsintiles):
                 newends.append({"name": end["name"], "strength": 0})
                 newends.append({"name": end["name"] + "_c", "strength": 0})
                 gluelist.append([end["name"], end["name"] + "_c", 1.0])
@@ -1806,7 +1798,7 @@ class TileSet(CommentedMap):
             energetics_names = DEFAULT_MM_ENERGETICS_NAMES
 
         if "ends" in tileset.keys():
-            ends = tileset["ends"]
+            ends = tileset.ends
         else:
             ends = tileset
 

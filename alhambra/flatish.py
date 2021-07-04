@@ -1,7 +1,7 @@
 from __future__ import annotations
-from glue import Glue
+from .glue import Glue
 from .newseed import Seed, seed_factory
-from typing import ClassVar, Literal, Sequence, Type, TypeVar, Union, cast
+from typing import Any, ClassVar, Literal, Sequence, Type, TypeVar, Union, cast
 import scadnano
 from .newtile import (
     BaseSSTSingle,
@@ -25,14 +25,18 @@ __all__ = [
 ]
 
 
-def _add_domain_from_glue(s: scadnano.StrandBuilder, g: SSGlue, d: Literal[1, -1]):
+def _add_domain_from_glue(
+    s: scadnano.StrandBuilder[Any, Any], g: SSGlue, d: Literal[1, -1]
+):
     s.move(g.dna_length * d)
     if g.name is not None:
         s.with_domain_name(g.name)
     return s
 
 
-def _add_loopout_from_glue(s: scadnano.StrandBuilder, g: SSGlue, d: Literal[1, -1]):
+def _add_loopout_from_glue(
+    s: scadnano.StrandBuilder[Any, Any], g: SSGlue, d: Literal[1, -1]
+):
     s.loopout(s.current_helix + d, g.dna_length)
     if g.name is not None:
         s.with_domain_name(g.name)
@@ -45,7 +49,7 @@ _STANDARD_LOOP = SSGlue("loop", 8 * "T")
 T = TypeVar("T")
 
 
-def _reorder(seq: Sequence[T], ord: Sequence[int]) -> Sequence[T]:
+def _reorder(seq: Sequence[T], ord: Sequence[int]) -> list[T]:
     return [seq[i] for i in ord]
 
 
@@ -74,9 +78,9 @@ class FlatishVDupleTile10_E2(VDupleTile, BaseSSTile):
     _scadnano_offsets = ((-1, -11), (-1, 10), (0, 21), (2, 23), (2, 1), (1, -9))
 
     @property
-    def domains(self):
+    def domains(self) -> list[SSGlue]:
         e = self.edges
-        return [e[2], _STANDARD_LOOP, e[1], e[0], e[5], _STANDARD_LOOP, e[4], e[3]]
+        return [e[2], _STANDARD_LOOP, e[1], e[0], e[5], _STANDARD_LOOP, e[4], e[3]]  # type: ignore
 
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
@@ -88,10 +92,10 @@ class FlatishVDupleTile10_E2(VDupleTile, BaseSSTile):
         _add_domain_from_glue(s, next(domiter), -1)
         _add_domain_from_glue(s, next(domiter), -1)
         s.cross(s.current_helix + 1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_loopout_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
+        _add_domain_from_glue(s, next(domiter), 1)
+        _add_loopout_from_glue(s, next(domiter), 1)
+        _add_domain_from_glue(s, next(domiter), 1)
+        _add_domain_from_glue(s, next(domiter), 1)
 
         if self.name is not None:
             s.with_name(self.name)
@@ -129,10 +133,10 @@ class FlatishVDupleTile9_E2(VDupleTile, BaseSSTile):
         _add_domain_from_glue(s, next(domiter), -1)
         _add_domain_from_glue(s, next(domiter), -1)
         s.cross(s.current_helix + 1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_loopout_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
+        _add_domain_from_glue(s, next(domiter), 1)
+        _add_loopout_from_glue(s, next(domiter), 1)
+        _add_domain_from_glue(s, next(domiter), 1)
+        _add_domain_from_glue(s, next(domiter), 1)
 
         if self.name is not None:
             s.with_name(self.name)
@@ -142,7 +146,7 @@ class FlatishVDupleTile9_E2(VDupleTile, BaseSSTile):
 
 
 class FlatishHDupleTile9_E(HDupleTile, BaseSSTile):
-    _base_domains: ClassVar[list[SSGlue]] = [
+    _base_domains: list[SSGlue] = [
         SSGlue(length=11),
         SSGlue(length=10),
         _STANDARD_LOOP,
@@ -166,13 +170,13 @@ class FlatishHDupleTile9_E(HDupleTile, BaseSSTile):
         domiter = iter(self.domains)
         _add_domain_from_glue(s, next(domiter), -1)
         _add_domain_from_glue(s, next(domiter), -1)
-        _add_loopout_from_glue(s, next(domiter), +1)
+        _add_loopout_from_glue(s, next(domiter), 1)
         _add_domain_from_glue(s, next(domiter), -1)
         s.cross(s.current_helix + 1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
+        _add_domain_from_glue(s, next(domiter), 1)
+        _add_domain_from_glue(s, next(domiter), 1)
         _add_loopout_from_glue(s, next(domiter), -1)
-        _add_domain_from_glue(s, next(domiter), +1)
+        _add_domain_from_glue(s, next(domiter), 1)
 
         if self.name is not None:
             s.with_name(self.name)
@@ -206,13 +210,13 @@ class FlatishHDupleTile10_E(HDupleTile, BaseSSTile):
         domiter = iter(self.domains)
         _add_domain_from_glue(s, next(domiter), -1)
         _add_domain_from_glue(s, next(domiter), -1)
-        _add_loopout_from_glue(s, next(domiter), +1)
+        _add_loopout_from_glue(s, next(domiter), 1)
         _add_domain_from_glue(s, next(domiter), -1)
         s.cross(s.current_helix + 1)
-        _add_domain_from_glue(s, next(domiter), +1)
-        _add_domain_from_glue(s, next(domiter), +1)
+        _add_domain_from_glue(s, next(domiter), 1)
+        _add_domain_from_glue(s, next(domiter), 1)
         _add_loopout_from_glue(s, next(domiter), -1)
-        _add_domain_from_glue(s, next(domiter), +1)
+        _add_domain_from_glue(s, next(domiter), 1)
 
         if self.name is not None:
             s.with_name(self.name)
@@ -232,6 +236,9 @@ for ttype in [
     tile_factory.register(ttype)
 
 
+T_FHS9 = TypeVar("T_FHS9", bound="FlatishHSeed9")
+
+
 class FlatishHSeed9(Seed):
     adapter_tiles: list[tuple[Glue | str, FlatishSingleTile9]]
 
@@ -239,7 +246,7 @@ class FlatishHSeed9(Seed):
         self.adapter_tiles = list(adapter_tiles)
 
     def to_dict(self, glues_as_refs=False) -> dict:
-        d = {}
+        d: dict[str, Any] = {}
         d["adapter_tiles"] = [
             [str(g), t.to_dict()] for g, t in self.adapter_tiles  # FIXME
         ]
@@ -247,7 +254,7 @@ class FlatishHSeed9(Seed):
         return d
 
     @classmethod
-    def from_dict(cls: Type[T], d: dict) -> T:
+    def from_dict(cls: Type[T_FHS9], d: dict) -> T_FHS9:
         return cls([(g, Tile.from_dict(t)) for g, t in d["adapter_tiles"]])
 
     def to_xgrow(

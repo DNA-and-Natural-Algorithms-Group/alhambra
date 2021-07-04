@@ -56,9 +56,11 @@ def revcomp(seq_str: str) -> str:
     return "".join(_WC_WITH_PUNC[c] for c in reversed(seq_str))
 
 
-def is_null(seq_str: str, _check_seq: bool = True) -> bool:
+def is_null(seq_str: str | None, _check_seq: bool = True) -> bool:
     """Return True if a sequence consists only of Ns (or Xs), or is empty.
     Return False otherwise."""
+    if seq_str is None:
+        return True
     if len(seq_str) == 0:
         return True
     if _check_seq:
@@ -66,10 +68,12 @@ def is_null(seq_str: str, _check_seq: bool = True) -> bool:
     return set(seq_str.lower()).issubset("nx" + _PUNC)
 
 
-def is_definite(seq_str: str, _check_seq: bool = True) -> bool:
+def is_definite(seq_str: str | None, _check_seq: bool = True) -> bool:
     """Return True if a sequence consists only of defined bases.  Return
     False otherwise.  If blank, return False.
     """
+    if seq_str is None:
+        return False
     if len(seq_str) == 0:
         return False
     if _check_seq:

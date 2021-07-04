@@ -453,7 +453,7 @@ class tile_daoe_3up_2h(tile_daoe_3up):
         ]
 
 
-class tile_daoe_doublehoriz(tile_daoe):
+class tile_doublehoriz(object):
     _dirs = (0, 0, 1, 2, 2, 3)
     _abase = "tile_daoe_doublehoriz"
     _a_endlocs = ["northwest", "northeast", "east", "southeast", "southwest", "west"]
@@ -461,12 +461,20 @@ class tile_daoe_doublehoriz(tile_daoe):
     double = "h"
 
 
-class tile_daoe_doublevert(tile_daoe):
+class tile_doublevert(object):
     _dirs = (0, 1, 1, 2, 3, 3)
     _abase = "tile_daoe_doublevert"
     _a_endlocs = ["north", "northeast", "southeast", "south", "southwest", "northwest"]
     singleends = ((0, 1, None, 5), (None, 2, 3, 4))
     double = "v"
+
+
+class tile_daoe_doublehoriz(tile_doublehoriz, tile_daoe):
+    ...
+
+
+class tile_daoe_doublevert(tile_doublevert, tile_daoe):
+    ...
 
 
 class tile_daoe_doublehoriz_35up(tile_daoe_doublehoriz):

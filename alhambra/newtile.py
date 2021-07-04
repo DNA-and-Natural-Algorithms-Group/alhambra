@@ -130,8 +130,8 @@ class Tile:
     def edge_directions(self) -> List[D]:
         raise NotImplementedError
 
-    def set_edge(self, i: int, e: Glue):
-        self._edges[i] = e
+    def set_edge(self, i: int, glue: Glue):
+        self._edges[i] = glue
 
     def copy(self: T) -> T:
         return copy.deepcopy(self)
@@ -185,7 +185,7 @@ class Tile:
     def from_dict(d: dict[str, Any]) -> Tile:
         return tile_factory.from_dict(d)
 
-    def to_xgrow(self, self_complementary_glues=False) -> xgt.Tile:
+    def to_xgrow(self, self_complementary_glues: bool = False) -> xgt.Tile:
         if self._edges and not self_complementary_glues:
             edges = [g.ident() for g in self._edges]
         elif self._edges:
@@ -314,7 +314,7 @@ class BaseSSTile(Tile):
         self._edges[i] = self._base_edges[i].merge(glue)
 
     def __repr__(self) -> str:
-        s = []
+        s: list[str] = []
         s.append(self.__class__.__name__)
         s.append("(")
         if self.name is not None:

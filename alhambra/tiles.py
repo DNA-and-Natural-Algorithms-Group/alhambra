@@ -183,7 +183,7 @@ with getstructure) or a TileStructure.  Get always returns the TileStructure."""
         return c
 
 
-class TileList(NamedList):
+class TileList(NamedList[Tile]):
     """A list of `Tile` instances, taking into account tile names."""
 
     def __init__(self, val=[]):

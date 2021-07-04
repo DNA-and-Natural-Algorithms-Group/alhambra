@@ -163,10 +163,10 @@ class FTileList:
 RSEL = (2, 3, 0, 1)
 FTI = (1, 0, 1, 0)
 FTS = (
-    tilestructures.tile_daoe_doublevert(),
-    tilestructures.tile_daoe_doublehoriz(),
-    tilestructures.tile_daoe_doublevert(),
-    tilestructures.tile_daoe_doublehoriz(),
+    tilestructures.tile_doublevert(),
+    tilestructures.tile_doublehoriz(),
+    tilestructures.tile_doublevert(),
+    tilestructures.tile_doublehoriz(),
 )
 
 
