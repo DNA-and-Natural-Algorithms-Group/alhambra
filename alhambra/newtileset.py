@@ -1,9 +1,10 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from alhambra.classes import Serializable
 from typing import Any, Iterable, Optional, Type, TypeVar
 from .newtile import Tile, TileList
 from .glue import Glue, GlueList
-from .newseed import Seed
+from .newseed import Seed, seed_factory
 import xgrow.tileset as xgt
 import xgrow
 import copy
@@ -11,6 +12,7 @@ import copy
 T = TypeVar("T")
 
 
+@dataclass(init=False)
 class TileSet(Serializable):
     tiles: TileList
     glues: GlueList
@@ -21,7 +23,7 @@ class TileSet(Serializable):
         xgrow_tileset = self.to_xgrow()
         return xgrow.run(xgrow_tileset, *args, **kwargs)
 
-    def to_xgrow(self, self_complementary_glues=True) -> xgt.TileSet:
+    def to_xgrow(self, self_complementary_glues: bool = True) -> xgt.TileSet:
 
         tiles = [t.to_xgrow(self_complementary_glues) for t in self.tiles]
 
@@ -45,7 +47,7 @@ class TileSet(Serializable):
         return xgrow_tileset
 
     def to_xgrow_dict(self) -> dict:
-        return self.to_xgrow.to_dict()
+        return self.to_xgrow().to_dict()
 
     def to_dict(self) -> dict:
         d = {}
@@ -69,7 +71,7 @@ class TileSet(Serializable):
         ts.tiles = TileList(Tile.from_dict(x) for x in d.get("tiles", []))
         ts.glues = GlueList(Glue.from_dict(x) for x in d.get("glues", []))
         if "seed" in d:
-            ts.seed = Seed.from_dict(d["seed"])
+            ts.seed = seed_factory.from_dict(d["seed"])
         if "params" in d:
             ts.params = copy.deepcopy(d["params"])
         return ts

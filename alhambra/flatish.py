@@ -43,7 +43,7 @@ def _add_loopout_from_glue(
     return s
 
 
-_STANDARD_LOOP = SSGlue("loop", 8 * "T")
+_STANDARD_LOOP = SSGlue(sequence=8 * "T")
 
 
 T = TypeVar("T")
@@ -56,11 +56,13 @@ def _reorder(seq: Sequence[T], ord: Sequence[int]) -> list[T]:
 class FlatishSingleTile9(BaseSSTSingle):
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [12, 9, 11, 10]]
     _scadnano_offsets = ((-1, -12), (-1, 9), (1, 11), (1, -10))
+    _scadnano_5p_offset = (0, 21)
 
 
 class FlatishSingleTile10(BaseSSTSingle):
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [11, 10, 12, 9]]
     _scadnano_offsets = ((-1, -11), (-1, 10), (1, 12), (1, -9))
+    _scadnano_5p_offset = (0, 21)
 
 
 class FlatishVDupleTile10_E2(VDupleTile, BaseSSTile):
@@ -76,16 +78,17 @@ class FlatishVDupleTile10_E2(VDupleTile, BaseSSTile):
     ]
     _base_edges = _reorder(_base_domains, [3, 2, 0, 7, 6, 4])
     _scadnano_offsets = ((-1, -11), (-1, 10), (0, 21), (2, 23), (2, 1), (1, -9))
+    _scadnano_5p_offset = (0, 33)
 
     @property
     def domains(self) -> list[SSGlue]:
         e = self.edges
-        return [e[2], _STANDARD_LOOP, e[1], e[0], e[5], _STANDARD_LOOP, e[4], e[3]]  # type: ignore
+        return [e[2], _STANDARD_LOOP.copy(), e[1], e[0], e[5], _STANDARD_LOOP.copy(), e[4], e[3]]  # type: ignore
 
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
     ) -> scadnano.Strand:
-        s = design.strand(helix, offset + 33)
+        s = design.strand(helix, offset + self._scadnano_5p_offset[1])
         domiter = iter(self.domains)
         _add_domain_from_glue(s, next(domiter), -1)
         _add_loopout_from_glue(s, next(domiter), -1)
@@ -117,16 +120,26 @@ class FlatishVDupleTile9_E2(VDupleTile, BaseSSTile):
     ]
     _base_edges = _reorder(_base_domains, [3, 2, 0, 7, 6, 4])
     _scadnano_offsets = ((-1, -12), (-1, 9), (0, 21), (2, 23), (2, 2), (1, -10))
+    _scadnano_5p_offset = (0, 32)
 
     @property
     def domains(self):
         e = self.edges
-        return [e[2], _STANDARD_LOOP, e[1], e[0], e[5], _STANDARD_LOOP, e[4], e[3]]
+        return [
+            e[2],
+            _STANDARD_LOOP.copy(),
+            e[1],
+            e[0],
+            e[5],
+            _STANDARD_LOOP.copy(),
+            e[4],
+            e[3],
+        ]
 
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
     ) -> scadnano.Strand:
-        s = design.strand(helix, offset + 32)
+        s = design.strand(helix, offset + self._scadnano_5p_offset[1])
         domiter = iter(self.domains)
         _add_domain_from_glue(s, next(domiter), -1)
         _add_loopout_from_glue(s, next(domiter), -1)
@@ -157,16 +170,26 @@ class FlatishHDupleTile9_E(HDupleTile, BaseSSTile):
         SSGlue(length=9),
     ]
     _base_edges = _reorder(_base_domains, [3, 1, 0, 7, 5, 4])
+    _scadnano_5p_offset = (0, 30)
 
     @property
     def domains(self):
         e = self.edges
-        return [e[2], e[1], _STANDARD_LOOP, e[0], e[5], e[4], _STANDARD_LOOP, e[3]]
+        return [
+            e[2],
+            e[1],
+            _STANDARD_LOOP.copy(),
+            e[0],
+            e[5],
+            e[4],
+            _STANDARD_LOOP.copy(),
+            e[3],
+        ]
 
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
     ) -> scadnano.Strand:
-        s = design.strand(helix, offset + 30)
+        s = design.strand(helix, offset + self._scadnano_5p_offset[1])
         domiter = iter(self.domains)
         _add_domain_from_glue(s, next(domiter), -1)
         _add_domain_from_glue(s, next(domiter), -1)
@@ -197,16 +220,28 @@ class FlatishHDupleTile10_E(HDupleTile, BaseSSTile):
         SSGlue(length=10),
     ]
     _base_edges = _reorder(_base_domains, [3, 1, 0, 7, 5, 4])
+    _scadnano_5p_offset = (0, 31)
 
     @property
     def domains(self):
         e = self.edges
-        return [e[2], e[1], _STANDARD_LOOP, e[0], e[5], e[4], _STANDARD_LOOP, e[3]]
+        return [
+            e[2],
+            e[1],
+            _STANDARD_LOOP.copy(),
+            e[0],
+            e[5],
+            e[4],
+            _STANDARD_LOOP.copy(),
+            e[3],
+        ]
 
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
     ) -> scadnano.Strand:
-        s = design.strand(helix, offset + 31)
+        s = design.strand(
+            helix + self._scadnano_5p_offset[0], offset + self._scadnano_5p_offset[1]
+        )
         domiter = iter(self.domains)
         _add_domain_from_glue(s, next(domiter), -1)
         _add_domain_from_glue(s, next(domiter), -1)

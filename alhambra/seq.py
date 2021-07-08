@@ -206,6 +206,12 @@ class Seq:
     def n_ambiguous(self) -> int:
         return count_ambiguous(self.seq_str, _check_seq=False)
 
+    def __add__(self, other: Seq | str) -> Seq:
+        return Seq(self.seq_str + Seq(other).seq_str)
+
+    def __radd__(self, other: Seq | str) -> Seq:
+        return Seq(Seq(other).seq_str + self.seq_str)
+
     def merge(self, other: Union[Seq, str, None]) -> Seq:
         if other is None:
             return self

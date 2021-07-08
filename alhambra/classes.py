@@ -129,7 +129,7 @@ class UpdateListD(Generic[T_NMI]):
         if k in self.data:
             self.data[k] = self.data[k].merge(v)
         else:
-            self.data[k] = v.copy()
+            self.data[k] = v
 
     def __iter__(self):
         return self.data.values().__iter__()

@@ -1,9 +1,12 @@
 from __future__ import annotations
+from dataclasses import dataclass
 
 from .seq import Seq
 from typing import (
     Any,
+    ClassVar,
     Generic,
+    Iterable,
     List,
     Literal,
     Mapping,
@@ -19,6 +22,7 @@ import copy
 from enum import Enum
 import collections.abc
 from .classes import UpdateListD
+
 
 T = TypeVar("T")
 
@@ -57,11 +61,16 @@ def merge_items(a: Optional[T], b: Optional[T]) -> Optional[T]:
 
 
 class Glue:
-    name: Optional[str]
-    note: Optional[str]
-    use: Optional[Use]
-    abstractstrength: Optional[int]
-    __slots__ = ("name", "use", "note", "abstractstrength")
+    name: Optional[str] = None
+    note: Optional[str] = None
+    use: Optional[Use] = None
+    abstractstrength: Optional[int] = None
+    _fields: ClassVar[tuple[tuple[str, str], ...]] = (
+        ("name", "name"),
+        ("note", "note"),
+        ("use", "use"),
+        ("abstractstrength", "abstractstrength"),
+    )
 
     def __init__(
         self,
@@ -70,6 +79,8 @@ class Glue:
         use: Optional[Use] = None,
         abstractstrength: Optional[int] = None,
     ):
+        if name and name[-1] == "/":
+            name = name[:-1] + "*"
         self.name = name
         self.note = note
         self.use = use
@@ -81,6 +92,13 @@ class Glue:
                 self.name = self.name[:-1]
             else:
                 self.name = self.name + "*"
+
+    def __repr__(self) -> str:
+        p = []
+        for f, d in type(self)._fields:
+            if (v := getattr(self, f)) != getattr(type(self), f, None):
+                p.append(f"{d}={repr(v)}")
+        return type(self).__name__ + "(" + ", ".join(p) + ")"
 
     def copy(self: T) -> T:
         return copy.copy(self)
@@ -105,6 +123,12 @@ class Glue:
         c._into_complement()
         return c
 
+    def update(self, other: Glue):
+        if type(other) == Glue:
+            self.name = merge_items(self.name, other.name)
+        else:
+            raise NotImplementedError
+
     def merge(self, other: Glue) -> Glue:
         if type(other) == Glue:
             return Glue(merge_items(self.name, other.name))
@@ -113,6 +137,9 @@ class Glue:
 
     def __or__(self, other: Glue) -> Glue:
         return self.merge(other)
+
+    def __ior__(self, other: Glue):
+        self.update(other)
 
     def __ror__(self, other: Glue) -> Glue:
         return self.merge(other)
@@ -152,7 +179,9 @@ glue_factory = GlueFactory()
 
 class SSGlue(Glue):
     _sequence: Seq
-    __slots__ = ("_sequence",)
+    _fields: ClassVar[tuple[tuple[str, str], ...]] = Glue._fields + (
+        ("_sequence", "sequence"),
+    )
 
     def __init__(
         self,
@@ -214,19 +243,23 @@ class SSGlue(Glue):
             self.sequence = self.sequence.revcomp
         super()._into_complement()
 
-    def merge(self, other: Glue | str) -> SSGlue:
+    def update(self, other: Glue | str):
         if isinstance(other, str):
             other = Glue(other)
         if type(other) is Glue:  # a base glue: we can merge
-            new = self.copy()
-            new.name = merge_items(self.name, other.name)
-            return new
+            self.name = merge_items(self.name, other.name)
         elif type(other) is SSGlue:
             newname = merge_items(self.name, other.name)
             newseq = self.sequence | other.sequence
-            return SSGlue(newname, sequence=newseq)
+            self.name = newname
+            self.sequence = newseq
         else:
-            return NotImplemented
+            raise NotImplementedError
+
+    def merge(self, other: Glue | str) -> SSGlue:
+        new = self.copy()
+        new.update(other)
+        return new
 
     def __repr__(self):
         s = f"SSGlue({repr(self.name)}, {self.dna_length}"
@@ -257,16 +290,54 @@ glue_factory.register(SSGlue)
 
 class DXGlue(Glue):
     etype: Literal["TD", "DT"]
-    _fullseq: Optional[Seq]
-    __slots__ = ("etype", "_fullseq")
+    _fullseq: Seq
+    _fields: ClassVar[tuple[tuple[str, str], ...]] = Glue._fields + (
+        ("etype", "etype"),
+        ("_fullseq", "fullseq"),
+    )
 
     def _into_complement(self):
         if self.fullseq is not None:
             self.fullseq = self.fullseq.revcomp
         super()._into_complement()
 
-    def __init__(self, etype, name=None, length=None, sequence=None, fullseq=None):
-        raise NotImplementedError
+    def __init__(
+        self,
+        etype,
+        name=None,
+        length=None,
+        sequence: Seq | str | None = None,
+        fullseq=None,
+        use=None,
+        abstractstrength=None,
+        note=None,
+    ):
+        super().__init__(name, note, use, abstractstrength)
+        self.etype = etype
+        trial_fseq: Optional[Seq] = None
+        if length:
+            trial_fseq = Seq("N" * (length + 1))
+        if sequence:
+            if self.etype == "TD":
+                if trial_fseq:
+                    trial_fseq |= "N" + sequence
+                else:
+                    trial_fseq = Seq("N" + sequence)
+            elif self.etype == "DT":
+                if trial_fseq:
+                    trial_fseq |= sequence + "N"
+                else:
+                    trial_fseq = Seq(sequence + "N")
+            else:
+                raise ValueError(etype)
+        if fullseq:
+            if trial_fseq:
+                trial_fseq |= fullseq
+            else:
+                trial_fseq = Seq(fullseq)
+        if trial_fseq is None:
+            raise ValueError("Must have a least some information.")
+        self._fullseq = trial_fseq
 
     @property
     def fseq(self) -> Optional[str]:

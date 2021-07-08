@@ -1,9 +1,11 @@
 from __future__ import annotations
-from abc import ABCMeta, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 import copy
 from dataclasses import dataclass
 from typing import (
     Any,
+    Generic,
+    Iterable,
     List,
     MutableSequence,
     Optional,
@@ -92,6 +94,7 @@ class EdgeView(MutableSequence[Glue]):
         return self._edges.__str__()
 
 
+@dataclass(init=False)
 class Tile:
     name: Optional[str]
     _edges: List[Glue]
@@ -102,13 +105,15 @@ class Tile:
 
     def __init__(
         self,
-        edges: List[Glue],
+        edges: Optional[Iterable[Glue | str]] = None,
         name: Optional[str] = None,
         color: Optional[Color] = None,
         stoic: Optional[float] = None,
         note: Optional[str] = None,
     ) -> None:
-        self._edges = edges
+        if edges is None:
+            raise ValueError
+        self._edges = [(g if isinstance(g, Glue) else Glue(g)) for g in edges]
         self.name = name
         self.color = color
         self.stoic = stoic
@@ -183,6 +188,17 @@ class Tile:
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> Tile:
+        # FIXME: legacy conversion, changs input
+        if "ends" in d:
+            assert "edges" not in d
+            d["edges"] = d["ends"]
+            del d["ends"]
+        if "extra" in d:
+            if "type" in d:
+                d["type"] += "_" + d["extra"]
+            else:
+                raise ValueError
+
         return tile_factory.from_dict(d)
 
     def to_xgrow(self, self_complementary_glues: bool = False) -> xgt.Tile:
@@ -198,6 +214,31 @@ class Tile:
             stoic=self.stoic,
             color=self.color,
         )
+
+
+class TileSupportingScadnano(ABC, Tile):
+    @property
+    @abstractmethod
+    def _scadnano_5p_offset(self) -> tuple[int, int]:
+        ...
+
+    @abstractmethod
+    def to_scadnano(
+        self, design: scadnano.Design, helix: int, offset: int
+    ) -> scadnano.Strand:
+        ...
+
+    @abstractmethod
+    def __init__(
+        self,
+        edges: Optional[Iterable[Glue | str]] = None,
+        name: Optional[str] = None,
+        color: Optional[Color] = None,
+        stoic: Optional[float] = None,
+        note: Optional[str] = None,
+        domains: Optional[Iterable[SSGlue]] = None,
+    ) -> None:
+        ...
 
 
 class SingleTile(Tile):
@@ -232,7 +273,7 @@ class HDupleTile(Tile):
         return [D.N, D.N, D.E, D.S, D.S, D.W]
 
 
-class BaseSSTile(Tile):
+class BaseSSTile(TileSupportingScadnano):
     _edges: List[Glue]  # actually SSGlue
 
     def to_dict(self, refglues: set[str] = set()) -> dict[str, Any]:
@@ -267,11 +308,11 @@ class BaseSSTile(Tile):
         color: Optional[Color] = None,
         stoic: Optional[float] = None,
         sequence: Optional[Seq] = None,
+        domains: Optional[List[SSGlue]] = None,
         note: Optional[str] = None,
     ):
-        super().__init__([], name, color, stoic, note)
-
-        if edges is None and sequence is None:
+        Tile.__init__(self, edges=[], name=name, color=color, stoic=stoic, note=note)
+        if edges is None and sequence is None and domains is None:
             raise ValueError
         if edges is not None:
             self._edges = [bd.merge(g) for bd, g in zip(self._base_edges, edges)]
@@ -280,6 +321,11 @@ class BaseSSTile(Tile):
         if sequence is not None:
             self.sequence | sequence
             self.sequence = sequence
+        elif domains is not None:
+            if len(self.domains) != len(domains):
+                raise ValueError
+            for td, nd in zip(self.domains, domains):
+                td |= nd
 
     @property
     def sequence(self) -> Seq:
@@ -387,13 +433,51 @@ class TileFactory:
         else:
             return Tile(**d)
 
+    def from_scadnano(
+        self,
+        d: "scadnano.Strand" | Iterable["scadnano.Strand"],
+        return_position: bool = False,
+    ):
+        if isinstance(d, Iterable):
+            raise NotImplementedError
+
+        name = d.name
+        domain_names = [x.name for x in d.domains]
+        domain_seqs = [x.dna_sequence() for x in d.domains]
+        domains = [
+            SSGlue(name=n, sequence=s) for n, s in zip(domain_names, domain_seqs)
+        ]
+
+        t = None
+        for tiletype in self.types.values():
+            try:
+                if issubclass(tiletype, TileSupportingScadnano):
+                    t = tiletype(name=name, domains=domains)  # type: ignore
+                    break
+            except ValueError:
+                continue
+        if t:
+            if not return_position:
+                return t
+            else:
+                domain = d.first_domain()
+                return t, (
+                    domain.helix - t._scadnano_5p_offset[0],
+                    domain.offset_5p() - t._scadnano_5p_offset[1],
+                )
+        else:
+            raise ValueError
+
 
 tile_factory = TileFactory()
 for ttype in [Tile]:
     tile_factory.register(ttype)
 
 
-class TileList(UpdateListD[Tile]):
+SomeTile = TypeVar("SomeTile", bound=Tile)
+
+
+class TileList(Generic[SomeTile], UpdateListD[SomeTile]):
     def glues_from_tiles(self) -> GlueList:
         gl = GlueList()
         for tile in self:
@@ -411,15 +495,16 @@ class DAOETile(Tile):
 
 
 class DAOESingle(SingleTile, DAOETile, metaclass=ABCMeta):
-    @property
-    @abstractmethod
-    def _endlocs(self) -> list[tuple[int, slice]]:
-        ...
+    # @property
+    # @abstractmethod
+    # def _endlocs(self) -> list[tuple[int, slice]]:
+    #    ...
 
-    @property
-    @abstractmethod
-    def _baseglues(self) -> List[DXGlue]:
-        ...
+    # @property
+    # @abstractmethod
+    # def _baseglues(self) -> List[DXGlue]:
+    #    ...
+    ...
 
 
 class DAOESingle5p(DAOESingle):
@@ -437,6 +522,9 @@ class DAOESingle5p(DAOESingle):
     ]
 
 
+tile_factory.register(DAOESingle5p, "tile_daoe_5up")
+
+
 class DAOESingle3p(DAOESingle):
     _baseglues: ClassVar[List[DXGlue]] = [
         DXGlue("DT", length=5),
@@ -450,3 +538,30 @@ class DAOESingle3p(DAOESingle):
         (3, slice(0, 5)),
         (0, slice(0, 5)),
     ]
+
+
+tile_factory.register(DAOESingle3p, "tile_daoe_3up")
+
+
+class DAOEHDouble3p(HDupleTile, DAOETile):
+    ...
+
+
+tile_factory.register(DAOEHDouble3p)
+tile_factory.register(DAOEHDouble3p, "tile_daoe_doublehoriz_35up")
+
+
+class DAOEHDouble5p(HDupleTile, DAOETile):
+    ...
+
+
+class DAOEVDouble3p(VDupleTile, DAOETile):
+    ...
+
+
+tile_factory.register(DAOEVDouble3p)
+tile_factory.register(DAOEVDouble3p, "tile_daoe_doublevert_35up")
+
+
+class DAOEVDouble5p(VDupleTile, DAOETile):
+    ...
