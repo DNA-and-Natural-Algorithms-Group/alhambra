@@ -60,6 +60,7 @@ def merge_items(a: Optional[T], b: Optional[T]) -> Optional[T]:
         return a
 
 
+@dataclass(init=False)
 class Glue:
     name: Optional[str] = None
     note: Optional[str] = None
@@ -177,6 +178,7 @@ class GlueFactory:
 glue_factory = GlueFactory()
 
 
+@dataclass(init=False)
 class SSGlue(Glue):
     _sequence: Seq
     _fields: ClassVar[tuple[tuple[str, str], ...]] = Glue._fields + (
@@ -407,9 +409,12 @@ class DXGlue(Glue):
             return "<dxend {} ({})>".format(self.name, getattr(self, "etype", "?"))
 
 
-class GlueList(UpdateListD[Glue]):
+SomeGlue = TypeVar("SomeGlue", bound=Glue)
+
+
+class GlueList(Generic[SomeGlue], UpdateListD[SomeGlue]):
     def merge_complements(self):
-        newitems: dict[str, Glue] = {}
+        newitems: dict[str, SomeGlue] = {}
         for v in self:
             c = v.complement
             kc = c.ident()
@@ -419,7 +424,7 @@ class GlueList(UpdateListD[Glue]):
                 newitems[kc] = c
         self.data.update(newitems)
 
-    def merge_glue(self, g: Glue) -> Glue:
+    def merge_glue(self, g: SomeGlue) -> SomeGlue:
         if g.ident() in self.data:
             g = self.data[g.ident()].merge(g)
         c = g.complement
@@ -427,7 +432,7 @@ class GlueList(UpdateListD[Glue]):
             g = self.data[c.ident()].complement.merge(g)
         return g
 
-    def merge_glue_and_update_list(self, g: Glue) -> Glue:
+    def merge_glue_and_update_list(self, g: SomeGlue) -> SomeGlue:
         kg = g.ident()
         if kg in self.data:
             g = self.data[kg].merge(g)

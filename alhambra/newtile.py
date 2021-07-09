@@ -7,6 +7,7 @@ from typing import (
     Generic,
     Iterable,
     List,
+    Literal,
     MutableSequence,
     Optional,
     ClassVar,
@@ -20,8 +21,11 @@ from typing import (
     overload,
 )
 from enum import Enum
-import scadnano
 
+try:
+    import scadnano
+except ImportError:
+    pass
 from .seq import Seq
 from .glue import DXGlue, Glue, SSGlue, GlueList
 from .classes import UpdateListD
@@ -433,11 +437,27 @@ class TileFactory:
         else:
             return Tile(**d)
 
+    @overload
+    def from_scadnano(
+        self,
+        d: "scadnano.Strand" | Iterable["scadnano.Strand"],
+        return_position: Literal[True],
+    ) -> tuple[TileSupportingScadnano, tuple[int, int]]:
+        ...
+
+    @overload
+    def from_scadnano(
+        self,
+        d: "scadnano.Strand" | Iterable["scadnano.Strand"],
+        return_position: Literal[False],
+    ) -> TileSupportingScadnano:
+        ...
+
     def from_scadnano(
         self,
         d: "scadnano.Strand" | Iterable["scadnano.Strand"],
         return_position: bool = False,
-    ):
+    ) -> tuple[TileSupportingScadnano, tuple[int, int]] | TileSupportingScadnano:
         if isinstance(d, Iterable):
             raise NotImplementedError
 
@@ -463,7 +483,7 @@ class TileFactory:
                 domain = d.first_domain()
                 return t, (
                     domain.helix - t._scadnano_5p_offset[0],
-                    domain.offset_5p() - t._scadnano_5p_offset[1],
+                    domain.offset_5p() - t._scadnano_5p_offset[1] + 1,
                 )
         else:
             raise ValueError
