@@ -2,6 +2,7 @@ from __future__ import annotations
 from abc import ABC, ABCMeta, abstractmethod
 import copy
 from dataclasses import dataclass
+import drawSvg as draw
 from typing import (
     Any,
     Generic,
@@ -21,6 +22,7 @@ from typing import (
     overload,
 )
 from enum import Enum
+from xgrow.xcolors import xcolors
 
 try:
     import scadnano
@@ -155,6 +157,10 @@ class Tile:
         else:
             raise ValueError
 
+    @property
+    def is_fake(self) -> bool:
+        return False
+
     def merge(self, other) -> Tile:
         raise NotImplementedError
 
@@ -219,6 +225,11 @@ class Tile:
             color=self.color,
         )
 
+    def abstract_diagram(
+        self, tileset=None, draw_names: bool = True, draw_glues: bool = True
+    ) -> draw.Group:
+        raise NotImplementedError
+
 
 class TileSupportingScadnano(ABC, Tile):
     @property
@@ -248,11 +259,40 @@ class TileSupportingScadnano(ABC, Tile):
 class SingleTile(Tile):
     """A tile with N, E, S and W edges."""
 
-    ...
-
     @property
     def edge_directions(self) -> List[D]:
         return [D.N, D.E, D.S, D.W]
+
+    def abstract_diagram(
+        self, tileset=None, draw_names: bool = True, draw_glues: bool = True
+    ) -> draw.Group:
+        if (self.color is not None) and (self.color in xcolors):
+            color = xcolors[self.color]
+        else:
+            color = "gray"
+        box = draw.Rectangle(0, 0, 10, 10, fill=color, stroke="black")
+
+        elems: list[draw.DrawingBasicElement] = [box]
+
+        if draw_glues:
+            gluetext_locs = [(5, 1, 0), (9, 5, 90), (5, 9, 0), (1, 5, -90)]
+            for loc, glue in zip(gluetext_locs, self.edges):
+                elems.append(
+                    draw.Text(
+                        glue.ident(),
+                        0.8,
+                        loc[0],
+                        loc[1],
+                        center=True,
+                        transform=f"rotate({loc[2]},{loc[0]},{loc[1]})",
+                    )
+                )
+
+        if self.name is not None and draw_names:
+            nametext = draw.Text(self.name, 1.2, 5, 5, center=True, valign="center")
+            elems.append(nametext)
+
+        return draw.Group(elems)
 
 
 class VDupleTile(Tile):
@@ -265,6 +305,52 @@ class VDupleTile(Tile):
     def edge_directions(self) -> List[D]:
         return [D.N, D.E, D.E, D.S, D.W, D.W]
 
+    def abstract_diagram(
+        self, tileset=None, draw_names: bool = True, draw_glues: bool = True
+    ) -> draw.Group:
+        if (self.color is not None) and (self.color in xcolors):
+            color = xcolors[self.color]
+        else:
+            color = "gray"
+        box = draw.Rectangle(0, 0, 10, 20, fill=color, stroke="black")
+
+        elems: list[draw.DrawingBasicElement] = [box]
+
+        if draw_glues:
+            gluetext_locs = [
+                (5, 1, 0),
+                (9, 5, 90),
+                (9, 15, 90),
+                (5, 19, 0),
+                (1, 55, -90),
+                (1, 5, -90),
+            ]
+            for loc, glue in zip(gluetext_locs, self.edges):
+                elems.append(
+                    draw.Text(
+                        glue.ident(),
+                        0.8,
+                        loc[0],
+                        loc[1],
+                        center=True,
+                        transform=f"rotate({loc[2]},{loc[0]},{loc[1]})",
+                    )
+                )
+
+        if self.name is not None and draw_names:
+            nametext = draw.Text(
+                self.name,
+                1.2,
+                5,
+                10,
+                transform="rotate(-90, 5, 10)",
+                center=True,
+                valign="center",
+            )
+            elems.append(nametext)
+
+        return draw.Group(elems)
+
 
 class HDupleTile(Tile):
     def to_xgrow(self, self_complementary_glues: bool = False) -> xgt.Tile:
@@ -275,6 +361,51 @@ class HDupleTile(Tile):
     @property
     def edge_directions(self) -> List[D]:
         return [D.N, D.N, D.E, D.S, D.S, D.W]
+
+    def abstract_diagram(
+        self, tileset=None, draw_names: bool = True, draw_glues: bool = True
+    ) -> draw.Group:
+        if (self.color is not None) and (self.color in xcolors):
+            color = xcolors[self.color]
+        else:
+            color = "rgb(150,150,150)"
+        box = draw.Rectangle(0, 0, 20, 10, fill=color, stroke="black")
+
+        elems: list[draw.DrawingBasicElement] = [box]
+
+        if draw_glues:
+            gluetext_locs = [
+                (5, 1, 0),
+                (10, 1, 0),
+                (19, 5, 90),
+                (15, 9, 0),
+                (5, 9, 0),
+                (1, 5, -90),
+            ]
+            for loc, glue in zip(gluetext_locs, self.edges):
+                elems.append(
+                    draw.Text(
+                        glue.ident(),
+                        0.8,
+                        loc[0],
+                        loc[1],
+                        center=True,
+                        transform=f"rotate({loc[2]},{loc[0]},{loc[1]})",
+                    )
+                )
+
+        if self.name is not None and draw_names:
+            nametext = draw.Text(
+                self.name,
+                1.2,
+                10,
+                5,
+                center=True,
+                valign="center",
+            )
+            elems.append(nametext)
+
+        return draw.Group(elems)
 
 
 class BaseSSTile(TileSupportingScadnano):

@@ -70,7 +70,7 @@ class TileSet(CommentedMap):
     def __init__(self, val={}):
         CommentedMap.__init__(self, val)
 
-        self.ends = EndList(self.get("ends", []))
+        self.glues = EndList(self.get("ends", []))
         self["tiles"] = TileList(self.get("tiles", []))
 
     @classmethod
@@ -112,72 +112,6 @@ class TileSet(CommentedMap):
             return yaml.round_trip_dump(self, open(name_or_stream, "w"))
         else:
             return yaml.round_trip_dump(self, name_or_stream)
-
-    @property
-    def tiles(self) -> TileList:
-        """Property returning the `TileList` of tiles in the TileSet
-
-        Returns
-        -------
-
-        TileList
-            Tiles listed in the tileset.
-        """
-        return self["tiles"]
-
-    @tiles.setter
-    def tiles(self, val: TileList):
-        if isinstance(val, TileList):
-            self["tiles"] = val
-        else:
-            self["tiles"] = TileList(val)
-
-    @property
-    def allends(self) -> EndList:
-        """All ends in the system, both from ends and tiles.
-
-        Returns
-        -------
-
-        EndList
-
-        See Also
-        --------
-
-        TileSet.ends
-        TileSet.tiles.endlist"""
-        return self.ends.merge(self.tiles.glues_from_tiles())
-
-    @property
-    def ends(self) -> EndList:
-        """The EndList of specified ends in the TileSet (not including
-        ends that are only in tiles.
-
-        Returns
-        -------
-
-        EndList
-
-        See Also
-        --------
-
-        TileSet.allends
-
-        TileSet.tiles.endlist"""
-        return self["ends"]
-
-    @ends.setter
-    def ends(self, value):
-        self["ends"] = value
-
-    @ends.deleter
-    def ends(self):
-        del self["ends"]
-
-    @property
-    def seed(self) -> Optional[dict[str, Any]]:
-        """Information on the tileset's seed"""
-        return self.get("seed", None)
 
     def create_sequence_diagrams(self, filename, *options):
         """Write sequence tile diagrams in SVG for the TileSet.
@@ -249,96 +183,6 @@ class TileSet(CommentedMap):
         """
         return [y for x in self.tiles if not x.is_fake for y in x.orderableseqs]
 
-    def check_consistent(self):
-        """Check the TileSet consistency.
-
-        Check a number of properties of the TileSet for consistency.
-        In particular:
-
-           * Each tile must pass Tile.check_consistent()
-           * TileSet.ends and TileSet.tiles.endlist() must not contain conflicting
-             ends or end sequences.
-           * If there is a seed:
-               * It must be of an understood type (it must be in seeds.seedtypes)
-               * All adapter locations must be valid.
-               * The seed must pass its check_consistent and check_sequence.
-        """
-        # * END LIST The end list itself must be consistent.
-        # ** Each end must be of understood type
-        # ** Each end must have a valid sequence or no sequence
-        # ** There must be no more than one instance of each name
-        # ** WARN if there are ends with no namecounts
-        # * TILE LIST
-        # ** each tile must be of understood type (must parse)
-        # ** ends in the tile list must be consistent (must merge)
-        # ** there must be no more than one tile with each name
-        self.tiles.check_consistent()
-        endsfromtiles = self.tiles.glues_from_tiles()
-
-        # ** WARN if any end that appears does not have a complement used or vice versa
-        # ** WARN if there are tiles with no name
-        # * TILE + END
-        # ** The tile and end lists must merge validly
-        # (checks sequences, adjacents, types, complements)
-        self.ends.merge(endsfromtiles)
-
-        # ** WARN if tilelist has end references not in ends
-        # ** WARN if merge is not equal to the endlist
-        # ** WARN if endlist has ends not used in tilelist
-        # * ADAPTERS / SEEDS
-        if self.seed:
-            # ** seeds must be of understood type
-            assert self.seed["type"] in seeds.seedtypes.keys()
-            # ** adapter locations must be valid
-            sclass = seeds.seedtypes[self.seed["type"]]
-
-            sclass.check_consistent(self)
-
-            sclass.check_sequence(self)
-            # ** each adapter must have no sequence or a consistent sequence
-            # *** the RH strand must match the associated tile
-            # *** the ends in the sequence must match the ends in the endlist
-            # *** the LH sequence must be validly binding to both RH and
-            #     origami
-            # ** each adapter must have valid definition, which means for us:
-            # *** if both tile mimic and ends are specified, they must match
-
-    def summary(self):
-        """Returns a short summary line about the TileSet"""
-        self.check_consistent()
-        info = {
-            "ntiles": len(self.tiles),
-            "nrt": len([x for x in self.tiles if not x.is_fake]),
-            "nft": len([x for x in self.tiles if x.is_fake]),
-            "nends": len(self.ends),
-            "ntends": len(self.tiles.glues_from_tiles()),
-            "tns": " ".join(x.name for x in self.tiles if x.name),
-            "ens": " ".join(x.name for x in self.ends if x.name),
-            "name": " {}".format(self["info"]["name"])
-            if ("info" in self.keys() and "name" in self["info"].keys())
-            else "",
-        }
-        tun = sum(1 for x in self.tiles if "name" not in x.keys())
-        if tun > 0:
-            info["tns"] += " ({} unnamed)".format(tun)
-        eun = sum(1 for x in self.ends if "name" not in x.keys())
-        if eun > 0:
-            info["ens"] += " ({} unnamed)".format(eun)
-        if info["nft"] > 0:
-            info["nft"] = " (+ {} fake)".format(info["nft"])
-        else:
-            info["nft"] = ""
-        return "TileSet{name}: {nrt} tiles{nft}, {nends} ends, {ntends} ends in tiles.\nTiles: {tns}\nEnds:  {ens}".format(
-            **info
-        )
-
-    def __str__(self):
-        return self.summary()
-
-    def copy(self):
-        """Return a full (deep) copy of the TileSet"""
-        return copy.deepcopy(self)
-
     def dump(self, stream):
         """Dump the tileset into a stream in YAML format.
 
@@ -351,7 +195,7 @@ class TileSet(CommentedMap):
 
         return yaml.round_trip_dump(self, stream)
 
-    def design_set(
+    def dx_design_set(
         tileset,
         name="tsd_temp",
         includes=[pkg_resources.resource_filename(__name__, "peppercomps-j1")],
@@ -388,7 +232,7 @@ class TileSet(CommentedMap):
             tileset = TileSet(tileset)
 
         tileset.check_consistent()
-        tileset_with_ends_randomorder, new_ends = tileset.create_end_sequences(
+        tileset_with_ends_randomorder, new_ends = tileset.dx_create_end_sequences(
             energetics=energetics, **stickyopts
         )
         tileset_with_ends_ordered = tileset_with_ends_randomorder.reorder_ends(
@@ -399,7 +243,9 @@ class TileSet(CommentedMap):
         )
 
         if "guards" in tileset_with_strands.keys():
-            tileset_with_strands = tileset_with_strands.create_guard_strand_sequences()
+            tileset_with_strands = (
+                tileset_with_strands.dx_create_guard_strand_sequences()
+            )
 
         # FIXME: this is temporary, until we have a better way of deciding.
         if "createseqs" in tileset_with_strands["seed"].keys():
@@ -416,7 +262,7 @@ class TileSet(CommentedMap):
         tileset_with_strands.check_consistent()
         return tileset_with_strands
 
-    def create_end_sequences(
+    def dx_create_end_sequences(
         self,
         method="default",
         energetics=None,
@@ -494,8 +340,8 @@ class TileSet(CommentedMap):
         # by creating a NamedList, then merging them into it.
         ends = EndList()
 
-        if newtileset.ends:
-            ends.update(newtileset.ends, fail_immediate=False)
+        if newtileset.glues:
+            ends.update(newtileset.glues, fail_immediate=False)
 
         # This is the endlist from the tiles themselves.
         if newtileset.tiles:  # maybe you just want ends?
@@ -702,14 +548,14 @@ class TileSet(CommentedMap):
 
         # Ensure that the old and new sets have consistent end definitions,
         # and that the tile definitions still fit.
-        self.ends.merge(ends)
+        self.glues.merge(ends)
         newtileset.tiles.glues_from_tiles().merge(ends)
 
         newendnames = [e.name for e in newTD] + [e.name for e in newDT]
         info["newends"] = newendnames
 
         # Apply new sequences to tile system.
-        newtileset.ends = ends
+        newtileset.glues = ends
         if "info" not in newtileset.keys():
             newtileset["info"] = {}
         if "end_design" not in newtileset["info"].keys():
@@ -764,7 +610,7 @@ class TileSet(CommentedMap):
 
         # Now take that new state, and apply it to the new tileset.
         seqs = reordersys.slowseqs(newstate[0])
-        for end in tset.ends:
+        for end in tset.glues:
             if end.etype in ["DT", "TD"]:
                 eloc = reordersys.enlocs[end["name"]]
                 end.fseq = seqs[eloc[1]].tolist()[eloc[0]]
@@ -778,9 +624,9 @@ class TileSet(CommentedMap):
         # Ensure that only ends in newends moved: that all others remain mergeable:
         if newends:
             old_ends_from_new_set = EndList(
-                end for end in tset.ends if end["name"] not in newends
+                end for end in tset.glues if end["name"] not in newends
             )
-            tileset.ends.merge(old_ends_from_new_set)
+            tileset.glues.merge(old_ends_from_new_set)
 
         # Ensure system consistency
         tset.check_consistent()
@@ -895,7 +741,7 @@ class TileSet(CommentedMap):
         tileset_with_strands = newtileset._load_pepper_output_files(basename)
 
         # Ensure:
-        tileset.ends.merge(
+        tileset.glues.merge(
             tileset_with_strands.tiles.glues_from_tiles()
         )  # Ends still fit
         for tile in tileset_with_strands.tiles:
@@ -906,7 +752,7 @@ class TileSet(CommentedMap):
             assert oldtile.ends == tile.ends
 
         # Check that old end sequences remain
-        tileset.ends.merge(tileset_with_strands.ends)
+        tileset.glues.merge(tileset_with_strands.glues)
 
         return tileset_with_strands
 
@@ -921,7 +767,7 @@ class TileSet(CommentedMap):
         fixedfile = open(basename + ".fix", "w")
         # We first need to create a fixed sequence list/file for pepper.
         # Add fixed sticky end and adjacent tile sequences.
-        for end in tileset.ends:
+        for end in tileset.glues:
             if "fseq" not in end.keys():
                 continue
             seq = end["fseq"][1:-1]
@@ -1015,7 +861,7 @@ class TileSet(CommentedMap):
 
         return tset
 
-    def create_guard_strand_sequences(tileset):
+    def dx_create_guard_strand_sequences(tileset):
         """Given a tileset dictionary with core tile sequences,
         create guard strand sequences.
 
@@ -1033,7 +879,7 @@ class TileSet(CommentedMap):
 
         return tset
 
-    def create_adapter_sequence_diagrams(tileset, filename, *options):
+    def dx_create_adapter_sequence_diagrams(tileset, filename, *options):
         """Create sequence diagrams of adapters for the seed."""
         from lxml import etree
         import pkg_resources
@@ -1350,7 +1196,7 @@ class TileSet(CommentedMap):
 
         # check for whether we need to use perfect:
         if not perfect:
-            for end in ts.allends:
+            for end in ts.allglues:
                 if (end["type"] in {"TD", "DT"}) and "fseq" not in end.keys():
                     perfect = True
                     SELOGGER.warn(
@@ -1363,7 +1209,7 @@ class TileSet(CommentedMap):
         gluelist = []
         if not perfect:
             glueends = {"DT": [], "TD": []}
-            for end in ts.allends:
+            for end in ts.allglues:
                 newends.append({"name": end["name"], "strength": 0})
                 newends.append({"name": end["name"] + "_c", "strength": 0})
                 if (end["type"] == "TD") or (end["type"] == "DT"):
@@ -1392,12 +1238,12 @@ class TileSet(CommentedMap):
 
         else:
             if "ends" not in ts.keys():
-                ts.ends = []
-            endsinlist = set(e["name"] for e in ts.ends)
+                ts.glues = []
+            endsinlist = set(e["name"] for e in ts.glues)
             endsintiles = set()
             for tile in ts.tiles:
                 endsintiles.update(re.sub("/", "", e) for e in tile.ends if e != "hp")
-            for end in ts.ends + list({"name": e} for e in endsintiles):
+            for end in ts.glues + list({"name": e} for e in endsintiles):
                 newends.append({"name": end["name"], "strength": 0})
                 newends.append({"name": end["name"] + "_c", "strength": 0})
                 gluelist.append([end["name"], end["name"] + "_c", 1.0])
@@ -1416,309 +1262,3 @@ class TileSet(CommentedMap):
         sts = {"tiles": newtiles, "bonds": newends, "xgrowargs": xga, "glues": gluelist}
 
         return sts
-
-    def plot_se_hists(
-        tileset, all_energetics=None, energetics_names=None, title=None, **kwargs
-    ):
-        """Plot histograms of sticky end energies, using stickydesign.plots.hist_multi.
-
-        Parameters
-        ----------
-
-        all_energetics : list of Energetics
-            A list of energetics to use.  Defaults to DEFAULT_MULTIMODEL_ENERGETICS.
-
-        energetics_names : list of str
-            Names for energetics in all_energetics.  Defaults to DEFAULT_MM_ENERGETICS_NAMES.
-
-        title : str
-            Title for the plot.
-
-        **kwargs
-            kwargs passed to stickydesign.plots.hist_multi.
-
-        """
-        if all_energetics is None:
-            all_energetics = DEFAULT_MULTIMODEL_ENERGETICS
-
-        if energetics_names is None:
-            energetics_names = DEFAULT_MM_ENERGETICS_NAMES
-
-        if "ends" in tileset.keys():
-            ends = tileset.ends
-        else:
-            ends = tileset
-
-        if title is None:
-            # FIXME
-            title = "Title"
-
-        td = sd.endarray([x["fseq"] for x in ends if x["type"] == "TD"], "TD")
-
-        dt = sd.endarray([x["fseq"] for x in ends if x["type"] == "DT"], "DT")
-        import stickydesign.plots as sdplots
-
-        return sdplots.hist_multi(
-            [td, dt], all_energetics, energetics_names, title, **kwargs
-        )
-
-    def plot_se_lv(
-        self,
-        all_energetics=None,
-        energetics_names=None,
-        pltcmd=None,
-        title=None,
-        **kwargs
-    ):
-        """
-        Uses an LV plot to show sticky end energetics.
-        """
-
-        if all_energetics is None:
-            all_energetics = DEFAULT_MULTIMODEL_ENERGETICS
-
-        if energetics_names is None:
-            energetics_names = DEFAULT_MM_ENERGETICS_NAMES
-        import stickydesign.plots as sdplots
-
-        m, s = sdplots._multi_data_pandas(
-            self.ends.to_endarrays(), all_energetics, energetics_names
-        )
-
-        import seaborn as sns
-        import matplotlib.pyplot as plt
-
-        if pltcmd is None:
-            pltcmd = sns.lvplot
-
-        pltcmd(data=m, **kwargs)
-        pltcmd(data=s, marker="x", **kwargs)
-        if title:
-            plt.title(title)
-        plt.ylabel("Energy (kcal/mol)")
-
-    def plot_adjacent_regions(tileset, energetics=None):
-        """
-        Plots the strength of double-stranded regions in DX tiles adjacent
-        to sticky ends.
-
-        Parameters
-        ----------
-
-        energetics : stickydesign.Energetics
-            The energetics to use.  Defaults to DEFAULT_REGION_ENERGETICS.
-        """
-
-        if energetics is None:
-            energetics = DEFAULT_REGION_ENERGETICS
-
-        regions = [t.structure._side_bound_regions(t) for t in tileset.tiles]
-        regions = [[x.lower() for x in y] for y in regions]
-        allregions = sum(regions, [])
-        count = [[Counter(x) for x in y] for y in regions]
-        gc_count = [[x["g"] + x["c"] for x in c] for c in count]
-        gc_counts = sum(gc_count, [])
-
-        ens = energetics.matching_uniform(sd.endarray(allregions, "DT"))
-        from matplotlib import pylab
-
-        pylab.figure(figsize=(10, 4))
-        pylab.subplot(121)
-        pylab.hist(
-            gc_counts, bins=np.arange(min(gc_counts) - 0.5, max(gc_counts) + 0.5)
-        )
-        pylab.title("G/C pairs in arms")
-        pylab.ylabel("# of 8 nt arms")
-        pylab.xlabel("# of G/C pairs")
-        pylab.subplot(122)
-        pylab.hist(ens)
-        pylab.title("ΔG, T=33, no coaxparams/danglecorr")
-        pylab.ylabel("# of 8 nt regions")
-        pylab.xlabel("stickydesign ΔG")
-        pylab.suptitle("8 nt end-adjacent region strengths")
-
-    def plot_side_strands(tileset, energetics=None):
-        """
-        Plots the binding strength of short strands in DX tiles.
-
-        Parameters
-        ----------
-
-        energetics : stickydesign.Energetics
-            The energetics to use.  Defaults to DEFAULT_REGION_ENERGETICS.
-        """
-
-        if energetics is None:
-            energetics = DEFAULT_REGION_ENERGETICS
-
-        regions = [t.structure._short_bound_full(t) for t in tileset.tiles]
-        regions = [[x.lower() for x in y] for y in regions]
-        allregions = sum(regions, [])
-        count = [[Counter(x) for x in y] for y in regions]
-        gc_count = [[x["g"] + x["c"] for x in c] for c in count]
-        gc_counts = sum(gc_count, [])
-
-        ens = energetics.matching_uniform(sd.endarray(allregions, "DT"))
-        from matplotlib import pylab
-
-        pylab.figure(figsize=(10, 4))
-        pylab.subplot(121)
-        pylab.hist(
-            gc_counts, bins=np.arange(min(gc_counts) - 0.5, max(gc_counts) + 0.5)
-        )
-        pylab.title("G/C pairs in arms")
-        pylab.ylabel("# of 8 nt arms")
-        pylab.xlabel("# of G/C pairs")
-        pylab.subplot(122)
-        pylab.hist(ens)
-        pylab.title("ΔG, T=33, no coaxparams/danglecorr")
-        pylab.ylabel("# of 16 nt regions")
-        pylab.xlabel("stickydesign ΔG")
-        pylab.suptitle("16 nt arm region strengths")
-
-    def reduce_tiles(
-        tileset,
-        preserve=["s22", "ld"],
-        tries=10,
-        threads=1,
-        returntype="equiv",
-        best=1,
-        key=None,
-        initequiv=None,
-    ):
-        """
-        Apply tile reduction algorithm, preserving some set of properties, and using a multiprocessing pool.
-
-        Parameters
-        ----------
-        tileset: TileSet
-            The system to reduce.
-
-        preserve: a tuple or list of strings, optional
-            The properties to preserve.  Currently supported are 's1' for first order
-            sensitivity, 's2' for second order sensitivity, 's22' for two-by-two sensitivity,
-            'ld' for small lattice defects, and 'gs' for glue sense (to avoid spurious
-            hierarchical attachment).  Default is currently ('s22', 'ld').
-
-        tries: int, optional
-            The number of times to run the algorithm.
-
-        threads: int, optional
-            The number of threads to use (using multiprocessing).
-
-        returntype: 'TileSet' or 'equiv' (default 'equiv')
-            The type of object to return.  If 'equiv', returns an array of glue equivalences
-            (or list, if best != 1) that can be applied to the tileset with apply_equiv, or used
-            for further reduction.  If 'TileSet', return a TileSet with the equiv already applied
-            (or a list, if best != 1).
-
-        best: int or None, optional
-            The number of systems to return.  If 1, the result will be returned
-            directly; if k > 1, a list will be returned of the best k results (per cmp);
-            if k = None, a list of *all* results will be returned, sorted by cmp. (default 1)
-
-        key: function (ts, equiv1, equiv2) -> some number/comparable
-            A comparison function for equivs, to sort the results. FIXME: documentation needed.
-            Default (if None) here is to sort by number of glues in the system, regardless of number
-            of tiles.
-
-        initequiv: equiv
-            If provided, the equivalence array to start from.  If None, start from the tileset without
-            any merged glues.
-
-        Returns
-        -------
-        reduced: single TileSet or equiv, or list
-            The reduced system/systems
-        """
-        return fastreduce.reduce_tiles(
-            tileset, preserve, tries, threads, returntype, best, key, initequiv
-        )
-
-    def reduce_ends(
-        tileset,
-        preserve=["s22", "ld"],
-        tries=10,
-        threads=1,
-        returntype="equiv",
-        best=1,
-        key=None,
-        initequiv=None,
-    ):
-        """
-        Apply end reduction algorithm, preserving some set of properties, and using a multiprocessing pool.
-
-        Parameters
-        ----------
-        tileset: TileSet
-            The system to reduce.
-
-        preserve: a tuple or list of strings, optional
-            The properties to preserve.  Currently supported are 's1' for first order
-            sensitivity, 's2' for second order sensitivity, 's22' for two-by-two sensitivity,
-            'ld' for small lattice defects, and 'gs' for glue sense (to avoid spurious
-            hierarchical attachment).  Default is currently ('s22', 'ld').
-
-        tries: int, optional
-            The number of times to run the algorithm.
-
-        threads: int, optional
-            The number of threads to use (using multiprocessing).
-
-        returntype: 'TileSet' or 'equiv' (default 'equiv')
-            The type of object to return.  If 'equiv', returns an array of glue equivalences
-            (or list, if best != 1) that can be applied to the tileset with apply_equiv, or used
-            for further reduction.  If 'TileSet', return a TileSet with the equiv already applied
-            (or a list, if best != 1).
-
-        best: int or None, optional
-            The number of systems to return.  If 1, the result will be returned
-            directly; if k > 1, a list will be returned of the best k results (per cmp);
-            if k = None, a list of *all* results will be returned, sorted by cmp. (default 1)
-
-        key: function (ts, equiv1, equiv2) -> some number/comparable
-            A comparison function for equivs, to sort the results. FIXME: documentation needed.
-            Default (if None) here is to sort by number of glues in the system, regardless of number
-            of tiles.
-
-        initequiv: equiv
-            If provided, the equivalence array to start from.  If None, start from the tileset without
-            any merged glues.
-
-        Returns
-        -------
-        reduced: single TileSet or equiv, or list
-            The reduced system/systems
-        """
-        return fastreduce.reduce_ends(
-            tileset, preserve, tries, threads, returntype, best, key, initequiv
-        )
-
-    def latticedefects(ts, direction="e", depth=2, pp=True, rotate=False):
-        """
-        Calculate and show possible small lattice defect configurations.
-        """
-        from . import latticedefect
-
-        return latticedefect.latticedefects(
-            ts, direction=direction, depth=depth, pp=pp, rotate=rotate
-        )
-
-    def apply_equiv(ts, equiv):
-        """
-        Apply an equivalence array (from, eg, `TileSet.reduce_ends` or `TileSet.reduce_tiles`).
-
-        Parameters
-        ----------
-        equiv : ndarray
-            An equivalence array, *for this tileset*, generated by reduction functions.
-
-        Returns
-        -------
-        TileSet
-            A tileset with the equivalence array, and thus the reduction, applied.
-        """
-        return fastreduce._FastTileSet(ts).applyequiv(ts, equiv)
-
-
-RoundTripRepresenter.add_representer(TileSet, RoundTripRepresenter.represent_dict)

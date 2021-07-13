@@ -174,61 +174,6 @@ class tile_daoe(TileStructure):
         assert "label" not in tile.keys()
         return [("{}-{}".format(tile.name, i + 1), seq) for i, seq in enumerate(seqs)]
 
-    def abstract_diagram(self, tile, tileset=None):
-        tilediagfile = etree.parse(
-            pkg_resources.resource_stream(
-                __name__,
-                os.path.join("seqdiagrambases", "{}-abstract.svg".format(self._abase)),
-            )
-        )
-
-        tilediag = tilediagfile.getroot().find("./*[@class='tile']")
-
-        c = tile.get("color", None)
-        if c is None:
-            fill = None
-        elif c[0] == "#":
-            fill = c
-        else:
-            fill = xcolors.get(c, None)
-
-        tilediag.find("./*[@class='tilename']").text = tile.name
-        if fill:
-            s = cssutils.parseStyle(
-                tilediag.find("./*[@class='tilerect']").attrib["style"]
-            )
-            s["fill"] = fill
-            tilediag.find("./*[@class='tilerect']").attrib["style"] = s.cssText
-        if self._orient:
-            tilediag.find("./*[@class='type_sw']").text = self._orient[0]
-            tilediag.find("./*[@class='type_ne']").text = self._orient[1]
-
-        if not tileset:
-            return (tilediag, 1)
-
-        for endn, loc in zip(tile.ends, self._a_endlocs):
-            if endn in tileset.ends.keys():
-                end = tileset.ends[endn]
-            elif endn[:-1] in tileset["ends"].keys() and endn[-1] == "/":
-                end = tileset["ends"][endn[:-1]]
-            else:
-                end = None
-            tilediag.find("./*[@class='endname_{}']".format(loc)).text = endn
-            if end and ("color" in end.keys()):
-                ec = tilediag.find("./*[@class='endcolor_{}']".format(loc))
-                s = cssutils.parseStyle(ec.attrib["style"])
-                c = end.get("color", None)
-                if c is None:
-                    fill = None
-                elif c[0] == "#":
-                    fill = c
-                else:
-                    fill = xcolors.get(c, None)
-                s["fill"] = fill
-                ec.attrib["style"] = s.getCssText("")
-
-        return (tilediag, 1)
-
 
 class tile_daoe_single(tile_daoe):
     """Base class for single DAO-E tiles."""
