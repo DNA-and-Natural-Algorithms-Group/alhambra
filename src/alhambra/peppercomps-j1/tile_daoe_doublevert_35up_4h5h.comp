@@ -1,0 +1,33 @@
+declare component tile_daoe_doublevert_35up_2h3h: eTL + eTM + eTR + eBL -> aTL + aTM + aTR + aBL
+
+sequence eTL = "5N" : 5
+sequence eTM = "5N" : 5
+sequence eTR = "5N" : 5
+sequence eBL = "5N" : 5
+sequence aTL = "N" : 1
+sequence aTM = "N" : 1
+sequence aTR = "N" : 1
+sequence aBL = "N" : 1
+
+sequence stTLarm = "CC 5N" : 7
+sequence stBLarm = "5N CA" : 7
+sequence stTcore = "AC 12N CA" : 16
+sequence stBcore = "CC 5N TA 5N CC" : 16
+sequence stTRarm = "5N CC" : 7
+sequence sMarm = "AC 17N CA" : 21
+sequence sbBLarm = "CC 6N" : 8
+sequence sbTcore = "GG 12N GG" : 16
+sequence sbBcore = "AC 5N TA 5N CA" : 16
+sequence sbTRarm = "5N GT" : 7
+sequence sbBRarm = "GG 6N" : 8
+sequence sbBRhairpin = "7N" : 7
+sequence sbBLhairpin = "7N" : 7
+
+strand shortLeft = eBL aBL stBLarm stTLarm aTL eTL : 26
+strand longLeft = aTL* stTLarm* stTcore stBcore stBLarm* aBL* : 48
+strand longMidLeft = aTM* stTRarm stTcore* stBcore* sMarm sbBLarm sbBLhairpin "TTTT" sbBLhairpin* : 87
+strand longMidRight = sbBLarm* sbBcore sbTcore* sMarm* stTRarm* aTM eTM : 74
+strand longRight = sbBRarm* sbBcore* sbTcore sbTRarm* aTR* : 48
+strand shortRight = eTR aTR sbTRarm sbBRarm sbBRhairpin "TTTT" sbBRhairpin* : 39
+
+structure [no-opt] tile = shortLeft + longLeft + longMidLeft + longMidRight + longRight + shortRight : 26. + 48. + 87. + 74. + 48. + 39.

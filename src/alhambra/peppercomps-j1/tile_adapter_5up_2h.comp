@@ -1,0 +1,24 @@
+declare component tile_adapter_5up_2h: origamicore + eTR -> aTR
+
+# Sequences
+
+sequence origamicore = "32N" : 32
+sequence eTR = "5N" : 5
+
+sequence aTR = "N" : 1
+
+## Sequences
+# core
+sequence sTRarm = "7N" : 7
+sequence sBRarm = "8N" : 8
+sequence hairpin_arm = "7N" : 7
+
+## Strands
+strand longRight  = sBRarm* origamicore sTRarm aTR* : 48
+strand shortRight = eTR aTR sTRarm* sBRarm hairpin_arm "TTTT" hairpin_arm* : 39
+
+## Structures
+structure [no-opt] tile = longRight + shortRight : 48. + 39.
+# This is a dummy structure that tells the designer that these strands are in a
+#   complex, but provides no further base-pairing information because we don't
+#   "yet" handle psuedoknots

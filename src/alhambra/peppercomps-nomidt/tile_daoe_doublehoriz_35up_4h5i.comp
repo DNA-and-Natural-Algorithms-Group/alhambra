@@ -1,0 +1,44 @@
+declare component DAOEdoubletile_35up_4h5b: eTL + eTM + eTR + eBL -> aTL + aTM + aTR + aBL
+# bottom left tile is 3up, upper right tile is 5up
+# bottom tile's bottom right sticky end is blunt; top tile's bottom right sticky end is hairpin
+# just like Barish et al's Z56 for Variable-Width and Copy
+
+## Sequences
+# sticky ends
+sequence eBL = "5N" : 5
+sequence eTL = "5N" : 5
+sequence eTM = "5N" : 5
+sequence eTR = "5N" : 5
+sequence aBL = "N" : 1
+sequence aTL = "N" : 1
+sequence aTM = "N" : 1
+sequence aTR = "N" : 1
+
+# core
+sequence sbTLarm = "7N" : 7
+sequence sbBLarm = "7N" : 7
+sequence sbBRarm = "N 12N" : 13
+sequence sbTcore = "N 14N N" : 16
+sequence sbBcore = "N 14N N" : 16
+sequence sMarm   = "21N" : 21
+sequence stTLarm = "7N" : 7
+sequence stBRarm = "N 7N" : 8
+sequence stTRarm = "7N" : 7
+sequence stTcore = "N 14N N" : 16
+sequence stBcore = "N 14N N" : 16
+sequence stBRhairpin_arm = "7N" : 7
+
+
+## Strands
+strand shortLeft    = eBL aBL sbBLarm sbTLarm* aTL eTL : 26
+strand longLeft     = aTL* sbTLarm sbTcore sbBcore* sbBLarm* aBL* : 48
+strand longMidLeft  = eTM aTM stTLarm sMarm sbTcore* sbBcore sbBRarm* : 79
+strand longMidRight = sbBRarm sMarm* stBcore stTcore* stTLarm* aTM* : 74
+strand longRight    = stBRarm stBcore* stTcore stTRarm* aTR* : 48
+strand shortRight   = eTR aTR stTRarm stBRarm* stBRhairpin_arm "TTTT" stBRhairpin_arm* : 39
+
+## Structures
+structure [no-opt] tile = shortLeft + longLeft + longMidLeft + longMidRight + longRight + shortRight : 26. + 48. + 79. + 74. + 48. + 39.
+# This is a dummy structure that tells the designer that these strands are in a
+#   complex, but provides no further base-pairing information because we don't
+#   "yet" handle psuedoknots

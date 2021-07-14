@@ -1,0 +1,33 @@
+declare component tile_daoe_5up: eTL + eBR + eBL -> aTL + aBR + aBL
+
+# Sequences
+
+sequence eTL = "5N" : 5
+sequence eBR = "5N" : 5
+sequence eBL = "5N" : 5
+
+sequence aTL = "N" : 1
+sequence aBR = "N" : 1
+sequence aBL = "N" : 1
+
+## Sequences
+# core
+sequence sTLarm = "7N" : 7
+sequence sTcore = "16N" : 16
+sequence sTRarm = "8N" : 8
+sequence sBLarm = "7N" : 7
+sequence sBcore = "7N AT 7N" : 16
+sequence sBRarm = "7N" : 7
+sequence hairpin_arm = "7N" : 7
+
+## Strands
+strand shortLeft  = eTL aTL sTLarm sBLarm* aBL eBL : 26
+strand longLeft   = aBL* sBLarm sBcore sTcore* sTLarm* aTL* : 48
+strand longRight  = aBR* sBRarm* sBcore* sTcore sTRarm : 48
+strand shortRight = hairpin_arm* "TTTT" hairpin_arm sTRarm* sBRarm aBR eBR : 39
+
+## Structures
+structure [no-opt] tile = shortLeft + longLeft + longRight + shortRight : 26. + 48. + 48. + 39.
+# This is a dummy structure that tells the designer that these strands are in a
+#   complex, but provides no further base-pairing information because we don't
+#   "yet" handle psuedoknots
