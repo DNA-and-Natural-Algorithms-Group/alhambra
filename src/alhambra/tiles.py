@@ -2,7 +2,7 @@ from __future__ import annotations
 from abc import ABC, ABCMeta, abstractmethod
 import copy
 from dataclasses import dataclass
-import drawSvg as draw
+import drawSvg_svgy as draw
 from typing import (
     Any,
     Generic,

@@ -580,7 +580,7 @@ class TileSet(Serializable):
             File name / path of the output file.
 
         """
-        import drawSvg as draw
+        import drawSvg_svgy as draw
 
         if isinstance(lattice, str) or isinstance(lattice, int):
             lt = self.lattices[lattice]
