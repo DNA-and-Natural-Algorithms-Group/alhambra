@@ -145,6 +145,11 @@ class Glue:
     def __ror__(self, other: Glue) -> Glue:
         return self.merge(other)
 
+    def __eq__(self, o: Glue | str) -> bool:
+        if isinstance(o, str):
+            o = Glue(o)
+        return self.ident() == o.ident()
+
     def as_dict(self) -> dict[str, Any]:
         return {
             k: v for k in ["name", "use", "note"] if (v := getattr(self, k)) is not None

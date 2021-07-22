@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from alhambra.grid import AbstractLattice, LatticeSupportingScadnano, ScadnanoLattice
+from alhambra.grid import (
+    AbstractLattice,
+    LatticeSupportingScadnano,
+    ScadnanoLattice,
+    lattice_factory,
+)
 from .glues import Glue
 from .seeds import Seed, seed_factory
 from typing import Any, ClassVar, Literal, Sequence, Type, TypeVar, Union, cast
@@ -390,3 +395,6 @@ class FlatishLattice(LatticeSupportingScadnano, AbstractLattice):
             scpos = flatgrid_hofromxy(ix[0], ix[1], self.grid.shape[1], 0)
             sclat[scpos] = t
         return sclat
+
+
+lattice_factory.register(FlatishLattice)

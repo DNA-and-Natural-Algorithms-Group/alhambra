@@ -23,6 +23,8 @@ from alhambra.grid import (
     Lattice,
     LatticeSupportingScadnano,
     ScadnanoLattice,
+    _skip_polyT_and_inertname,
+    lattice_factory,
 )
 
 from . import fastreduce
@@ -41,13 +43,46 @@ SELOGGER = logging.getLogger(__name__)
 
 from numpy import isin
 from alhambra.classes import Serializable
-from typing import Any, Iterable, Literal, Mapping, Optional, Type, TypeVar, cast
-from .tiles import Tile, tile_factory, TileList, TileSupportingScadnano
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Iterable,
+    Literal,
+    Mapping,
+    Optional,
+    Type,
+    TypeVar,
+    cast,
+)
+from .tiles import (
+    EdgeLoc,
+    SupportsGuards,
+    Tile,
+    tile_factory,
+    TileList,
+    TileSupportingScadnano,
+    D,
+)
 from .glues import DXGlue, Glue, GlueList
 from .seeds import Seed, seed_factory
 import xgrow.tileset as xgt
 import xgrow
 import copy
+
+
+_gl = {
+    EdgeLoc(D.N, (0, 0)): (0, 0, 10, 0),
+    EdgeLoc(D.E, (0, 0)): (10, 0, 10, 10),
+    EdgeLoc(D.S, (0, 0)): (0, 10, 10, 10),
+    EdgeLoc(D.W, (0, 0)): (0, 0, 0, 10),
+    EdgeLoc(D.N, (0, 1)): (10, 0, 20, 0),
+    EdgeLoc(D.E, (1, 0)): (10, 10, 10, 20),
+    EdgeLoc(D.E, (0, 1)): (20, 0, 20, 10),
+    EdgeLoc(D.S, (1, 0)): (0, 20, 10, 20),
+    EdgeLoc(D.S, (0, 1)): (10, 10, 20, 10),
+    EdgeLoc(D.W, (1, 0)): (0, 10, 0, 20),
+}
 
 try:
     import scadnano
@@ -63,10 +98,17 @@ class TileSet(Serializable):
     glues: GlueList[Glue]
     seeds: dict[str | int, Seed]
     lattices: dict[str | int, Lattice]
+    guards: dict[str | int, list[str]]
     params: dict
 
-    def run_xgrow(self, to_lattice=True, *args, **kwargs) -> Any:  # FIXME
-        xgrow_tileset = self.to_xgrow()
+    def run_xgrow(
+        self,
+        to_lattice=True,
+        seed: str | int | Seed | None | Literal[False] = None,
+        *args,
+        **kwargs,
+    ) -> Any:  # FIXME
+        xgrow_tileset = self.to_xgrow(seed=seed)
 
         if to_lattice:
             kwargs["outputopts"] = "array"
@@ -78,6 +120,8 @@ class TileSet(Serializable):
 
         if not to_lattice:
             return out
+
+        assert out.tiles is not None
 
         newarray = np.full_like(out.tiles[1:-1, 1:-1], "", dtype=object)
 
@@ -103,9 +147,15 @@ class TileSet(Serializable):
         self.glues.refreshnames()
         tiles = [t.to_xgrow(self_complementary_glues) for t in self.tiles]
 
+        allglues = self.allglues
+
         # FIXME
         # bonds = [g.to_xgrow(self_complementary_glues) for g in self.glues]
-        bonds = []
+        bonds = [
+            xgt.Bond(g.name, 0)
+            for g in allglues
+            if g.name and ("null" in g.name or "inert" in g.name or "hairpin" in g.name)
+        ]
 
         if seed is None:
             if self.seeds:
@@ -216,7 +266,9 @@ class TileSet(Serializable):
         if self.seeds:
             d["seed"] = {k: v.to_dict() for k, v in self.seeds.items()}
         if self.lattices:
-            d["lattices"] = {k: v.to_dict() for k, v in self.lattices.items()}
+            d["lattices"] = {k: v.asdict() for k, v in self.lattices.items()}
+        if self.guards:
+            d["guards"] = self.guards
         if self.params:
             d["params"] = self.params.copy()
         return d
@@ -226,11 +278,12 @@ class TileSet(Serializable):
         ts = cls()
         ts.tiles = TileList(Tile.from_dict(x) for x in d.get("tiles", []))
         ts.glues = GlueList(Glue.from_dict(x) for x in d.get("glues", []))
-        ts.seeds = {k: seed_factory.from_dict(v) for k, v in d.get("seeds", {})}
+        ts.seeds = {k: seed_factory.from_dict(v) for k, v in d.get("seeds", {}).items()}
+        ts.guards = {k: v for k, v in d.get("guards", {}).items()}
         if not ts.seeds and "seed" in d:
             ts.seeds = {0: seed_factory.from_dict(d["seed"])}
         ts.lattices = {
-            k: lattice_factory.from_dict(v) for k, v in d.get("lattices", {})
+            k: lattice_factory.from_dict(v) for k, v in d.get("lattices", {}).items()
         }
         if "params" in d:
             ts.params = copy.deepcopy(d["params"])
@@ -560,8 +613,40 @@ class TileSet(Serializable):
     def allglues(self) -> GlueList:
         return self.tiles.glues_from_tiles() | self.glues
 
+    def create_guards_square(
+        self,
+        lattice: AbstractLattice,
+        square_size: int,
+        init_x: int = 0,
+        init_y: int = 0,
+        skip: Callable[[Glue], bool] = _skip_polyT_and_inertname,
+    ) -> list[str]:
+        glues: set[str] = set()
+        for xi in range(init_x, lattice.grid.shape[0], square_size):
+            glues.update(
+                g.ident()
+                for tile in lattice.grid[xi, :]
+                if isinstance(self.tiles[tile], SupportsGuards)
+                for g in self.tiles[tile].create_guards("S")
+                if not skip(g)
+            )
+        for yi in range(init_y, lattice.grid.shape[1], square_size):
+            glues.update(
+                g.ident()
+                for tile in lattice.grid[:, yi]
+                if isinstance(self.tiles[tile], SupportsGuards)
+                for g in self.tiles[tile].create_guards("E")
+                if not skip(g)
+            )
+        return list(glues)
+
     def create_abstract_diagram(
-        self, lattice: AbstractLattice | str | int, filename=None, scale=1, **options
+        self,
+        lattice: AbstractLattice | str | int | None,
+        filename=None,
+        scale=1,
+        guards: Collection[str] | str | int = tuple(),
+        **options,
     ):
         """Create an SVG layout diagram from a lattice.
 
@@ -586,6 +671,13 @@ class TileSet(Serializable):
             lt = self.lattices[lattice]
             assert isinstance(lt, AbstractLattice)
             lattice = lt
+        elif lattice is None:
+            lt = next(iter(self.lattices.values()))
+            assert isinstance(lt, AbstractLattice)
+            lattice = lt
+
+        if isinstance(guards, str) or isinstance(guards, int):
+            guards = self.guards[guards]
 
         d = draw.Drawing(200, 200)
 
@@ -607,6 +699,34 @@ class TileSet(Serializable):
             maxxi = max(maxxi, xi)
             maxyi = max(maxyi, yi)
             d.append(draw.Use(svgtiles[tn], xi * 10, yi * 10))
+
+        if len(guards) > 0:
+            for (yi, xi), tn in np.ndenumerate(lattice.grid):
+                if tn == "":
+                    continue
+                t = self.tiles[tn]
+                for g, pos in zip(t.edges, t.edge_locations):  # FIXME: deal with duples
+                    if g.complement.ident() in guards:
+                        d.append(
+                            draw.Line(
+                                xi * 10 + _gl[pos][0],
+                                yi * 10 + _gl[pos][1],
+                                xi * 10 + _gl[pos][2],
+                                yi * 10 + _gl[pos][3],
+                                stroke="black",
+                                stroke_width=0.6,
+                            )
+                        )
+                        d.append(
+                            draw.Line(
+                                xi * 10 + _gl[pos][0],
+                                yi * 10 + _gl[pos][1],
+                                xi * 10 + _gl[pos][2],
+                                yi * 10 + _gl[pos][3],
+                                stroke="red",
+                                stroke_width=0.3,
+                            )
+                        )
 
         d.viewBox = (
             minxi * 10,
@@ -767,7 +887,7 @@ class TileSet(Serializable):
         return fastreduce._FastTileSet(self).applyequiv(self, equiv)
 
     def dx_plot_se_hists(
-        tileset, all_energetics=None, energetics_names=None, title=None, **kwargs
+        self, all_energetics=None, energetics_names=None, title=None, **kwargs
     ):
         """Plot histograms of sticky end energies, using stickydesign.plots.hist_multi.
 
@@ -793,18 +913,19 @@ class TileSet(Serializable):
         if energetics_names is None:
             energetics_names = DEFAULT_MM_ENERGETICS_NAMES
 
-        if "ends" in tileset.keys():
-            ends = tileset.glues
-        else:
-            ends = tileset
+        ends = self.glues
 
         if title is None:
             # FIXME
             title = "Title"
 
-        td = sd.endarray([x["fseq"] for x in ends if x["type"] == "TD"], "TD")
+        td = sd.endarray(
+            [x.fseq for x in ends if isinstance(x, DXGlue) and x.etype == "TD"], "TD"
+        )
 
-        dt = sd.endarray([x["fseq"] for x in ends if x["type"] == "DT"], "DT")
+        dt = sd.endarray(
+            [x.fseq for x in ends if isinstance(x, DXGlue) and x.etype == "DT"], "DT"
+        )
         import stickydesign.plots as sdplots
 
         return sdplots.hist_multi(

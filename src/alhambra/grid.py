@@ -2,13 +2,15 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 import dataclasses
-from typing import Any, Literal, Protocol, Type, TypeVar, cast
+from typing import Any, Callable, Literal, Protocol, Type, TypeVar, cast
 import numpy as np
 import scadnano
 
 from xgrow.tileset import Tile
+from alhambra.glues import Glue, SSGlue
+from alhambra.seq import Seq
 
-from alhambra.tiles import TileSupportingScadnano
+from alhambra.tiles import D, TileSupportingScadnano, SupportsGuards
 
 if False:
     from alhambra.tilesets import TileSet
@@ -22,6 +24,13 @@ class Lattice(ABC):
     @abstractmethod
     def __setitem__(self, index, v):
         ...
+
+    def asdict(self) -> dict[str, Any]:
+        raise NotImplementedError
+
+    @classmethod
+    def fromdict(cls, d: dict[str, Any]) -> Lattice:
+        raise NotADirectoryError
 
 
 class LatticeSupportingScadnano(ABC):
@@ -61,8 +70,24 @@ class ScadnanoLattice(LatticeSupportingScadnano, Lattice):
     def to_scadnano_lattice(self) -> ScadnanoLattice:
         return self
 
+    def asdict(self) -> dict[str, Any]:
+        raise NotImplementedError
+
+    @classmethod
+    def fromdict(cls, d: dict[str, Any]):
+        raise NotADirectoryError
+
 
 T_AL = TypeVar("T_AL", bound="Type[AbstractLattice]")
+
+
+def _skip_polyT_and_inertname(glue: Glue) -> bool:
+    if "inert" in glue.ident():
+        return True
+    elif isinstance(glue, SSGlue):
+        if frozenset(glue.sequence.base_str) == frozenset("T"):
+            return True
+    return False
 
 
 @dataclass(init=False)
@@ -79,8 +104,41 @@ class AbstractLattice(Lattice):
         if isinstance(v, AbstractLattice):
             self.grid = v.grid
         else:
-            self.grid = v
+            self.grid = np.array(v)
+
+    def asdict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {}
+        d["type"] = self.__class__.__name__
+        d["grid"] = self.grid.tolist()
+        return d
+
+    @classmethod
+    def fromdict(cls: Type[T_AL], d: dict[str, Any]) -> T_AL:
+        return cls(np.array(d["grid"]))
 
     @classmethod
     def empty(cls, shape):
         return cls(np.full(shape, "", dtype=object))
+
+
+class LatticeFactory:
+    types: dict[str, Type[Lattice]]
+
+    def __init__(self):
+        self.types = {}
+
+    def register(self, c: Type[Lattice], n: str = None):
+        self.types[n if n is not None else c.__name__] = c
+
+    def from_dict(self, d: dict[str, Any]) -> Lattice:
+        if "type" in d:
+            c = self.types[d["type"]]
+            return c.fromdict({k: v for k, v in d.items() if k != "type"})
+        else:
+            raise ValueError
+
+
+lattice_factory = LatticeFactory()
+
+lattice_factory.register(AbstractLattice)
+lattice_factory.register(ScadnanoLattice)

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import drawSvg_svgy as draw
 from typing import (
     Any,
+    Collection,
     Generic,
     Iterable,
     List,
@@ -106,7 +107,7 @@ class Tile:
     _edges: List[Glue]
     color: Optional[Color]
     stoic: Optional[float]
-    note: Optional[str]
+    note: Optional[str | dict[str, Any]]
     __slots__ = ("name", "_edges", "color", "stoic", "note")
 
     def __init__(
@@ -115,7 +116,7 @@ class Tile:
         name: Optional[str] = None,
         color: Optional[Color] = None,
         stoic: Optional[float] = None,
-        note: Optional[str] = None,
+        note: Optional[str | dict[str, Any]] = None,
     ) -> None:
         if edges is None:
             raise ValueError
@@ -139,6 +140,10 @@ class Tile:
 
     @property
     def edge_directions(self) -> List[D]:
+        raise NotImplementedError
+
+    @property
+    def edge_locations(self) -> List[EdgeLoc]:
         raise NotImplementedError
 
     def set_edge(self, i: int, glue: Glue):
@@ -263,6 +268,15 @@ class SingleTile(Tile):
     def edge_directions(self) -> List[D]:
         return [D.N, D.E, D.S, D.W]
 
+    @property
+    def edge_locations(self) -> List[EdgeLoc]:
+        return [
+            EdgeLoc(D.N, (0, 0)),
+            EdgeLoc(D.E, (0, 0)),
+            EdgeLoc(D.S, (0, 0)),
+            EdgeLoc(D.W, (0, 0)),
+        ]
+
     def abstract_diagram(
         self, tileset=None, draw_names: bool = True, draw_glues: bool = True
     ) -> draw.Group:
@@ -304,6 +318,17 @@ class VDupleTile(Tile):
     @property
     def edge_directions(self) -> List[D]:
         return [D.N, D.E, D.E, D.S, D.W, D.W]
+
+    @property
+    def edge_locations(self) -> List[EdgeLoc]:
+        return [
+            EdgeLoc(D.N, (0, 0)),
+            EdgeLoc(D.E, (0, 0)),
+            EdgeLoc(D.E, (1, 0)),
+            EdgeLoc(D.S, (1, 0)),
+            EdgeLoc(D.W, (1, 0)),
+            EdgeLoc(D.W, (0, 0)),
+        ]
 
     def abstract_diagram(
         self, tileset=None, draw_names: bool = True, draw_glues: bool = True
@@ -362,6 +387,17 @@ class HDupleTile(Tile):
     def edge_directions(self) -> List[D]:
         return [D.N, D.N, D.E, D.S, D.S, D.W]
 
+    @property
+    def edge_locations(self) -> List[EdgeLoc]:
+        return [
+            EdgeLoc(D.N, (0, 0)),
+            EdgeLoc(D.N, (0, 1)),
+            EdgeLoc(D.E, (0, 1)),
+            EdgeLoc(D.S, (0, 1)),
+            EdgeLoc(D.S, (0, 0)),
+            EdgeLoc(D.W, (0, 0)),
+        ]
+
     def abstract_diagram(
         self, tileset=None, draw_names: bool = True, draw_glues: bool = True
     ) -> draw.Group:
@@ -408,7 +444,13 @@ class HDupleTile(Tile):
         return draw.Group(elems)
 
 
-class BaseSSTile(TileSupportingScadnano):
+class SupportsGuards:
+    @abstractmethod
+    def create_guards(self, directions: Collection[str | D] = (D.E, D.S)) -> list[Glue]:
+        ...
+
+
+class BaseSSTile(SupportsGuards, TileSupportingScadnano):
     _edges: List[Glue]  # actually SSGlue
 
     def to_dict(self, refglues: set[str] = set()) -> dict[str, Any]:
@@ -430,6 +472,11 @@ class BaseSSTile(TileSupportingScadnano):
     @property
     @abstractmethod
     def domains(self) -> List[SSGlue]:
+        ...
+
+    @property
+    @abstractmethod
+    def edge_directions(self) -> list[str]:
         ...
 
     @property
@@ -511,6 +558,16 @@ class BaseSSTile(TileSupportingScadnano):
         s.append(", ".join(g.ident() for g in self.edges))
         s.append(">")
         return "".join(s)
+
+    def create_guards(self, directions: Collection[str | D] = (D.E, D.S)) -> list[Glue]:
+        guards: list[Glue] = []
+        directions = set(x if isinstance(x, D) else D[x] for x in directions)
+        for ei, d in enumerate(self.edge_directions):
+            if d not in directions:
+                continue
+            else:
+                guards.append(self.edges[ei].complement)
+        return guards
 
 
 class BaseSSTSingle(SingleTile, BaseSSTile):
