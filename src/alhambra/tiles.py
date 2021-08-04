@@ -167,6 +167,8 @@ class Tile:
         return False
 
     def merge(self, other) -> Tile:
+        if self == other:
+            return self
         raise NotImplementedError
 
     @property
@@ -347,7 +349,7 @@ class VDupleTile(Tile):
                 (9, 5, 90),
                 (9, 15, 90),
                 (5, 19, 0),
-                (1, 55, -90),
+                (1, 15, -90),
                 (1, 5, -90),
             ]
             for loc, glue in zip(gluetext_locs, self.edges):

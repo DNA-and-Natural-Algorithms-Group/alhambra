@@ -95,7 +95,7 @@ class AbstractLattice(Lattice):
     grid: np.ndarray
 
     def __getitem__(self, index) -> str | Any:
-        return self.grid[index]
+        return AbstractLattice(self.grid[index])
 
     def __setitem__(self, index, v):
         self.grid[index] = v
@@ -111,6 +111,10 @@ class AbstractLattice(Lattice):
         d["type"] = self.__class__.__name__
         d["grid"] = self.grid.tolist()
         return d
+
+    @property
+    def tilenames(self) -> list[str]:
+        return list(np.unique(self.grid))
 
     @classmethod
     def fromdict(cls: Type[T_AL], d: dict[str, Any]) -> T_AL:

@@ -104,6 +104,7 @@ class TileSet(Serializable):
     def run_xgrow(
         self,
         to_lattice=True,
+        _include_out=False,
         seed: str | int | Seed | None | Literal[False] = None,
         xgrow_seed: str | None = None,
         *args,
@@ -139,7 +140,11 @@ class TileSet(Serializable):
 
         a = AbstractLattice(newarray.shape)
         a.grid = newarray
-        return a
+
+        if not _include_out:
+            return a
+        else:
+            return a, out
 
     def to_xgrow(
         self,
@@ -304,13 +309,16 @@ class TileSet(Serializable):
         tiles: Iterable[Tile] = tuple(),
         glues: Iterable[Glue] = tuple(),
         seeds: Mapping[str | int, Seed] | None = None,
+        *,
         lattices: Mapping[str | int, Lattice] | None = None,
+        guards: Iterable[str] = tuple(),
         params: dict | None = None,
     ) -> None:
         self.tiles = TileList(tiles)
         self.glues = GlueList(glues)
         self.seeds = dict(seeds) if seeds else dict()
         self.lattices = dict(lattices) if lattices else dict()
+        self.guards = list(guards)
         if params is not None:
             self.params = params
         else:
@@ -615,6 +623,40 @@ class TileSet(Serializable):
     @property
     def allglues(self) -> GlueList:
         return self.tiles.glues_from_tiles() | self.glues
+
+    def lattice_tiles(
+        self,
+        lattice: AbstractLattice | int | str | np.ndarray,
+        *,
+        x: int | slice | None = None,
+        y: int | slice | None = None,
+        copy: bool = False,
+    ):
+        """Return a list of (unique) tiles in a lattice, potentially taking a slice of the lattice.
+
+        Parameters
+        ----------
+        lattice : AbstractLattice | int | str
+            Lattice or reference to a lattice in the tileset
+        x : int | slice | None, optional
+            index in the lattice, by default None
+        y : int | slice | None, optional
+            index in the lattice, by default None
+        copy : bool, optional
+            return copies if True (useful for creating a new set) or tiles in the set if False (useful for modifying the set), by default False
+        """
+
+        if isinstance(lattice, (int, str)):
+            lattice = cast(AbstractLattice, self.lattices[lattice])
+        elif not isinstance(lattice, AbstractLattice):
+            lattice = AbstractLattice(lattice)
+
+        tilenames = np.unique(lattice.grid[x, y])
+
+        if copy:
+            return [self.tiles[t].copy() for t in tilenames]
+        else:
+            return [self.tiles[t] for t in tilenames]
 
     def create_guards_square(
         self,

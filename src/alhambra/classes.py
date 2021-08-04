@@ -9,6 +9,7 @@ from typing import (
     SupportsIndex,
     Type,
     TypeVar,
+    Literal,
     cast,
     overload,
 )
@@ -182,9 +183,24 @@ class UpdateListD(Generic[T_NMI]):
                 del out[v.ident()]
         return out
 
+    @overload
+    def search(self: T, regex: str, match: Literal[False] = False) -> T:
+        ...
+
+    @overload
+    def search(self: T, regex: str, match: Literal[True]) -> list[re.Match, T_NMI]:
+        ...
+
     def search(self: T, regex: str, match: bool = False) -> T:
         r = re.compile(regex)
-        return self.__class__(v for v in self.data.values() if r.search(v.ident()))
+        if not match:
+            return self.__class__(v for v in self.data.values() if r.search(v.ident()))
+        else:
+            a: list[tuple[re.Match, T_NMI]] = []
+            for v in self.data.values():
+                if m := r.search(v.ident()):
+                    a.append((m, v))
+            return a
 
 
 TS = TypeVar("TS", bound="Serializable")
