@@ -105,6 +105,7 @@ class TileSet(Serializable):
         self,
         to_lattice=True,
         seed: str | int | Seed | None | Literal[False] = None,
+        xgrow_seed: str | None = None,
         *args,
         **kwargs,
     ) -> Any:  # FIXME
@@ -115,7 +116,9 @@ class TileSet(Serializable):
 
         out = cast(
             xgrow.parseoutput.XgrowOutput,
-            xgrow.run(xgrow_tileset, process_info=False, *args, **kwargs),
+            xgrow.run(
+                xgrow_tileset, process_info=False, seed=xgrow_seed, *args, **kwargs
+            ),
         )
 
         if not to_lattice:
@@ -642,7 +645,7 @@ class TileSet(Serializable):
 
     def create_abstract_diagram(
         self,
-        lattice: AbstractLattice | str | int | None,
+        lattice: AbstractLattice | str | int | np.ndarray | None,
         filename=None,
         scale=1,
         guards: Collection[str] | str | int = tuple(),
@@ -675,6 +678,8 @@ class TileSet(Serializable):
             lt = next(iter(self.lattices.values()))
             assert isinstance(lt, AbstractLattice)
             lattice = lt
+        elif not isinstance(lattice, AbstractLattice):
+            lattice = AbstractLattice(lattice)
 
         if isinstance(guards, str) or isinstance(guards, int):
             guards = self.guards[guards]
@@ -714,7 +719,7 @@ class TileSet(Serializable):
                                 xi * 10 + _gl[pos][2],
                                 yi * 10 + _gl[pos][3],
                                 stroke="black",
-                                stroke_width=0.6,
+                                stroke_width=2.5,
                             )
                         )
                         d.append(
@@ -724,7 +729,7 @@ class TileSet(Serializable):
                                 xi * 10 + _gl[pos][2],
                                 yi * 10 + _gl[pos][3],
                                 stroke="red",
-                                stroke_width=0.3,
+                                stroke_width=1.0,
                             )
                         )
 
