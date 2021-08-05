@@ -1,4 +1,4 @@
-__version__ = "2.0.0a2"
+__version__ = "2.0.0a4"
 __all__ = ["TileSet", "Tile", "TileList", "Glue", "GlueList"]
 
 from . import classes
