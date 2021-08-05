@@ -1,11 +1,11 @@
-include alhambra/peppercomps/*.comp
+include src/alhambra/peppercomps/*.comp
 
-include alhambra/peppercomps-nomidt/*.comp
+include src/alhambra/peppercomps-nomidt/*.comp
 
-include alhambra/peppercomps-j1/*.comp
+include src/alhambra/peppercomps-j1/*.comp
 
-include alhambra/seqdiagrambases/*.svg
+include src/alhambra/seqdiagrambases/*.svg
 
-include alhambra/data/rgb.txt
+include src/alhambra/data/rgb.txt
 
-include alhambra/spuriousSSM
+include src/alhambra/spuriousSSM
