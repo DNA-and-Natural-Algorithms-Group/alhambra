@@ -4,36 +4,43 @@
 # Largely adapted from Numpy's conf.py
 
 import sys, os, re
+
 # -- General configuration -----------
 
-extensions = ['sphinx.ext.autodoc', 
-              'sphinx.ext.intersphinx', 'sphinx.ext.coverage',
-              'sphinx.ext.doctest', 'sphinx.ext.autosummary',
-              'sphinx.ext.graphviz', 'sphinx.ext.ifconfig',
-              'matplotlib.sphinxext.plot_directive', 'numpydoc']
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.coverage",
+    "sphinx.ext.doctest",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.graphviz",
+    "sphinx.ext.ifconfig",
+    "matplotlib.sphinxext.plot_directive",
+    "numpydoc",
+]
 
-extensions.append('sphinx.ext.imgmath')
-imgmath_image_format = 'svg'
+extensions.append("sphinx.ext.imgmath")
+imgmath_image_format = "svg"
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
-#autoclass_content = 'both'
+# autoclass_content = 'both'
 
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ".rst"
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # General information about the project.
-project = 'Alhambra'
-copyright = '2018, Constantine Evans'
-author = 'Constantine Evans'
+project = "Alhambra"
+copyright = "2018, Constantine Evans"
+author = "Constantine Evans"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -41,8 +48,9 @@ author = 'Constantine Evans'
 #
 
 import alhambra
-version = re.sub(r'(\d+\.\d+)\.\d+(.*)', r'\1\2', alhambra.__version__)
-version = re.sub(r'(\.dev\d+).*?$', r'\1', version)
+
+version = re.sub(r"(\d+\.\d+)\.\d+(.*)", r"\1\2", alhambra.__version__)
+version = re.sub(r"(\.dev\d+).*?$", r"\1", version)
 # The full version, including alpha/beta/rc tags.
 release = alhambra.__version__
 
@@ -51,19 +59,21 @@ add_function_parentheses = False
 
 default_role = "autolink"
 
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 
 # -- Options for HTML output ----------------------------------------------
 
-themedir = os.path.join(os.path.dirname(__file__), 'scipy-sphinx-theme', '_theme')
+themedir = os.path.join(os.path.dirname(__file__), "scipy-sphinx-theme", "_theme")
 if not os.path.isdir(themedir):
-    raise RuntimeError("Get the scipy-sphinx-theme first, "
-                       "via git submodule init && git submodule update")
+    raise RuntimeError(
+        "Get the scipy-sphinx-theme first, "
+        "via git submodule init && git submodule update"
+    )
 
-html_theme = 'scipy'
+html_theme = "scipy"
 html_theme_path = [themedir]
 
 
@@ -72,12 +82,12 @@ html_theme_options = {
     "edit_link": False,
     "sidebar": "left",
     "scipy_org_logo": False,
-    "rootlinks": []
+    "rootlinks": [],
 }
 html_sidebars = {}
 
 html_title = "%s v%s Manual" % (project, version)
-html_last_updated_fmt = '%b %d, %Y'
+html_last_updated_fmt = "%b %d, %Y"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
@@ -93,13 +103,10 @@ html_last_updated_fmt = '%b %d, %Y'
 html_static_path = []
 
 
-
-
-
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'alhambradoc'
+htmlhelp_basename = "alhambradoc"
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -107,16 +114,13 @@ htmlhelp_basename = 'alhambradoc'
 latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
-    'papersize': 'a4paper',
-
+    "papersize": "a4paper",
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -126,8 +130,13 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'alhambra.tex', 'Alhambra Documentation',
-     'Constantine Evans', 'manual'),
+    (
+        master_doc,
+        "alhambra.tex",
+        "Alhambra Documentation",
+        "Constantine Evans",
+        "manual",
+    ),
 ]
 
 
@@ -135,10 +144,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'alhambra', 'Alhambra Documentation',
-     [author], 1)
-]
+man_pages = [(master_doc, "alhambra", "Alhambra Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -147,13 +153,20 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'alhambra', 'alhambra Documentation',
-     author, 'alhambra', 'One line description of project.',
-     'Miscellaneous'),
+    (
+        master_doc,
+        "alhambra",
+        "alhambra Documentation",
+        author,
+        "alhambra",
+        "One line description of project.",
+        "Miscellaneous",
+    ),
 ]
 
 numpydoc_show_inherited_class_members = False
-#numpydoc_class_members_toctree = False
+# numpydoc_class_members_toctree = False
 
 import glob
+
 autosummary_generate = glob.glob("*.rst")
