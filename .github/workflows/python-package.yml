@@ -38,9 +38,9 @@ jobs:
     - name: Test with tox/pytest
       run: |
         tox -e py39
-    - name: Test with mypy
-      run: |
-        tox -e mypy
+    #- name: Test with mypy
+    #  run: |
+    #    tox -e mypy
     - name: "Upload coverage to Codecov"
       uses: codecov/codecov-action@v1
       with:
