@@ -2,6 +2,7 @@ from __future__ import annotations
 from abc import ABC, ABCMeta, abstractmethod
 import copy
 from dataclasses import dataclass
+import uuid
 import drawSvg_svgy as draw
 from typing import (
     Any,
@@ -308,7 +309,7 @@ class SingleTile(Tile):
             nametext = draw.Text(self.name, 1.2, 5, 5, center=True, valign="center")
             elems.append(nametext)
 
-        return draw.Group(elems)
+        return draw.Group(elems, id=uuid.uuid4().hex)
 
 
 class VDupleTile(Tile):
@@ -376,7 +377,7 @@ class VDupleTile(Tile):
             )
             elems.append(nametext)
 
-        return draw.Group(elems)
+        return draw.Group(elems, id=uuid.uuid4().hex)
 
 
 class HDupleTile(Tile):
@@ -443,7 +444,7 @@ class HDupleTile(Tile):
             )
             elems.append(nametext)
 
-        return draw.Group(elems)
+        return draw.Group(elems, id=uuid.uuid4().hex)
 
 
 class SupportsGuards:
