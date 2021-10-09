@@ -39,7 +39,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Alhambra"
-copyright = "2018, Constantine Evans"
+copyright = "2021, Constantine Evans"
 author = "Constantine Evans"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -66,15 +66,15 @@ pygments_style = "sphinx"
 
 # -- Options for HTML output ----------------------------------------------
 
-themedir = os.path.join(os.path.dirname(__file__), "scipy-sphinx-theme", "_theme")
-if not os.path.isdir(themedir):
-    raise RuntimeError(
-        "Get the scipy-sphinx-theme first, "
-        "via git submodule init && git submodule update"
-    )
+# themedir = os.path.join(os.path.dirname(__file__), "scipy-sphinx-theme", "_theme")
+# if not os.path.isdir(themedir):
+#    raise RuntimeError(
+#        "Get the scipy-sphinx-theme first, "
+#        "via git submodule init && git submodule update"
+#    )
 
-html_theme = "scipy"
-html_theme_path = [themedir]
+# html_theme = "scipy"
+# html_theme_path = [themedir]
 
 
 # Default build
