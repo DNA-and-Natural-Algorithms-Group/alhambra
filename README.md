@@ -15,12 +15,13 @@ flexibly take inputs of YAML or similar formats.
 # Installation
 
 Alhambra is designed to be installed as a Python package.  To install the
-current (semi-)stable version from the Python Package Index, you can simply use
+the prerelease, use
 
-    pip install alhambra
+```
+pip install -U 'alhambra @ git+https://github.com/DNA-and-Natural-Algorithms-Group/alhambra@v2'
+```
 
 Alhambra 2 is designed to work with Python 3.9 or later.
-
 
 To install development versions, you can check out this github repository, and
 use `pip -e` or some other method for installing Python packages.  Multiple

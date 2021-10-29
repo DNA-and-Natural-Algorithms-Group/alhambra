@@ -31,7 +31,7 @@ try:
 except ImportError:
     pass
 from .seq import Seq
-from .glues import DXGlue, Glue, SSGlue, GlueList
+from .glues import DXGlue, Glue, GlueFactory, SSGlue, GlueList
 from .classes import UpdateListD
 import xgrow.tileset as xgt
 
@@ -191,7 +191,7 @@ class Tile:
         }
         if self.edges is not None:
             b["edges"] = [
-                (x.name if x.name in refglues else x.as_dict()) for x in self.edges
+                (x.name if x.name in refglues else x.to_dict()) for x in self.edges
             ]
             # fixme: deal with None
         return b
@@ -617,9 +617,16 @@ class TileFactory:
         self.types[n if n is not None else c.__name__] = c
 
     def from_dict(self, d: dict[str, Any]) -> Tile:
+        if "edges" in d:
+            for i in range(0, len(d["edges"])):
+                glue = d["edges"][i]
+                if isinstance(glue, dict):
+                    glue = Glue.from_dict(glue)
+                d["edges"][i] = glue
         if "type" in d:
             c = self.types[d["type"]]
             del d["type"]
+
             return c(**d)
         elif "structure" in d:
             c = self.types[d["structure"]]

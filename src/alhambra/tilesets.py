@@ -270,9 +270,9 @@ class TileSet(Serializable):
         if self.tiles:
             d["tiles"] = [t.to_dict(refglues=refglues) for t in self.tiles.aslist()]
         if allglues:
-            d["glues"] = [g for g in allglues.aslist()]
+            d["glues"] = [g.to_dict() for g in allglues.aslist()]
         if self.seeds:
-            d["seed"] = {k: v.to_dict() for k, v in self.seeds.items()}
+            d["seeds"] = {k: v.to_dict() for k, v in self.seeds.items()}
         if self.lattices:
             d["lattices"] = {k: v.asdict() for k, v in self.lattices.items()}
         if self.guards:

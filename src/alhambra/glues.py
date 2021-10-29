@@ -150,7 +150,7 @@ class Glue:
             o = Glue(o)
         return self.ident() == o.ident()
 
-    def as_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             k: v for k in ["name", "use", "note"] if (v := getattr(self, k)) is not None
         }
@@ -274,8 +274,8 @@ class SSGlue(Glue):
             s += f", {repr(self.sequence.seq_str)}"
         return s + ")"
 
-    def as_dict(self) -> dict[str, Any]:
-        d = super().as_dict()
+    def to_dict(self) -> dict[str, Any]:
+        d = super().to_dict()
         d["type"] = self.__class__.__name__
         d["sequence"] = self.sequence.seq_str
         return d
