@@ -1,3 +1,5 @@
+src/*/_version.py
+
 *.pyc
 *.egg-info/**
 build/**

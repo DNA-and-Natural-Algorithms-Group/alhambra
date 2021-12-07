@@ -16,7 +16,11 @@ import stickydesign.multimodel as multimodel
 
 import xgrow.parseoutput
 
+from pint import UnitRegistry
+
 from random import shuffle
+
+from . import mixes
 
 from alhambra.grid import (
     AbstractLattice,
@@ -1135,3 +1139,20 @@ class TileSet(Serializable):
     def copy(self):
         """Return a full (deep) copy of the TileSet"""
         return copy.deepcopy(self)
+
+    def apply_mix(
+        self, mix: mixes.Mix, base_conc=100 * mixes.UR("nM"), seed=None
+    ) -> TileSet:
+        """Return a subset of the tileset with the tiles (and concentrations) from a Mix."""
+
+        comps = mix.all_comps()
+
+        new_tl: TileList = self.tiles.apply_mix(mix, base_conc)
+
+        new_ts = self.copy()
+
+        new_ts.tiles = new_tl
+
+        new_ts.params["base_concentration"] = float(base_conc / (1 * mixes.UR("nM")))
+
+        return new_ts
