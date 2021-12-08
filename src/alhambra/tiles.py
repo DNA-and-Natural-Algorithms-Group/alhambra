@@ -25,7 +25,6 @@ from typing import (
 )
 from enum import Enum
 from xgrow.xcolors import xcolors
-from . import mixes
 
 try:
     import scadnano
@@ -706,26 +705,6 @@ class TileList(Generic[SomeTile], UpdateListD[SomeTile]):
         for tile in self:
             gl |= tile.edges
         return gl
-
-    def apply_mix(self, mix: mixes.Mix, base_conc):
-
-        newlist = TileList()
-
-        for comp, conc in mix.all_comps().items():
-            try:
-                tile = self[comp]
-
-                new_tile = tile.copy()
-                new_tile.stoic = float(conc / base_conc)
-
-                newlist.add(new_tile)
-            except KeyError:
-                log.warn(f"Component {comp} not found in tile list.")
-
-        if len(newlist) == 0:
-            raise ValueError("No mix components match tiles.")
-
-        return newlist
 
 
 class DAOETile(Tile):
