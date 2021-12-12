@@ -6,3 +6,6 @@ build-backend = "setuptools.build_meta"
 # See configuration details in https://github.com/pypa/setuptools_scm
 version_scheme = "no-guess-dev"
 write_to = "src/alhambra/_version.py"
+
+[tool.black]
+target_version = ["py310"]

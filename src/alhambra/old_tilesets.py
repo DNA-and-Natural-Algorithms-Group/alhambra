@@ -412,7 +412,7 @@ class TileSet(CommentedMap):
                 number=len(newTD),
                 energetics=energetics,
                 interaction=targetint,
-                **sdopts
+                **sdopts,
             ).tolist()
 
             newDTseqs = sd.easyends(
@@ -421,7 +421,7 @@ class TileSet(CommentedMap):
                 number=len(newDT),
                 energetics=energetics,
                 interaction=targetint,
-                **sdopts
+                **sdopts,
             ).tolist()
 
         elif method == "multimodel":
@@ -449,7 +449,7 @@ class TileSet(CommentedMap):
                     interaction=targetint,
                     echoose=endchooserTD,
                     _presetavail=presetavail,
-                    **sdopts
+                    **sdopts,
                 )
                 newTDseqs.append(e)
                 pl.update(i)
@@ -472,7 +472,7 @@ class TileSet(CommentedMap):
                     target_vals=tval,
                     templates=DTtemplates,
                     devmethod=devmethod,
-                    **ecpars
+                    **ecpars,
                 )
                 for tval in tvals
             ]
@@ -491,7 +491,7 @@ class TileSet(CommentedMap):
                     interaction=targetint,
                     echoose=echoose,
                     _presetavail=presetavail,
-                    **sdopts
+                    **sdopts,
                 )
                 newDTseqs.append(e)
 
@@ -637,7 +637,7 @@ class TileSet(CommentedMap):
         basename="alhambratemp",
         includes=[pkg_resources.resource_filename(__name__, "peppercomps-j1")],
         spurious_pars="verboten_weak=1.5",
-        *options
+        *options,
     ):
         """Given a tileset dictionary with sticky ends sequences, create core sequences
         for tiles, using Pepper.
@@ -911,7 +911,7 @@ class TileSet(CommentedMap):
         output=None,
         labelsonly=False,
         onlyreal=True,
-        **xgrowparams
+        **xgrowparams,
     ):
         """Run Xgrow for the system.
 
@@ -962,7 +962,7 @@ class TileSet(CommentedMap):
                 onlyreal=onlyreal,
             ),
             outputopts=output,
-            **xgrowparams
+            **xgrowparams,
         )
 
     # FIXME: NEED TO IMPLEMENT THIS WITH BETTER CODE
