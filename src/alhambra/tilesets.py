@@ -192,9 +192,9 @@ class TileSet(Serializable):
         return xgrow_tileset
 
     def summary(self):
+        """Returns a short summary line about the TileSet"""
         self.tiles.refreshnames()
         self.glues.refreshnames()
-        """Returns a short summary line about the TileSet"""
         # self.check_consistent()
         info = {
             "ntiles": len(self.tiles),
