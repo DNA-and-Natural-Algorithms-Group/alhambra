@@ -1,5 +1,6 @@
-from .tilestructures import check_edotparen_sequence, check_edotparen_consistency
 import copy
+
+from .tilestructures import check_edotparen_consistency, check_edotparen_sequence
 
 
 class seed_base:
@@ -10,9 +11,10 @@ class seed_base:
         if "extra" in adapterdef.keys():
             ttype += "_" + adapterdef["extra"]
 
-        from lxml import etree
-        import pkg_resources
         import os
+
+        import pkg_resources
+        from lxml import etree
 
         base_svg = etree.parse(
             pkg_resources.resource_stream(

@@ -1,8 +1,9 @@
 import collections
-import string
 import re
-from .seq import _VALID_NTS, revcomp
+import string
+
 from . import seq as sq
+from .seq import _VALID_NTS, revcomp
 
 edp_closetoopen = {x: y for x, y in zip(string.ascii_lowercase, string.ascii_uppercase)}
 edp_closetoopen.update({")": "(", "]": "[", "}": "{"})

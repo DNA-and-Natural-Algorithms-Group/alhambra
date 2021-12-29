@@ -46,7 +46,12 @@ cities in the United States.
 # 4) Run the automatic annealer which will attempt to choose reasonable values
 # for maximum and minimum temperatures and then anneal for the allotted time.
 
-import copy, math, random, sys, time
+import copy
+import math
+import random
+import sys
+import time
+
 import numpy as np
 
 

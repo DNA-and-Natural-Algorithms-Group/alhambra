@@ -1,5 +1,6 @@
 # Utility functions for sequences
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Tuple, Union
 

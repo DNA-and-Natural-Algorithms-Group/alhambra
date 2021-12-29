@@ -1,7 +1,8 @@
 # New sensitivity code.
 # from .tilestructures import tile_daoe_single
-from .tiles import TileList, Tile, VDupleTile, HDupleTile
 from collections import Counter
+
+from .tiles import HDupleTile, Tile, TileList, VDupleTile
 from .util import comp
 
 

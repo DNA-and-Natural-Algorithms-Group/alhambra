@@ -1,15 +1,14 @@
-import numpy as np
 import copy
 import time
 from typing import Generic, MutableMapping, Protocol, TypeVar, Union
 
+import numpy as np
+import stickydesign as sd
+import stickydesign.stickydesign2 as sd2
 from ruamel.yaml.comments import CommentedSeq
 from ruamel.yaml.representer import RoundTripRepresenter
 
 from . import seq
-
-import stickydesign as sd
-import stickydesign.stickydesign2 as sd2
 
 DEFAULT_ENERGETICS = sd.EnergeticsDAOE(temperature=33, coaxparams=True)
 

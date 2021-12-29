@@ -1,7 +1,9 @@
 from __future__ import annotations
-from dataclasses import dataclass
 
-from .seq import Seq
+import collections.abc
+import copy
+from dataclasses import dataclass
+from enum import Enum
 from typing import (
     Any,
     ClassVar,
@@ -18,11 +20,9 @@ from typing import (
     Union,
 )
 from warnings import warn
-import copy
-from enum import Enum
-import collections.abc
-from .classes import UpdateListD
 
+from .classes import UpdateListD
+from .seq import Seq
 
 T = TypeVar("T")
 

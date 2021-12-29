@@ -1,25 +1,20 @@
 from __future__ import annotations
-import pkg_resources
 
-from stickydesign.energetics_daoe import EnergeticsDAOE
-from alhambra import seq
 import collections
-from dataclasses import dataclass, field
 import datetime
-import warnings
 import logging
-import numpy as np
-
-import stickydesign as sd
-
-import stickydesign.multimodel as multimodel
-
-import xgrow.parseoutput
-
-
+import warnings
+from dataclasses import dataclass, field
 from random import shuffle
 
+import numpy as np
+import pkg_resources
+import stickydesign as sd
+import stickydesign.multimodel as multimodel
+import xgrow.parseoutput
+from stickydesign.energetics_daoe import EnergeticsDAOE
 
+from alhambra import seq, util
 from alhambra.grid import (
     AbstractLattice,
     Lattice,
@@ -30,21 +25,17 @@ from alhambra.grid import (
 )
 
 from . import fastreduceD as fastreduce
-
-
 from .util import (
-    DEFAULT_SD2_MULTIMODEL_ENERGETICS,
-    DEFAULT_MM_ENERGETICS_NAMES,
-    DEFAULT_REGION_ENERGETICS,
-    DEFAULT_MULTIMODEL_ENERGETICS,
     DEFAULT_ENERGETICS,
+    DEFAULT_MM_ENERGETICS_NAMES,
+    DEFAULT_MULTIMODEL_ENERGETICS,
+    DEFAULT_REGION_ENERGETICS,
+    DEFAULT_SD2_MULTIMODEL_ENERGETICS,
 )
-from alhambra import util
 
 SELOGGER = logging.getLogger(__name__)
 
-from numpy import isin
-from alhambra.classes import Serializable
+import copy
 from typing import (
     Any,
     Callable,
@@ -57,21 +48,24 @@ from typing import (
     TypeVar,
     cast,
 )
+
+import xgrow
+import xgrow.tileset as xgt
+from numpy import isin
+
+from alhambra.classes import Serializable
+
+from .glues import DXGlue, Glue, GlueList
+from .seeds import Seed, seed_factory
 from .tiles import (
+    D,
     EdgeLoc,
     SupportsGuards,
     Tile,
-    tile_factory,
     TileList,
     TileSupportingScadnano,
-    D,
+    tile_factory,
 )
-from .glues import DXGlue, Glue, GlueList
-from .seeds import Seed, seed_factory
-import xgrow.tileset as xgt
-import xgrow
-import copy
-
 
 _gl = {
     EdgeLoc(D.N, (0, 0)): (0, 0, 10, 0),
@@ -1008,8 +1002,8 @@ class TileSet(Serializable):
             self.glues.to_endarrays(), all_energetics, energetics_names
         )
 
-        import seaborn as sns
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         if pltcmd is None:
             pltcmd = sns.lvplot

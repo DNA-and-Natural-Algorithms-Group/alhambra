@@ -1,9 +1,11 @@
 import itertools
-from .util import comp, GlueMergeSpec
-import numpy as np
 import re
-from .tiles import TileList
+
+import numpy as np
+
 from .sensitivitynew import _fakesingles
+from .tiles import TileList
+from .util import GlueMergeSpec, comp
 
 _OE = np.array([2, 3, 0, 1])
 _ENDER = np.array([3, 2, 1, 0])

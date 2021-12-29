@@ -1,14 +1,20 @@
 from __future__ import annotations
-import warnings
-from ruamel.yaml.comments import CommentedMap
-from .util import NamedList
+
 import copy
-from peppercompiler.DNA_classes import wc
-from . import seq
+import warnings
+
 import stickydesign as sd
 import stickydesign.stickydesign2 as sd2
-from .util import DEFAULT_SD2_MULTIMODEL_ENERGETICS, DEFAULT_MM_ENERGETICS_NAMES
+from peppercompiler.DNA_classes import wc
+from ruamel.yaml.comments import CommentedMap
 from ruamel.yaml.representer import RoundTripRepresenter
+
+from . import seq
+from .util import (
+    DEFAULT_MM_ENERGETICS_NAMES,
+    DEFAULT_SD2_MULTIMODEL_ENERGETICS,
+    NamedList,
+)
 
 
 class End(CommentedMap):

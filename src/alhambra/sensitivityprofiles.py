@@ -1,8 +1,9 @@
 # New sensitivity code.
-from .tilestructures import tile_daoe_single
-from .tiles import TileList, Tile
 from collections import Counter
-from .util import comp, GlueMergeSpec, TileMergeSpec
+
+from .tiles import Tile, TileList
+from .tilestructures import tile_daoe_single
+from .util import GlueMergeSpec, TileMergeSpec, comp
 
 
 def _fakesingle(tile):

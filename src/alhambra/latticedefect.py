@@ -1,8 +1,9 @@
 import itertools
-from .util import comp, GlueMergeSpec
 import re
-from .tiles import TileList
+
 from .sensitivitynew import _fakesingles
+from .tiles import TileList
+from .util import GlueMergeSpec, comp
 
 _OE = [2, 3, 0, 1]
 _ENDER = [3, 2, 1, 0]

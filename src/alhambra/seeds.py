@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Any, Sequence, Type, TypeVar, cast
-import xgrow.tileset as xgt
-from .glues import DXGlue, Glue
 
+import xgrow.tileset as xgt
+
+from .glues import DXGlue, Glue
 
 T = TypeVar("T")
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from copy import copy
+from dataclasses import dataclass
 
 # from turtle import st
 from typing import (
@@ -8,24 +10,26 @@ from typing import (
     Literal,
     Protocol,
     Sequence,
+    Type,
     TypeVar,
     cast,
-    Type,
     overload,
 )
-from dataclasses import dataclass
+
 import numpy as np
 
 if False:
     from .tilesets import TileSet
-from .tiles import HDupleTile, SingleTile, Tile, TileList, VDupleTile
-from .glues import Glue, GlueList, Use
-from random import shuffle
-from . import util
-from . import fastlatticedefect as fld
+
 import logging
+from random import shuffle
+
 import numpy.typing as npt
 
+from . import fastlatticedefect as fld
+from . import util
+from .glues import Glue, GlueList, Use
+from .tiles import HDupleTile, SingleTile, Tile, TileList, VDupleTile
 
 TMap = dict[tuple[int, int], set[tuple[int, int, int]]]
 

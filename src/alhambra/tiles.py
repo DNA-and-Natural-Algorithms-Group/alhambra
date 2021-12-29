@@ -1,11 +1,13 @@
 from __future__ import annotations
-from abc import ABC, ABCMeta, abstractmethod
+
 import copy
-from dataclasses import dataclass
 import uuid
-import drawSvg_svgy as draw
+from abc import ABC, ABCMeta, abstractmethod
+from dataclasses import dataclass
+from enum import Enum
 from typing import (
     Any,
+    ClassVar,
     Collection,
     Generic,
     Iterable,
@@ -14,7 +16,6 @@ from typing import (
     Literal,
     MutableSequence,
     Optional,
-    ClassVar,
     Protocol,
     Sequence,
     SupportsIndex,
@@ -25,7 +26,8 @@ from typing import (
     cast,
     overload,
 )
-from enum import Enum
+
+import drawSvg_svgy as draw
 from xgrow.xcolors import xcolors
 
 from .glues import Use
@@ -34,10 +36,11 @@ try:
     import scadnano
 except ImportError:
     pass
-from .seq import Seq
-from .glues import DXGlue, Glue, GlueFactory, SSGlue, GlueList
-from .classes import UpdateListD
 import xgrow.tileset as xgt
+
+from .classes import UpdateListD
+from .glues import DXGlue, Glue, GlueFactory, GlueList, SSGlue
+from .seq import Seq
 
 Color = str
 

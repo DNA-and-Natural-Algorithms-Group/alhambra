@@ -1,54 +1,41 @@
-from typing import Any, Optional, Sequence
-import ruamel.yaml as yaml
-from ruamel.yaml.comments import CommentedMap
-from ruamel.yaml.representer import RoundTripRepresenter
-import warnings
-
+import collections
 import copy
-import re
-
-import pkg_resources
+import logging
 import os
+import re
+import warnings
+from collections import Counter
+from datetime import datetime, timezone
+from random import shuffle
+from typing import Any, Optional, Sequence
 
+import numpy as np
+import pkg_resources
+import ruamel.yaml as yaml
+import stickydesign as sd
+import stickydesign.multimodel as multimodel
+import stickydesign.stickydesign2 as sd2
 import xgrow.tileset as xgt
-
-from .tiles import TileList, Tile
-from .ends import EndList
-
-from . import tilestructures
-from . import seeds
-from . import util
-from . import seq
-from . import sensitivitynew as sensitivity
-
-from . import fastreduce
 
 # Need to disable this for now
 from peppercompiler import compiler as compiler
-from peppercompiler.design import spurious_design as spurious_design
 from peppercompiler import finish as finish
+from peppercompiler.design import spurious_design as spurious_design
 from peppercompiler.DNA_classes import wc
+from ruamel.yaml.comments import CommentedMap
+from ruamel.yaml.representer import RoundTripRepresenter
 
-import numpy as np
-import stickydesign as sd
-
-import stickydesign.multimodel as multimodel
-from collections import Counter
-
-import collections
-from random import shuffle
-from datetime import datetime, timezone
-
-import logging
-
-import stickydesign.stickydesign2 as sd2
-
+from . import fastreduce, seeds
+from . import sensitivitynew as sensitivity
+from . import seq, tilestructures, util
+from .ends import EndList
+from .tiles import Tile, TileList
 from .util import (
-    DEFAULT_SD2_MULTIMODEL_ENERGETICS,
-    DEFAULT_MM_ENERGETICS_NAMES,
-    DEFAULT_REGION_ENERGETICS,
-    DEFAULT_MULTIMODEL_ENERGETICS,
     DEFAULT_ENERGETICS,
+    DEFAULT_MM_ENERGETICS_NAMES,
+    DEFAULT_MULTIMODEL_ENERGETICS,
+    DEFAULT_REGION_ENERGETICS,
+    DEFAULT_SD2_MULTIMODEL_ENERGETICS,
 )
 
 SELOGGER = logging.getLogger(__name__)
@@ -125,9 +112,10 @@ class TileSet(CommentedMap):
             (currently unused)
         """
 
-        from lxml import etree
-        import pkg_resources
         import os.path
+
+        import pkg_resources
+        from lxml import etree
 
         base = etree.parse(
             pkg_resources.resource_stream(
@@ -586,8 +574,7 @@ class TileSet(CommentedMap):
         """Given a tileset dictionary that includes sticky end sequences, reorder these
         to try to optimize error rates.
         """
-        from . import endreorder
-        from . import anneal
+        from . import anneal, endreorder
 
         if energetics is None:
             energetics = DEFAULT_ENERGETICS
@@ -881,9 +868,10 @@ class TileSet(CommentedMap):
 
     def dx_create_adapter_sequence_diagrams(tileset, filename, *options):
         """Create sequence diagrams of adapters for the seed."""
-        from lxml import etree
-        import pkg_resources
         import os.path
+
+        import pkg_resources
+        from lxml import etree
 
         base = etree.parse(
             pkg_resources.resource_stream(

@@ -1,11 +1,12 @@
-import ruamel.yaml as yaml
 import argparse
 import logging
-import sys
 import os.path
-from .tilesets import TileSet
-import logging
+import sys
+
 import click
+import ruamel.yaml as yaml
+
+from .tilesets import TileSet
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 

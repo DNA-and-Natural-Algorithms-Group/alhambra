@@ -1,20 +1,20 @@
 from __future__ import annotations
+
+import re
 from abc import ABC, ABCMeta, abstractmethod
 from itertools import dropwhile
 from typing import (
     Any,
     Generic,
     Iterable,
+    Literal,
     Protocol,
     SupportsIndex,
     Type,
     TypeVar,
-    Literal,
     cast,
     overload,
 )
-import re
-
 
 T_NMI = TypeVar("T_NMI", bound="IdentMergeableItem")
 

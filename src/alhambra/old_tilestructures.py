@@ -1,20 +1,20 @@
-from abc import ABCMeta, abstractmethod
 import copy
-
+import logging
+import os.path
 import re
+import warnings
+from abc import ABCMeta, abstractmethod
 from typing import Literal, Optional, Union
+
 import cssutils
-from lxml import etree
 
 # Color dictionary for xgrow colors...
 import pkg_resources
-import os.path
-from .ends import End, EndList
-import warnings
+from lxml import etree
+
 from . import seq as sq
 from .edotparen import check_edotparen_consistency, check_edotparen_sequence
-
-import logging
+from .ends import End, EndList
 
 cssutils.log.setLevel(logging.FATAL)
 

@@ -1,9 +1,11 @@
 """A module"""
+import copy
+
 from ruamel.yaml.comments import CommentedMap
-from .util import NamedList
+
 from .ends import EndList
 from .tilestructures import TileStructure, getstructure
-import copy
+from .util import NamedList
 
 
 class Tile(dict):

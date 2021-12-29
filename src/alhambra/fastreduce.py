@@ -1,12 +1,14 @@
+import logging
 from collections import namedtuple
 from copy import copy
-import numpy as np
-from .tiles import TileList
-from .glues import Glue
 from random import shuffle
-from . import util
+
+import numpy as np
+
 from . import fastlatticedefect as fld
-import logging
+from . import util
+from .glues import Glue
+from .tiles import TileList
 
 FTile = namedtuple(
     "FTile", ("color", "use", "glues", "name", "used", "structure", "dfake", "sfake")

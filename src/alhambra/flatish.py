@@ -3,7 +3,11 @@ Tiles, seeds, glues, and lattices for the 'flatish' tile motif.
 """
 from __future__ import annotations
 
+from typing import Any, ClassVar, Literal, Sequence, Type, TypeVar, Union, cast
+
 import numpy as np
+import scadnano
+import xgrow.tileset as xgt
 
 from alhambra.grid import (
     AbstractLattice,
@@ -11,20 +15,18 @@ from alhambra.grid import (
     ScadnanoLattice,
     lattice_factory,
 )
+
 from .glues import Glue
 from .seeds import Seed, seed_factory
-from typing import Any, ClassVar, Literal, Sequence, Type, TypeVar, Union, cast
-import scadnano
 from .tiles import (
-    BaseSSTSingle,
     BaseSSTile,
+    BaseSSTSingle,
     HDupleTile,
     SSGlue,
     Tile,
     VDupleTile,
     tile_factory,
 )
-import xgrow.tileset as xgt
 
 __all__ = [
     "FlatishHSeed9",

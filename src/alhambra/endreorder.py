@@ -1,13 +1,15 @@
 # End reordering code to optimize placement.
 
-from . import anneal
-from . import sensitivity as sens
-import stickydesign as sd
-import numpy.random as random
-import numpy as np
 import random as pyrand
 from copy import deepcopy
+
+import numpy as np
 import numpy.ma as ma
+import numpy.random as random
+import stickydesign as sd
+
+from . import anneal
+from . import sensitivity as sens
 
 
 def flatten(seq):
