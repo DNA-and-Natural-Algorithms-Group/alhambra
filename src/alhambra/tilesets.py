@@ -33,8 +33,6 @@ from .util import (
     DEFAULT_SD2_MULTIMODEL_ENERGETICS,
 )
 
-SELOGGER = logging.getLogger(__name__)
-
 import copy
 from typing import (
     Any,
@@ -44,9 +42,11 @@ from typing import (
     Literal,
     Mapping,
     Optional,
+    Sequence,
     Type,
     TypeVar,
     cast,
+    TYPE_CHECKING,
 )
 
 import xgrow
@@ -67,6 +67,13 @@ from .tiles import (
     tile_factory,
 )
 
+if TYPE_CHECKING:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import scadnano
+
+SELOGGER = logging.getLogger(__name__)
+
 _gl = {
     EdgeLoc(D.N, (0, 0)): (0, 0, 10, 0),
     EdgeLoc(D.E, (0, 0)): (10, 0, 10, 10),
@@ -80,11 +87,6 @@ _gl = {
     EdgeLoc(D.W, (1, 0)): (0, 10, 0, 20),
 }
 
-try:
-    import scadnano
-except ImportError:
-    pass
-
 T = TypeVar("T")
 
 
@@ -97,6 +99,28 @@ class TileSet(Serializable):
     lattices: dict[str | int, Lattice]
     guards: dict[str | int, list[str]]
     params: dict
+
+    def __init__(
+        self,
+        tiles: Iterable[Tile] = tuple(),
+        glues: Iterable[Glue] = tuple(),
+        seeds: Mapping[str | int, Seed] | None = None,
+        *,
+        lattices: Mapping[str | int, Lattice] | None = None,
+        guards: Iterable[str] = tuple(),
+        params: dict | None = None,
+    ) -> None:
+        self.tiles = TileList(tiles)
+        self.glues = GlueList(glues)
+        self.seeds = dict(seeds) if seeds else dict()
+        self.lattices = dict(lattices) if lattices else dict()
+        self.guards = list(guards)
+        if params is not None:
+            self.params = params
+        else:
+            self.params = dict()
+
+    ### XGROW METHODS
 
     def run_xgrow(
         self,
@@ -185,6 +209,10 @@ class TileSet(Serializable):
 
         return xgrow_tileset
 
+    def _to_xgrow_dict(self) -> dict:
+        """DEPRECATED: to xgrow dict"""
+        return self.to_xgrow().to_dict()
+
     def summary(self):
         """Returns a short summary line about the TileSet"""
         self.tiles.refreshnames()
@@ -218,11 +246,11 @@ class TileSet(Serializable):
     def __str__(self):
         return self.summary()
 
-    def to_xgrow_dict(self) -> dict:
-        return self.to_xgrow().to_dict()
-
     @classmethod
-    def from_scadnano(cls: Type[T], des: "scadnano.Design", ret_fails=False) -> T:
+    def from_scadnano(cls: Type[T], des: scadnano.Design, ret_fails=False) -> T:
+        """Create TileSet from Scadnano Design."""
+        import scadnano
+
         ts = cls()
         tiles: TileList[TileSupportingScadnano] = TileList()
         ts.glues = GlueList()
@@ -247,9 +275,10 @@ class TileSet(Serializable):
         ts.lattices = [ScadnanoLattice(positions)]
         return ts
 
-    def to_scadnano(
-        self, lattice: LatticeSupportingScadnano = None
-    ) -> "scadnano.Design":
+    def to_scadnano(self, lattice: LatticeSupportingScadnano = None) -> scadnano.Design:
+        """Export TileSet (with lattice) as Scadnano Design."""
+        import scadnano
+
         self.tiles.refreshnames()
         self.glues.refreshnames()
         if lattice:
@@ -257,8 +286,7 @@ class TileSet(Serializable):
         for tlattice in self.lattices:
             if isinstance(tlattice, LatticeSupportingScadnano):
                 return tlattice.to_scadnano(self)
-        else:
-            raise ValueError
+        raise ValueError
 
     def to_dict(self) -> dict:
         d = {}
@@ -304,36 +332,16 @@ class TileSet(Serializable):
     def _deserialize(cls, input: Any) -> TileSet:
         return cls.from_dict(input)
 
-    def __init__(
-        self,
-        tiles: Iterable[Tile] = tuple(),
-        glues: Iterable[Glue] = tuple(),
-        seeds: Mapping[str | int, Seed] | None = None,
-        *,
-        lattices: Mapping[str | int, Lattice] | None = None,
-        guards: Iterable[str] = tuple(),
-        params: dict | None = None,
-    ) -> None:
-        self.tiles = TileList(tiles)
-        self.glues = GlueList(glues)
-        self.seeds = dict(seeds) if seeds else dict()
-        self.lattices = dict(lattices) if lattices else dict()
-        self.guards = list(guards)
-        if params is not None:
-            self.params = params
-        else:
-            self.params = dict()
-
     def stickydesign_create_dx_glue_sequences(
         self,
         method: Literal["default", "multimodel"] = "default",
-        energetics=None,
-        trials=100,
+        energetics: "stickydesign.Energetics" | None = None,
+        trials: int = 100,
         devmethod="dev",
-        sdopts={},
-        ecpars={},
-        listends=False,
-    ):
+        sdopts: dict[str, Any] | None = None,
+        ecpars: dict[str, Any] | None = None,
+        listends: bool = False,
+    ) -> tuple[TileSet, Sequence[str]]:
         """Create sticky end sequences for the TileSet, using stickydesign,
         and returning a new TileSet including the ends.
 
@@ -373,6 +381,10 @@ class TileSet(Serializable):
             Names of the ends that were designed.
 
         """
+        if sdopts is None:
+            sdopts = {}
+        if ecpars is None:
+            ecpars = {}
         info = {}
         info["method"] = method
         info["time"] = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
@@ -934,8 +946,12 @@ class TileSet(Serializable):
         return fastreduce._FastTileSet(self).applyequiv(self, equiv)
 
     def dx_plot_se_hists(
-        self, all_energetics=None, energetics_names=None, title=None, **kwargs
-    ):
+        self: TileSet,
+        all_energetics: Sequence[stickydesign.Energetics] | None = None,
+        energetics_names: Sequence[str] | None = None,
+        title: str | None = None,
+        **kwargs: Any,
+    ) -> Any:
         """Plot histograms of sticky end energies, using stickydesign.plots.hist_multi.
 
         Parameters
@@ -980,11 +996,11 @@ class TileSet(Serializable):
         )
 
     def dx_plot_se_lv(
-        self,
-        all_energetics=None,
-        energetics_names=None,
-        pltcmd=None,
-        title=None,
+        self: TileSet,
+        all_energetics: Sequence[stickydesign.Energetics] | None = None,
+        energetics_names: Sequence[str] | None = None,
+        pltcmd: Callable[[Any], Any] = None,
+        title: str | None = None,
         **kwargs,
     ):
         """
@@ -1014,7 +1030,7 @@ class TileSet(Serializable):
             plt.title(title)
         plt.ylabel("Energy (kcal/mol)")
 
-    def dx_plot_adjacent_regions(tileset, energetics=None):
+    def dx_plot_adjacent_regions(self: TileSet, energetics=None):
         """
         Plots the strength of double-stranded regions in DX tiles adjacent
         to sticky ends.
@@ -1054,7 +1070,7 @@ class TileSet(Serializable):
         pylab.xlabel("stickydesign ΔG")
         pylab.suptitle("8 nt end-adjacent region strengths")
 
-    def dx_plot_side_strands(tileset, energetics=None):
+    def dx_plot_side_strands(self: TileSet, energetics=None):
         """
         Plots the binding strength of short strands in DX tiles.
 
