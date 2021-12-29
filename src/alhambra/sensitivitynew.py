@@ -1,6 +1,6 @@
 # New sensitivity code.
 # from .tilestructures import tile_daoe_single
-from .tiles import TileList, Tile
+from .tiles import TileList, Tile, VDupleTile, HDupleTile
 from collections import Counter
 from .util import comp
 
@@ -26,11 +26,11 @@ class PathSet(dict):
         self[key].add(val)
 
 
-def _fakesingle(tile):
-    if not tile.structure.double:
+def _fakesingle(tile: Tile):
+    if not isinstance(tile, (HDupleTile, VDupleTile)):
         return TileList([tile])
     ret = TileList()
-    c = ["", "/"]
+    c = ["", "*"]
     cn = ["_db_a", "_db_b"]
     for qq, es in enumerate(tile.structure.singleends):
         ft = FakeSingle()
@@ -39,7 +39,6 @@ def _fakesingle(tile):
         ft["name"] = tile.name + cn[qq]
         if "input" in tile.keys():
             ft["input"] = []
-        ft.structure._endtypes = []
         for i in es:
             if i is not None:
                 ft["ends"].append(tile["ends"][i])

@@ -1,26 +1,95 @@
-from collections import namedtuple
+from __future__ import annotations
 from copy import copy
+
+# from turtle import st
+from typing import (
+    Any,
+    Iterable,
+    Literal,
+    Protocol,
+    Sequence,
+    TypeVar,
+    cast,
+    Type,
+    overload,
+)
+from dataclasses import dataclass
 import numpy as np
-from . import tilestructures
-from .tiles import TileList
-from .ends import End
+
+if False:
+    from .tilesets import TileSet
+from .tiles import HDupleTile, SingleTile, Tile, TileList, VDupleTile
+from .glues import Glue, GlueList, Use
 from random import shuffle
 from . import util
 from . import fastlatticedefect as fld
 import logging
+import numpy.typing as npt
 
-FTile = namedtuple(
-    "FTile", ("color", "use", "glues", "name", "used", "structure", "dfake", "sfake")
-)
 
-FTilesArray = namedtuple(
-    "FTilesArray",
-    ("color", "use", "glues", "name", "used", "structure", "dfake", "sfake"),
-)
+TMap = dict[tuple[int, int], set[tuple[int, int, int]]]
+
+
+@dataclass
+class FTile:
+    name: str
+    used: bool
+    glues: npt.NDArray[np.int64]
+    use: npt.NDArray[np.int64]
+    color: Any
+    structure: Type[Tile]
+    dfake: int
+    sfake: int
+
+
+@dataclass
+class FTilesArray:
+    color: Any
+    use: np.ndarray[Any, np.dtype[np.int64]]
+    glues: np.ndarray[Any, np.dtype[np.int64]]
+    name: np.ndarray[Any, np.dtype[np.str0]]
+    used: np.ndarray[Any, np.dtype[np.bool8]]
+    structure: np.ndarray[Any, np.dtype[np.str0]]
+    dfake: np.ndarray[Any, np.dtype[np.int64]]
+    sfake: np.ndarray[Any, np.dtype[np.int64]]
+
+    def __len__(self) -> int:
+        return len(self.name)
+
+    @classmethod
+    def from_ftiles(cls, ftiles: Iterable[FTile]) -> FTilesArray:
+
+        color = np.array([x.color for x in ftiles])
+        name = np.array([x.name for x in ftiles])
+        glues = np.array([x.glues for x in ftiles])
+        use = np.array([x.use for x in ftiles])
+        used = np.array([x.used for x in ftiles], dtype=bool)
+        structure = np.array([x.structure.name for x in ftiles])
+        dfake = np.array([x.dfake for x in ftiles])
+        sfake = np.array([x.sfake for x in ftiles])
+
+        return FTilesArray(
+            color=color,
+            name=name,
+            glues=glues,
+            use=use,
+            used=used,
+            structure=structure,
+            dfake=dfake,
+            sfake=sfake,
+        )
+
 
 TAU = 2
 
 other = [2, 3, 0, 1]
+
+
+class TileWithUse(Protocol):
+    @property
+    def use(self) -> list[int]:
+        ...
+
 
 # Use is now going to have 4 possible values: Null, Input, Output, Both, Permanent
 uU = 0
@@ -44,42 +113,46 @@ usedict = {
     "b": uB,
 }
 
+Equiv = npt.NDArray[np.int64]
+
 
 class FGlueList:
-    def __init__(self, glues):
+    def __init__(self, glues: GlueList[Glue]):
         self.name = []
         self.strength = []
-        self.structure = []
+        self.type = []
         self.complement = []
         self.use = []
         self.tonum = {}
 
         for i, g in enumerate(glues):
-            self.name.append(g.name)
-            self.name.append(g.name + "/")
+            g = cast(Glue, g)
+            self.name.append(g.ident())
+            self.name.append(g.ident() + "*")
             self.complement.append(2 * i + 1)
             self.complement.append(2 * i)
-            self.structure.append(g.etype)
-            self.structure.append(g.etype)
-            self.tonum.update({g.name: 2 * i, g.name + "/": 2 * i + 1})
-            self.strength.append(g.strength)
-            self.strength.append(g.strength)
-            self.use.append(g.use)
-            self.use.append(invertuse[g.use])
+            self.type.append(g.type)
+            self.type.append(g.type)
+            self.tonum.update({g.ident(): 2 * i, g.ident() + "*": 2 * i + 1})
+            self.strength.append(g.abstractstrength)
+            self.strength.append(g.abstractstrength)
+            assert g.use is not None
+            self.use.append(g.use.value)
+            self.use.append(g.use.invert().value)
         self.name = np.array(self.name)
         self.strength = np.array(self.strength)
-        self.structure = np.array(self.structure)
+        self.type = np.array(self.type)
         self.complement = np.array(self.complement)
         self.use = np.array(self.use)
 
-    def blankequiv(self):
+    def blankequiv(self) -> Equiv:
         return np.arange(0, len(self.name))
 
-    def iseq(self, equiv, a, b):
+    def iseq(self, equiv: Equiv, a: int, b: int) -> bool:
         return equiv[a] == equiv[b]
 
-    def domerge(self, equiv, a, b, preserveuse=False):
-        if self.structure[a] != self.structure[b]:
+    def domerge(self, equiv: Equiv, a: int, b: int, preserveuse: bool = False) -> Equiv:
+        if self.type[a] != self.type[b]:
             raise ValueError("structure")
         elif self.strength[a] != self.strength[b]:
             raise ValueError("strength")
@@ -102,32 +175,36 @@ class FGlueList:
 
 
 class FTileList:
-    def __init__(self, tiles, gluelist):
+    stiles: FTilesArray
+    htiles: FTilesArray
+    vtiles: FTilesArray
+
+    def __init__(self, tiles: TileList[Tile], gluelist: FGlueList):
         self.tiles = []
         self.totile = {}
         for t in tiles:
-            glues = np.array([gluelist.tonum[x] for x in t.ends])
-            if "fake" in t.keys():
+            glues = np.array([gluelist.tonum[x.ident()] for x in t.edges])
+            if t.is_fake:
                 continue
-            if "use" not in t.keys():
-                if "input" in t.keys():
-                    use = np.array([[uO, uI][int(x)] for x in t["input"]])
-                    used = True
-                else:
-                    used = False
-                    use = np.array([uU for _ in t.ends])
+            if t.use is None:
+                # if "input" in t.keys():
+                #    use = np.array([[uO, uI][int(x)] for x in t["input"]])
+                #    used = True
+                # else:
+                used = False
+                use = np.array([uU for _ in t.edges])
             else:
                 used = True
-                use = np.array([usedict(x) for x in t["use"]])
-            color = "label" in t.keys()
+                use = np.array([x.value for x in t.use])
+            # color = "label" in t.keys()
             self.tiles.append(
                 FTile(
-                    name=t.name,
-                    color=color,
+                    name=t.ident(),
+                    color=False,  # FIXME
                     use=use,
                     glues=glues,
                     used=used,
-                    structure=t.structure,
+                    structure=t.__class__,
                     dfake=0,
                     sfake=0,
                 )
@@ -139,35 +216,30 @@ class FTileList:
         vtiles = []
 
         for t in self.tiles:
-            if isinstance(t.structure, tilestructures.tile_daoe_single):
+            if issubclass(t.structure, SingleTile):
                 stiles.append(t)
-            elif isinstance(t.structure, tilestructures.tile_daoe_doublehoriz):
+            elif issubclass(t.structure, HDupleTile):
                 stiles += _ffakesingle(t, gluelist)
                 htiles.append(t)
-            elif isinstance(t.structure, tilestructures.tile_daoe_doublevert):
+            elif issubclass(t.structure, VDupleTile):
                 stiles += _ffakesingle(t, gluelist)
                 vtiles.append(t)
             else:
                 raise NotImplementedError
-        self.stiles = _ft_to_fta(stiles)
+        self.stiles = FTilesArray.from_ftiles(stiles)
 
         for i in range(0, len(self.stiles)):
             x, y = _ffakedouble_n(i, self.stiles, gluelist)
             htiles += x
             vtiles += y
 
-        self.htiles = _ft_to_fta(htiles)
-        self.vtiles = _ft_to_fta(vtiles)
+        self.htiles = FTilesArray.from_ftiles(htiles)
+        self.vtiles = FTilesArray.from_ftiles(vtiles)
 
 
 RSEL = (2, 3, 0, 1)
 FTI = (1, 0, 1, 0)
-FTS = (
-    tilestructures.tile_doublevert(),
-    tilestructures.tile_doublehoriz(),
-    tilestructures.tile_doublevert(),
-    tilestructures.tile_doublehoriz(),
-)
+FTS = (VDupleTile, HDupleTile, VDupleTile, HDupleTile)
 
 
 def _fdg(dir, gs1, gs2):
@@ -183,14 +255,57 @@ def _fdg(dir, gs1, gs2):
         raise ValueError(dir)
 
 
-def _ffakedouble_n(tn, sta, gluelist, outputonly=True, dir4=False, equiv=None):
+@overload
+def _ffakedouble_n(
+    tn: int,
+    sta,
+    gluelist: FGlueList,
+    outputonly: bool = True,
+    *,
+    dir4: Literal[True],
+    equiv=None,
+) -> tuple[list[FTile], list[FTile], list[FTile], list[FTile]]:
+    ...
+
+
+@overload
+def _ffakedouble_n(
+    tn: int,
+    sta,
+    gluelist: FGlueList,
+    outputonly: bool = True,
+    *,
+    dir4: Literal[False] = False,
+    equiv=None,
+) -> tuple[list[FTile], list[FTile]]:
+    ...
+
+
+def _ffakedouble_n(
+    tn: int,
+    sta,
+    gluelist: FGlueList,
+    outputonly: bool = True,
+    *,
+    dir4: bool = False,
+    equiv=None,
+) -> tuple[list[FTile], list[FTile]] | tuple[
+    list[FTile], list[FTile], list[FTile], list[FTile]
+]:
     if equiv is None:
         equiv = gluelist.blankequiv()
     if not dir4:
-        faketiles = ([], [])
+        faketiles: tuple[list[FTile], list[FTile]] | tuple[
+            list[FTile], list[FTile], list[FTile], list[FTile]
+        ] = ([], [])
         fti = FTI
     else:
-        faketiles = ([], [], [], [])
+        faketiles = (
+            [],
+            [],
+            [],
+            [],
+        )
         fti = (0, 1, 2, 3)
     if sta.sfake[tn]:
         ddir = np.flatnonzero(gluelist.tonum["fakedouble"] == sta.glues[tn])[0]
@@ -226,7 +341,7 @@ def _ffakedouble_n(tn, sta, gluelist, outputonly=True, dir4=False, equiv=None):
                     sfake=(sta.sfake[tn] or sta.sfake[i]),
                 )
             )
-        if sta.sfake[tn] and (dir == ddir):
+        if sta.sfake[tn] and (dir == ddir):  # type: ignore
             faketiles[fti[dir]].append(
                 FTile(
                     color=False,
@@ -236,10 +351,18 @@ def _ffakedouble_n(tn, sta, gluelist, outputonly=True, dir4=False, equiv=None):
                     + sta.name[tn + sta.sfake[tn]],
                     structure=FTS[dir],
                     glues=np.array(
-                        _fdg(dir, sta.glues[tn, :], sta.glues[tn + sta.sfake[tn]])
+                        _fdg(
+                            dir,
+                            sta.glues[tn, :],
+                            sta.glues[tn + sta.sfake[tn]],
+                        )
                     ),
                     use=np.array(
-                        _fdg(dir, sta.use[tn, :], sta.use[tn + sta.sfake[tn]])
+                        _fdg(
+                            dir,
+                            sta.use[tn, :],
+                            sta.use[tn + sta.sfake[tn]],
+                        )
                     ),
                     dfake=dir + 1,
                     sfake=True,
@@ -253,18 +376,18 @@ HSEL = ((1, 0, 5, 6), (2, 3, 4, 0))
 VSEL = ((1, 2, 0, 6), (0, 3, 4, 5))
 
 
-def _ffakesingle(ftile, gluelist):
+def _ffakesingle(ftile: FTile, gluelist: FGlueList) -> Sequence[FTile]:
     # FIXME: should be more generalized.  Currently only tau=2
-    if isinstance(ftile.structure, tilestructures.tile_daoe_doublehoriz):
+    if isinstance(ftile.structure, VDupleTile):
         sel = HSEL
-    elif isinstance(ftile.structure, tilestructures.tile_daoe_doublevert):
+    elif isinstance(ftile.structure, HDupleTile):
         sel = VSEL
     else:
         raise NotImplementedError
 
     # Start by making the tiles, then change around the inputs
     fdb = gluelist.tonum["fakedouble"]
-    glues = [[([fdb] + list(ftile.glues))[x] for x in y] for y in sel]
+    glues: list[list[int]] = [[([fdb] + list(ftile.glues))[x] for x in y] for y in sel]
     fuse = [[([uP] + list(ftile.use))[x] for x in y] for y in sel]
     use = []
     used = []
@@ -280,10 +403,10 @@ def _ffakesingle(ftile, gluelist):
         FTile(
             color=ftile.color,
             use=u,
-            glues=g,
+            glues=np.array(g),
             name=n,
             used=ud,
-            structure=tilestructures.tile_daoe_single(),
+            structure=SingleTile,
             dfake=0,
             sfake=sfo,
         )
@@ -291,56 +414,49 @@ def _ffakesingle(ftile, gluelist):
     ]
 
 
-def _ft_to_fta(ftiles):
-    return FTilesArray(
-        color=np.array([x.color for x in ftiles]),
-        name=np.array([x.name for x in ftiles]),
-        glues=np.array([x.glues for x in ftiles]),
-        use=np.array([x.use for x in ftiles]),
-        used=np.array([x.used for x in ftiles]),
-        structure=np.array([x.structure.name for x in ftiles]),
-        dfake=np.array([x.dfake for x in ftiles]),
-        sfake=np.array([x.sfake for x in ftiles]),
-    )
-
-
 class _FastTileSet:
-    def __init__(self, tilesystem):
+    gluelist: FGlueList
+    tilelist: FTileList
+
+    def __init__(self, tilesystem: "TileSet"):
         self.gluelist = FGlueList(
-            tilesystem.allends
+            tilesystem.allglues
             + [
-                End({"name": "hp", "type": "hairpin", "strength": 0}),
-                End({"name": "fakedouble", "type": "fakedouble", "strength": 0}),
+                # End({"name": "hp", "type": "hairpin", "strength": 0}),
+                Glue("fakedouble", "fakedouble", abstractstrength=0, use=Use.PERMANENT)
             ]
         )
         self.tilelist = FTileList(
             tilesystem.tiles
-            + sum([x.named_rotations() for x in tilesystem.tiles], TileList()),
+            # + sum([x.named_rotations() for x in tilesystem.tiles], TileList()) # FIXME
+            ,
             self.gluelist,
         )
 
-    def applyequiv(self, ts, equiv):
+    def applyequiv(self, ts: TileSet, equiv) -> TileSet:
         ts = ts.copy()
         alreadythere = []
         for tile in ts.tiles:
-            tile.ends = [
-                self.gluelist.name[equiv[self.gluelist.tonum[e]]] for e in tile.ends
+            tile.edges = [
+                self.gluelist.name[equiv[self.gluelist.tonum[e.ident()]]]
+                for e in tile.edges
             ]
-            if (tile.ends, "label" in tile.keys()) in alreadythere:
-                tile["fake"] = True
+            if (tile.edges, False) in alreadythere:  # FIXME: False was label
+                tile.fake = True
                 continue
             rs = [tile] + tile.rotations
-            alreadythere += [(t.ends, "label" in t.keys()) for t in rs]
-        if "seed" in ts.keys():
-            for t in ts.seed["adapters"]:
-                if "ends" in t.keys():
-                    t["ends"] = [
-                        self.gluelist.name[equiv[self.gluelist.tonum[e]]]
-                        for e in t["ends"]
-                    ]
-        ts["info"] = ts.get("info", dict())
-        ts["info"]["fgluemerge"] = ts["info"].get("fgluemerge", list())
-        ts["info"]["fgluemerge"].append([int(x) for x in equiv])
+            alreadythere += [(t.edges, False) for t in rs]
+        # FIXME
+        # if "seed" in ts.keys():
+        #    for t in ts.seed["adapters"]:
+        #        if "ends" in t.keys():
+        #            t["ends"] = [
+        #                self.gluelist.name[equiv[self.gluelist.tonum[e]]]
+        #                for e in t["ends"]
+        #            ]
+        # ts["info"] = ts.get("info", dict())
+        # ts["info"]["fgluemerge"] = ts["info"].get("fgluemerge", list())
+        # ts["info"]["fgluemerge"].append([int(x) for x in equiv])
         return ts
 
     def togluemergespec(self, ts, equiv):
@@ -351,13 +467,16 @@ class _FastTileSet:
         return gms
 
 
-def ptins(fts, equiv=None, tau=2):
+def ptins(
+    fts: _FastTileSet, equiv: Equiv | None = None, tau=2
+) -> list[list[np.ndarray[Any, np.dtype[np.int64]]]]:
     """Calculate potential tile attachments to input neighborhoods"""
     ptins = []
     if equiv is None:
         equiv = fts.gluelist.blankequiv()
     for ta in [fts.tilelist.stiles, fts.tilelist.htiles, fts.tilelist.vtiles]:
         ptin = []
+        ti: int
         for ti in np.arange(0, len(ta.used))[ta.used]:
             # Only iterate through used tiles
             isel = ta.use[ti] == uI  # used edges
@@ -423,10 +542,23 @@ def findmovetiles(fts, tilei, direction, allin, allout):
         return {(tmatch, False, allout, other[direction]) for tmatch in tilematches}
 
 
-def _2go_moveandfill(fts, t, i, allin=True, allout=True, pdir=None, x=0, y=0, d=None):
-    if d == None:
-        d = dict()
-    s = d.get((x, y), set())
+def _2go_moveandfill(
+    fts: _FastTileSet,
+    t: int,
+    i: int,
+    allin=True,
+    allout=True,
+    pdir=None,
+    x=0,
+    y=0,
+    old_d=None,
+) -> TMap:
+    if old_d is None:
+        d: dict[tuple[int, int], set[Any]] = dict()
+    else:
+        d = old_d
+
+    s: set[tuple[int, int, int]] = d.get((x, y), set())
     d[(x, y)] = s
     for edge in (0, 1, 2, 3):
         if allin:
@@ -443,6 +575,7 @@ def _2go_moveandfill(fts, t, i, allin=True, allout=True, pdir=None, x=0, y=0, d=
             continue
         dx, dy = directions[edge]
         moves = findmovetiles(fts, t, edge, allin, allout)
+        assert moves is not None  # FIXME
         for newt, newallin, newallout, newpdir in moves:
             d = _2go_moveandfill(
                 fts, newt, i - 1, newallin, newallout, newpdir, x + dx, y + dy, d
@@ -450,7 +583,7 @@ def _2go_moveandfill(fts, t, i, allin=True, allout=True, pdir=None, x=0, y=0, d=
     return d
 
 
-def _2go_findtrialmoves(fts, tilei, direction, equiv=None):
+def _2go_findtrialmoves(fts: _FastTileSet, tilei, direction, equiv=None):
     use = fts.tilelist.stiles.use[tilei, direction]
     if use == uN:
         return {}
@@ -474,7 +607,7 @@ def _2go_findtrialmoves(fts, tilei, direction, equiv=None):
 directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
 
 
-def _2go_checkandmove(fts, ct, x, y, i, tmap, exclude=tuple(), equiv=None):
+def _2go_checkandmove(fts, ct, x, y, i, tmap: TMap, exclude=tuple(), equiv=None):
 
     for direction in (0, 1, 2, 3):
         if direction in exclude:
@@ -506,7 +639,47 @@ def _2go_checkandmove(fts, ct, x, y, i, tmap, exclude=tuple(), equiv=None):
     return False, None, None, None, None
 
 
-def is_2go_nn(fts, tn, un, equiv, tau=2, tmaps=None, retall=False, also22go=False):
+@overload
+def is_2go_nn(
+    fts: _FastTileSet,
+    tn: int,
+    un: int,
+    equiv: np.ndarray[Any, np.dtype[np.int64]],
+    tau: int = 2,
+    tmaps: dict[int, TMap] | None = None,
+    *,
+    retall: Literal[True],
+    also22go: bool = False,
+) -> tuple[bool, tuple[Any, Any] | None]:
+    ...
+
+
+@overload
+def is_2go_nn(
+    fts: _FastTileSet,
+    tn: int,
+    un: int,
+    equiv: np.ndarray[Any, np.dtype[np.int64]],
+    tau: int = 2,
+    tmaps: dict[int, TMap] | None = None,
+    *,
+    retall: Literal[False] = False,
+    also22go: bool = False,
+) -> bool:
+    ...
+
+
+def is_2go_nn(
+    fts: _FastTileSet,
+    tn: int,
+    un: int,
+    equiv: np.ndarray[Any, np.dtype[np.int64]],
+    tau: int = 2,
+    tmaps: dict[int, TMap] | None = None,
+    *,
+    retall: bool = False,
+    also22go: bool = False,
+) -> bool | tuple[bool, tuple[Any, Any] | None]:
 
     if also22go:
         raise NotImplementedError()
@@ -515,16 +688,16 @@ def is_2go_nn(fts, tn, un, equiv, tau=2, tmaps=None, retall=False, also22go=Fals
     if np.all(
         equiv[fts.tilelist.stiles.glues[tn]] == equiv[fts.tilelist.stiles.glues[un]]
     ):
-        if not also22go:
-            if not retall:
-                return False
-            else:
-                return False, None
+        # if not also22go:
+        if not retall:
+            return False
         else:
-            if not retall:
-                return False, False
-            else:
-                return False, False, None, None
+            return False, None
+        # else:
+        #    if not retall:
+        #        return False, False
+        #    else:
+        #        return False, False, None, None
 
     if tmaps is not None:
         tmap = tmaps[tn]
@@ -544,15 +717,15 @@ def is_2go_nn(fts, tn, un, equiv, tau=2, tmaps=None, retall=False, also22go=Fals
             return True, (res[1], res[2])
 
 
-def gen_2go_maps(fts):
-    sel = np.flatnonzero(fts.tilelist.stiles.used)
-    maps = dict()
+def gen_2go_maps(fts: _FastTileSet) -> dict[int, TMap]:
+    sel: np.ndarray[Any, np.dtype[np.int64]] = np.flatnonzero(fts.tilelist.stiles.used)
+    maps: dict[int, TMap] = dict()
     for t in sel:
         maps[t] = _2go_moveandfill(fts, t, 2)
     return maps
 
 
-def gen_2go_profile(fts, equiv=None, tmaps=None, also22go=False):
+def gen_2go_profile(fts: _FastTileSet, equiv=None, tmaps=None, also22go: bool = False):
     if tmaps is None:
         tmaps = gen_2go_maps(fts)
     if equiv is None:
@@ -567,8 +740,8 @@ def gen_2go_profile(fts, equiv=None, tmaps=None, also22go=False):
         x22 = []
         for un in uns[0]:
             if also22go:
-                s2, s22 = is_2go_single_nn(
-                    fts, t, un, equiv, tau=2, in2go=in2go, also22go=True
+                s2, s22 = is_2go_single_nn(  # FIXME: this was still 2go_single; why?
+                    fts, t, un, equiv, tau=2, also22go=True
                 )
             else:
                 s2 = is_2go_nn(fts, t, un, equiv, tmaps=tmaps, also22go=False)
@@ -586,7 +759,9 @@ def gen_2go_profile(fts, equiv=None, tmaps=None, also22go=False):
         return sens2s
 
 
-def is_2go_equiv(fts, equiv=None, tmaps=None, origsens=None):
+def is_2go_equiv(
+    fts: _FastTileSet, equiv: Equiv | None = None, tmaps=None, origsens=None
+):
     if tmaps is None:
         tmaps = gen_2go_maps(fts)
     if equiv is None:
@@ -870,13 +1045,13 @@ def _tilereduce(
 
 
 def _gluereduce(
-    fts,
-    equiv=None,
-    check2go=False,
-    check22go=False,
-    checkld=False,
+    fts: _FastTileSet,
+    equiv: Equiv | None = None,
+    check2go: bool = False,
+    check22go: bool = False,
+    checkld: bool = False,
     initptins=None,
-    preserveuse=False,
+    preserveuse: bool = False,
 ):
     log = logging.getLogger(__name__)
     if equiv is None:
@@ -891,6 +1066,7 @@ def _gluereduce(
         ins2go = None
         origsens = None
         orig22go = None
+        tmaps = None
     for todoi, (g1, g2) in enumerate(todo):
         try:
             nequiv = fts.gluelist.domerge(equiv, g1, g2, preserveuse=preserveuse)

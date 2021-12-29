@@ -34,19 +34,31 @@ class Use(Enum):
     OUTPUT = 3
     BOTH = 4
     PERMANENT = 5
+    UNSET = 6
 
     def invert(self) -> Use:
+        if self == Use.UNSET:
+            raise ValueError
         return Use([0, 1, 3, 2, 4, 5][self.value])
 
-    def merge(self, other: Use | None) -> Use:
-        if other is None:
+    def merge(self: Use, other: Use) -> Use:
+        if self == other:
             return self
+        match (self, other):
+            case (Use.UNSET, x) | (x, Use.UNSET):
+                return x
+            case (Use.UNUSED, x) | (x, Use.UNUSED) if 2 <= x.value <= 4:
+                return x
+            case (Use.INPUT, Use.OUTPUT) | (Use.OUTPUT, Use.INPUT):
+                return Use.BOTH
+            case (Use.BOTH, x) | (x, Use.BOTH) if 2 <= x.value <= 4:
+                return Use.BOTH
+        raise ValueError
+
+    def __or__(self, other: Use) -> Use:
         raise NotImplementedError
 
-    def __or__(self, other: Use | None) -> Use:
-        raise NotImplementedError
-
-    def __ror__(self, other: Use | None) -> Use:
+    def __ror__(self, other: Use) -> Use:
         raise NotImplementedError
 
 
@@ -62,10 +74,10 @@ def merge_items(a: Optional[T], b: Optional[T]) -> Optional[T]:
 
 @dataclass(init=False)
 class Glue:
-    name: Optional[str] = None
-    note: Optional[str] = None
-    use: Optional[Use] = None
-    abstractstrength: Optional[int] = None
+    name: Optional[str]
+    note: Optional[str]
+    use: Use
+    abstractstrength: Optional[int]
     _fields: ClassVar[tuple[tuple[str, str], ...]] = (
         ("name", "name"),
         ("note", "note"),
@@ -77,8 +89,8 @@ class Glue:
         self,
         name: Optional[str] = None,
         note: Optional[str] = None,
-        use: Optional[Use] = None,
-        abstractstrength: Optional[int] = None,
+        use: Use = Use.UNSET,
+        abstractstrength: Optional[int] = 1,
     ):
         if name and name[-1] == "/":
             name = name[:-1] + "*"
@@ -110,6 +122,10 @@ class Glue:
         else:
             raise ValueError
 
+    @property
+    def type(self) -> str:
+        return self.__class__.__name__
+
     def basename(self) -> str:
         if self.name is None:
             raise ValueError
@@ -127,12 +143,22 @@ class Glue:
     def update(self, other: Glue):
         if type(other) == Glue:
             self.name = merge_items(self.name, other.name)
+            self.abstractstrength = merge_items(
+                self.abstractstrength, other.abstractstrength
+            )
+            self.use = Use.merge(self.use, other.use)
         else:
             raise NotImplementedError
 
     def merge(self, other: Glue) -> Glue:
         if type(other) == Glue:
-            return Glue(merge_items(self.name, other.name))
+            return Glue(
+                merge_items(self.name, other.name),
+                abstractstrength=merge_items(
+                    self.abstractstrength, other.abstractstrength
+                ),
+                use=Use.merge(self.use, other.use),
+            )
         else:
             return other.merge(self)
 

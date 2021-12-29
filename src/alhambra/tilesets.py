@@ -29,7 +29,7 @@ from alhambra.grid import (
     lattice_factory,
 )
 
-from . import fastreduce
+from . import fastreduceD as fastreduce
 
 
 from .util import (
@@ -96,6 +96,7 @@ T = TypeVar("T")
 
 @dataclass(init=False)
 class TileSet(Serializable):
+    "Class representing a tileset, whether abstract or sequence-level."
     tiles: TileList[Tile]
     glues: GlueList[Glue]
     seeds: dict[str | int, Seed]
@@ -108,20 +109,19 @@ class TileSet(Serializable):
         to_lattice=True,
         _include_out=False,
         seed: str | int | Seed | None | Literal[False] = None,
+        seed_offset: tuple[int, int] = (0, 0),
         xgrow_seed: str | None = None,
-        *args,
-        **kwargs,
+        **kwargs: Any,
     ) -> Any:  # FIXME
-        xgrow_tileset = self.to_xgrow(seed=seed)
+        """Run the tilesystem in Xgrow."""
+        xgrow_tileset = self.to_xgrow(seed=seed, seed_offset=seed_offset)
 
         if to_lattice:
             kwargs["outputopts"] = "array"
 
         out = cast(
             xgrow.parseoutput.XgrowOutput,
-            xgrow.run(
-                xgrow_tileset, process_info=False, seed=xgrow_seed, *args, **kwargs
-            ),
+            xgrow.run(xgrow_tileset, process_info=False, seed=xgrow_seed, **kwargs),
         )
 
         if not to_lattice:
@@ -152,7 +152,9 @@ class TileSet(Serializable):
         self,
         self_complementary_glues: bool = True,
         seed: str | int | Seed | None | Literal[False] = None,
+        seed_offset: tuple[int, int] = (0, 0),
     ) -> xgt.TileSet:
+        "Convert Alhambra TileSet to an XGrow TileSet"
         self.tiles.refreshnames()
         self.glues.refreshnames()
         tiles = [t.to_xgrow(self_complementary_glues) for t in self.tiles]
@@ -179,7 +181,9 @@ class TileSet(Serializable):
             seed_bonds = []
             initstate = None
         else:
-            seed_tiles, seed_bonds, initstate = seed.to_xgrow(self_complementary_glues)
+            seed_tiles, seed_bonds, initstate = seed.to_xgrow(
+                self_complementary_glues, offset=seed_offset
+            )
 
         xgrow_tileset = xgt.TileSet(
             seed_tiles + tiles, seed_bonds + bonds, initstate=initstate

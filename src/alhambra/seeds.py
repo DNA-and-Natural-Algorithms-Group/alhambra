@@ -9,10 +9,17 @@ T = TypeVar("T")
 
 
 class Seed(ABC):
+    "Abstact Base Class for a seed structure."
+
     @abstractmethod
     def to_xgrow(
-        self, self_complementary_glues=False
+        self, self_complementary_glues=False, offset: tuple[int, int] = (0, 0)
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
+        """Create xgrow implementation of the seed.
+
+        Converts the Seed to a list of xgrow tiles to add to a system, a list of bonds to add,
+        and an initial state.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -46,7 +53,8 @@ class DXOrigamiSeed(Seed):
     ...
 
 
-class DX_TallRect(DXOrigamiSeed):
+class DXTallRect(DXOrigamiSeed):
+    "Tall rectangle origami to DX-tile seed (Barish et al)"
     # FIXME: fixed-choice adapters for now
     adapters: list[tuple[Glue, Glue]]
 
@@ -56,7 +64,7 @@ class DX_TallRect(DXOrigamiSeed):
         self.adapters = [(Glue(a["ends"][0]), Glue(a["ends"][1])) for a in adapters]
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> DX_TallRect:
+    def from_dict(cls, d: dict[str, Any]) -> DXTallRect:
         return cls(**d)
 
     def to_xgrow(
@@ -94,6 +102,6 @@ class DX_TallRect(DXOrigamiSeed):
 
 seed_factory = SeedFactory()
 
-seed_factory.register(DX_TallRect, "longrect")
+seed_factory.register(DXTallRect, "longrect")
 # seed_factory.register(DX_TallRect, "tallrect")
 # seed_factory.register(DX_TallRect)

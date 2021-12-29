@@ -1,3 +1,6 @@
+"""
+Tiles, seeds, glues, and lattices for the 'flatish' tile motif.
+"""
 from __future__ import annotations
 
 import numpy as np
@@ -63,12 +66,14 @@ def _reorder(seq: Sequence[T], ord: Sequence[int]) -> list[T]:
 
 
 class FlatishSingleTile9(BaseSSTSingle):
+    "Flatish single tile, with domains (5'→3') of 12, 9, 11, and 10 nt."
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [12, 9, 11, 10]]
     _scadnano_offsets = ((-1, -12), (-1, 9), (1, 11), (1, -10))
     _scadnano_5p_offset = (0, 21)
 
 
 class FlatishSingleTile10(BaseSSTSingle):
+    "Flatish single tile, with domains (5'→3') of 11, 10, 12, and 9 nt."
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [11, 10, 12, 9]]
     _scadnano_offsets = ((-1, -11), (-1, 10), (1, 12), (1, -9))
     _scadnano_5p_offset = (0, 21)
@@ -290,6 +295,8 @@ T_FHS9 = TypeVar("T_FHS9", bound="FlatishHSeed9")
 
 
 class FlatishHSeed9(Seed):
+    """Flatish origami seed."""
+
     adapter_tiles: list[tuple[Glue | str, FlatishSingleTile9]]
 
     def __init__(self, adapter_tiles=[]):
@@ -308,7 +315,9 @@ class FlatishHSeed9(Seed):
         return cls([(g, Tile.from_dict(t)) for g, t in d["adapter_tiles"]])
 
     def to_xgrow(
-        self, self_complementary_glues=False
+        self,
+        self_complementary_glues: bool = False,
+        offset: tuple[int, int] = (0, 0),
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
 
         xgtiles = []
@@ -318,8 +327,8 @@ class FlatishHSeed9(Seed):
         xgtiles.append(
             xgt.Tile([0, "seed", "seed", "seed"], "seed", stoic=0, color="white")
         )
-        x = 2
-        ybase = 1
+        x = 2 + offset[0]
+        ybase = 1 + offset[1]
         for y_offset in range(0, 2 * len(self.adapter_tiles)):
             if y_offset % 2:
                 locs.append((x, ybase + y_offset, "seed"))
@@ -338,9 +347,9 @@ class FlatishHSeed9(Seed):
                 xgtiles.append(atile)
                 locs.append((x, ybase + y_offset, aname))
 
-        x = 3
-        ybase = 2
-        for adapt, (south, tile) in enumerate(self.adapter_tiles):
+        x = 3 + offset[0]
+        ybase = 2 + offset[1]
+        for adapt, (_, tile) in enumerate(self.adapter_tiles):
             if tile.name:
                 aname = "adapterSE_" + tile.name
             else:

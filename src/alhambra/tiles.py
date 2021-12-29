@@ -9,11 +9,13 @@ from typing import (
     Collection,
     Generic,
     Iterable,
+    Iterator,
     List,
     Literal,
     MutableSequence,
     Optional,
     ClassVar,
+    Protocol,
     Sequence,
     SupportsIndex,
     Tuple,
@@ -25,6 +27,8 @@ from typing import (
 )
 from enum import Enum
 from xgrow.xcolors import xcolors
+
+from .glues import Use
 
 try:
     import scadnano
@@ -106,6 +110,47 @@ class EdgeView(MutableSequence[Glue]):
         return self._edges.__str__()
 
 
+class UseView(MutableSequence[Use]):
+    _tile: Tile
+    __slots__ = "_tile"
+
+    def __init__(self, _tile: Tile):
+        self._tile = _tile
+
+    @overload
+    def __getitem__(self, k: int) -> Use:
+        ...
+
+    @overload
+    def __getitem__(self, k: slice) -> list[Use]:
+        ...
+
+    def __getitem__(self, k: int | slice) -> Use | list[Use]:
+        x = self._tile._edges[k]
+        if isinstance(x, Iterable):
+            return [g.use for g in x]
+        else:
+            return x.use
+
+    def __setitem__(self, k: int, v: Use) -> None:
+        self._tile._edges[k].use = v
+
+    def insert(self, index: int, value: Use) -> None:
+        raise NotImplementedError
+
+    def __delitem__(self, k: int) -> None:
+        raise NotImplementedError
+
+    def __len__(self) -> int:
+        return self._tile._edges.__len__()
+
+    def __repr__(self) -> str:
+        return repr([g.use for g in self._tile._edges])
+
+    def __str__(self) -> str:
+        return str([g.use for g in self._tile._edges])
+
+
 @dataclass(init=False)
 class Tile:
     name: Optional[str]
@@ -113,7 +158,8 @@ class Tile:
     color: Optional[Color]
     stoic: Optional[float]
     note: Optional[str | dict[str, Any]]
-    __slots__ = ("name", "_edges", "color", "stoic", "note")
+    fake: bool
+    __slots__ = ("name", "_edges", "color", "stoic", "note", "fake")
 
     def __init__(
         self,
@@ -122,18 +168,32 @@ class Tile:
         color: Optional[Color] = None,
         stoic: Optional[float] = None,
         note: Optional[str | dict[str, Any]] = None,
+        use: List[Use] | None = None,
+        fake: bool = False,
     ) -> None:
         if edges is None:
             raise ValueError
         self._edges = [(g if isinstance(g, Glue) else Glue(g)) for g in edges]
+        if use is not None:
+            self.use = use
         self.name = name
         self.color = color
         self.stoic = stoic
         self.note = note
+        self.fake = fake
 
     @property
     def structure(self):
         return self.__class__.__name__
+
+    @property
+    def use(self) -> Sequence[Use]:
+        return [g.use for g in self._edges]
+
+    @use.setter
+    def use(self, uses: Iterable[Use]):
+        for glue, use in zip(self._edges, uses):
+            glue.use = use
 
     @property
     def edges(self):
@@ -169,7 +229,7 @@ class Tile:
 
     @property
     def is_fake(self) -> bool:
-        return False
+        return self.fake
 
     def merge(self, other) -> Tile:
         if self == other:
