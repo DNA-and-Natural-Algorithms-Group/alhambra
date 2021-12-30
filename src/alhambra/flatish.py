@@ -30,6 +30,7 @@ from .tiles import (
 
 __all__ = [
     "FlatishHSeed9",
+    "FlatishVSeed9",
     "FlatishHDupleTile9_E",
     "FlatishHDupleTile10_E",
     "FlatishVDupleTile9_E2",
@@ -301,7 +302,9 @@ class FlatishHSeed9(Seed):
 
     adapter_tiles: list[tuple[Glue | str, FlatishSingleTile9]]
 
-    def __init__(self, adapter_tiles=[]):
+    def __init__(
+        self, adapter_tiles: Sequence[tuple[SSGlue | str, FlatishSingleTile9]] = tuple()
+    ):
         self.adapter_tiles = list(adapter_tiles)
 
     def to_dict(self, glues_as_refs=False) -> dict:
@@ -374,6 +377,88 @@ class FlatishHSeed9(Seed):
 
 
 seed_factory.register(FlatishHSeed9)
+
+
+class FlatishVSeed9(Seed):
+    """Flatish origami seed (vertical)."""
+
+    adapter_tiles: list[tuple[Glue | str, FlatishSingleTile9]]
+
+    def __init__(
+        self, adapter_tiles: Sequence[tuple[SSGlue | str, FlatishSingleTile9]] = tuple()
+    ):
+        self.adapter_tiles = list(adapter_tiles)
+
+    def to_dict(self, glues_as_refs=False) -> dict:
+        d: dict[str, Any] = {}
+        d["adapter_tiles"] = [
+            [str(g), t.to_dict()] for g, t in self.adapter_tiles  # FIXME
+        ]
+        d["type"] = self.__class__.__name__
+        return d
+
+    @classmethod
+    def from_dict(cls: Type[T_FHS9], d: dict) -> T_FHS9:
+        return cls([(g, Tile.from_dict(t)) for g, t in d["adapter_tiles"]])
+
+    def to_xgrow(
+        self,
+        self_complementary_glues: bool = False,
+        offset: tuple[int, int] = (0, 0),
+    ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
+
+        xgtiles = []
+        locs: list[tuple[int, int, str]] = []
+        bonds = [xgt.Bond("seed", 10)]
+
+        xgtiles.append(
+            xgt.Tile(["seed", "seed", "seed", 0], "seed", stoic=0, color="white")
+        )
+        ybase = 2 + offset[1]
+        xbase = 1 + offset[0]
+        for x_offset in range(0, 2 * len(self.adapter_tiles)):
+            if x_offset % 2:
+                locs.append((xbase + x_offset, ybase, "seed"))
+            else:
+                adapt = x_offset // 2
+                aname = f"adapterNW_{adapt}"
+                aglue = self.adapter_tiles[adapt][0]
+                if isinstance(aglue, Glue):
+                    if self_complementary_glues:
+                        aglue = aglue.basename()
+                    else:
+                        aglue = aglue.ident()
+                atile = xgt.Tile(
+                    ["seed", aglue, "seed", 0], aname, stoic=0, color="green"
+                )
+                xgtiles.append(atile)
+                locs.append((xbase + x_offset, ybase, aname))
+
+        ybase = 3 + offset[1]
+        xbase = 2 + offset[0]
+        for adapt, (_, tile) in enumerate(self.adapter_tiles):
+            if tile.name:
+                aname = "adapterSE_" + tile.name
+            else:
+                aname = f"adapterSE_{adapt}"
+            if self_complementary_glues:
+                edges = [e.basename() for e in tile._edges[:-1]] + ["seed"]
+            else:
+                edges = [e.ident() for e in tile._edges[:-1]] + ["seed"]
+            xgtiles.append(
+                xgt.Tile(
+                    cast(list[Union[str, int]], edges),
+                    name=aname,
+                    stoic=0,
+                    color="green",
+                )
+            )
+            locs.append((xbase + 2 * adapt, ybase, aname))
+
+        return xgtiles, bonds, xgt.InitState(locs)
+
+
+seed_factory.register(FlatishVSeed9)
 
 
 def flatgrid_hofromxy(
