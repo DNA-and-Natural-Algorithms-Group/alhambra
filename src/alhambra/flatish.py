@@ -69,14 +69,14 @@ def _reorder(seq: Sequence[T], ord: Sequence[int]) -> list[T]:
 
 
 class FlatishSingleTile9(BaseSSTSingle):
-    "Flatish single tile, with domains (5'→3') of 12, 9, 11, and 10 nt."
+    "Flatish single tile, with domains (5'→3') of 12, 9, 11, and 10 nt.  North edge is 9nt."
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [12, 9, 11, 10]]
     _scadnano_offsets = ((-1, -12), (-1, 9), (1, 11), (1, -10))
     _scadnano_5p_offset = (0, 21)
 
 
 class FlatishSingleTile10(BaseSSTSingle):
-    "Flatish single tile, with domains (5'→3') of 11, 10, 12, and 9 nt."
+    "Flatish single tile, with domains (5'→3') of 11, 10, 12, and 9 nt. North edge is 10nt."
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [11, 10, 12, 9]]
     _scadnano_offsets = ((-1, -11), (-1, 10), (1, 12), (1, -9))
     _scadnano_5p_offset = (0, 21)

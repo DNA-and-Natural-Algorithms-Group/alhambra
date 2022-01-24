@@ -10,6 +10,7 @@ import scadnano
 from xgrow.tileset import Tile
 
 from alhambra.glues import Glue, SSGlue
+from alhambra.seeds import Seed
 from alhambra.seq import Seq
 from alhambra.tiles import D, SupportsGuards, TileSupportingScadnano
 
@@ -94,6 +95,8 @@ def _skip_polyT_and_inertname(glue: Glue) -> bool:
 @dataclass(init=False)
 class AbstractLattice(Lattice):
     grid: np.ndarray
+    seed: Seed | None = None
+    seed_offset: tuple[int, int] = (0, 0)
 
     def __getitem__(self, index) -> str | Any:
         return AbstractLattice(self.grid[index])
@@ -101,9 +104,16 @@ class AbstractLattice(Lattice):
     def __setitem__(self, index, v):
         self.grid[index] = v
 
-    def __init__(self, v) -> None:
+    def __init__(
+        self,
+        v: AbstractLattice | np.ndarray,
+        seed: Seed | None = None,
+        seed_offset: tuple[int, int] = (0, 0),
+    ) -> None:
         if isinstance(v, AbstractLattice):
             self.grid = v.grid
+            self.seed = v.seed
+            self.seed_offset = v.seed_offset
         else:
             self.grid = np.array(v)
 

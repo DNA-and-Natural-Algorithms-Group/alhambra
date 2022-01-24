@@ -118,24 +118,19 @@ class TileSet(Serializable):
         _include_out: bool = False,
         seed: str | int | Seed | None | Literal[False] = None,
         seed_offset: tuple[int, int] = (0, 0),
-        xgrow_seed: str | None = None,
         **kwargs: Any,
     ) -> Any:  # FIXME
         """Run the tilesystem in Xgrow."""
         xgrow_tileset = self.to_xgrow(seed=seed, seed_offset=seed_offset)
 
         if not to_lattice:
-            return (
-                xgrow.run(xgrow_tileset, process_info=False, seed=xgrow_seed, **kwargs),
-            )
+            return (xgrow.run(xgrow_tileset, **kwargs),)
 
         out = cast(
             xgrow.XgrowOutput,
             xgrow.run(
                 xgrow_tileset,
-                process_info=False,
                 outputopts="array",
-                seed=xgrow_seed,
                 **kwargs,
             ),
         )
@@ -153,8 +148,7 @@ class TileSet(Serializable):
             if tile_name in self.tiles.data.keys():
                 newarray[ix] = tile_name
 
-        a = AbstractLattice(newarray.shape)
-        a.grid = newarray
+        a = AbstractLattice(newarray, seed, seed_offset)
 
         if not _include_out:
             return a
@@ -398,6 +392,8 @@ class TileSet(Serializable):
         filename=None,
         scale=1,
         guards: Collection[str] | str | int = tuple(),
+        seed: str | bool | Seed = True,
+        seed_offset: tuple[int, int] = (0, 0),
         **options,
     ):
         """Create an SVG layout diagram from a lattice.
@@ -452,6 +448,14 @@ class TileSet(Serializable):
             maxxi = max(maxxi, xi)
             maxyi = max(maxyi, yi)
             d.append(draw.Use(svgtiles[tn], xi * 10, yi * 10))
+
+        if seed is True:
+            try:
+                seed = self.seeds.values()[0]
+            except KeyError:
+                seed = False
+        elif isinstance(seed, str):
+            seed = self.seeds[seed]
 
         if len(guards) > 0:
             for (yi, xi), tn in np.ndenumerate(lattice.grid):

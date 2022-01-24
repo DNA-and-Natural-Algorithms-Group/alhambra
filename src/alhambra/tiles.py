@@ -52,6 +52,8 @@ log = logging.getLogger("alhambra")
 
 
 class D(Enum):
+    """Cardinal directions; also edge directions for single tiles."""
+
     N = 0
     E = 1
     S = 2
@@ -75,8 +77,10 @@ EL = EdgeLoc
 
 
 class EdgeView(MutableSequence[Glue]):
+    """A class to ensure that tile edge glue manipulations are handled through the tile."""
+
     _edges: List[Glue]
-    _tile: "Tile"
+    _tile: Tile
     __slots__ = ("_edges", "_tile")
 
     def __init__(self, _edges: List[Glue], _tile: Tile):
@@ -84,17 +88,19 @@ class EdgeView(MutableSequence[Glue]):
         self._tile = _tile
 
     @overload
-    def __getitem__(self, k: int) -> Glue:
+    def __getitem__(self, k: int | str) -> Glue:
         ...
 
     @overload
     def __getitem__(self, k: slice) -> list[Glue]:
         ...
 
-    def __getitem__(self, k: int | slice) -> Glue | list[Glue]:
+    def __getitem__(self, k: int | slice | str) -> Glue | list[Glue]:
+        if isinstance(k, str):
+            k = self._tile._get_edge_index(k)
         return self._edges.__getitem__(k)
 
-    def __setitem__(self, k: int, v: Glue) -> None:
+    def __setitem__(self, k: int | str, v: Glue) -> None:
         self._tile.set_edge(k, v)
 
     def insert(self, index: int, value: Glue) -> None:
@@ -114,6 +120,8 @@ class EdgeView(MutableSequence[Glue]):
 
 
 class UseView(MutableSequence[Use]):
+    """A class to ensure that tile edge use manipulations are handled through the tile."""
+
     _tile: Tile
     __slots__ = "_tile"
 
@@ -156,6 +164,8 @@ class UseView(MutableSequence[Use]):
 
 @dataclass(init=False)
 class Tile:
+    """Base class for a tile."""
+
     name: Optional[str]
     _edges: List[Glue]
     color: Optional[Color]
@@ -307,6 +317,8 @@ class Tile:
 
 
 class TileSupportingScadnano(ABC, Tile):
+    """Abstract base class for a tile that allows export to scadnano."""
+
     @property
     @abstractmethod
     def _scadnano_5p_offset(self) -> tuple[int, int]:
@@ -521,6 +533,8 @@ class SupportsGuards:
 
 
 class BaseSSTile(SupportsGuards, TileSupportingScadnano):
+    """Base class for single-stranded tiles."""
+
     _edges: List[Glue]  # actually SSGlue
 
     def to_dict(self, refglues: set[str] = set()) -> dict[str, Any]:
@@ -641,6 +655,8 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
 
 
 class BaseSSTSingle(SingleTile, BaseSSTile):
+    """Base class for a standard-orientation SST single tile."""
+
     _edges: List[Glue]
 
     @property

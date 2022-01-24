@@ -11,7 +11,13 @@ T = TypeVar("T")
 
 
 class Seed(ABC):
-    "Abstact Base Class for a seed structure."
+    """Abstact Base Class for a seed structure.
+
+    Generally, seeds need:
+
+    - A method to convert the seed to xgrow-usable information.
+    - Methods to convert the seed to and from a dict, for storage
+    """
 
     @abstractmethod
     def to_xgrow(
