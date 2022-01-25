@@ -57,7 +57,10 @@ dist/*
 sdist/*
 docs/api/*
 docs/_rst/*
-docs/_build/*
+docs/build/*
+docs/source/_auto*
+olddocs/_build/*
+olddocs/generated/*
 cover/*
 MANIFEST
 

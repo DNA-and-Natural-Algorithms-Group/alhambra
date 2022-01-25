@@ -13,4 +13,6 @@ Alhambra Documentation
    tutorial
    fileformat
    alhambra
+   mixes
    references
+   modules

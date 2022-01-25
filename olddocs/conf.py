@@ -4,6 +4,7 @@
 # Largely adapted from Numpy's conf.py
 
 import sys, os, re
+sys.path.insert(0, os.path.abspath('../src')) 
 
 # -- General configuration -----------
 
@@ -12,12 +13,15 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.coverage",
     "sphinx.ext.doctest",
+    "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.graphviz",
     "sphinx.ext.ifconfig",
     "matplotlib.sphinxext.plot_directive",
     "numpydoc",
 ]
+
+autosummary_generate = True
 
 extensions.append("sphinx.ext.imgmath")
 imgmath_image_format = "svg"
@@ -78,12 +82,12 @@ pygments_style = "sphinx"
 
 
 # Default build
-html_theme_options = {
-    "edit_link": False,
-    "sidebar": "left",
-    "scipy_org_logo": False,
-    "rootlinks": [],
-}
+# html_theme_options = {
+#     "edit_link": False,
+#     "sidebar": "left",
+#     "scipy_org_logo": False,
+#     "rootlinks": [],
+# }
 html_sidebars = {}
 
 html_title = "%s v%s Manual" % (project, version)
@@ -166,7 +170,3 @@ texinfo_documents = [
 
 numpydoc_show_inherited_class_members = False
 # numpydoc_class_members_toctree = False
-
-import glob
-
-autosummary_generate = glob.glob("*.rst")

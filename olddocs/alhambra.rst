@@ -18,5 +18,5 @@ Other classes in the base module are:
 	     
    Tile
    TileList
-   End
-   EndList
+   Glue
+   GlueList
