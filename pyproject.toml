@@ -3,9 +3,22 @@ requires = ["setuptools>=46.1.0", "setuptools_scm[toml]>=5", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-# See configuration details in https://github.com/pypa/setuptools_scm
 version_scheme = "no-guess-dev"
 write_to = "src/alhambra/_version.py"
 
+[tool.pytest.ini_options]
+addopts = "--cov alhambra --cov-report term-missing --cov-report html"
+norecursedirs = [
+    "dist",
+    "build",
+    ".tox"]
+testpaths = ["tests"]
+
 [tool.black]
 target_version = ["py310"]
+
+[tool.mypy]
+python_version = "3.10"
+# warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
