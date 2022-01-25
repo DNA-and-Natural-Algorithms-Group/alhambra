@@ -126,11 +126,11 @@ def test_a_mix(reference: pd.DataFrame):
     s2 = Strand("strand2")
     s3 = Strand("strand3", ureg("1000 nM"), "GGTG")
 
-    m = Mix("test",
+    m = Mix(
     [MultiFixedVolume([s1, s2, s3], ureg("10 uL"), compact_display=True),
-     FixedConcentration(c1, ureg("100 nM")),
+     FixedConcentration(c1, "100 nM"),
      FixedVolume(s3, ureg("10 uL"))
-    ], ureg("50 uL"), fixed_concentration='strand3'
+    ], "test", ureg("50 uL"), fixed_concentration='strand3'
     ).with_reference(reference)
 
     assert m.buffer_volume == ureg("5 uL")
