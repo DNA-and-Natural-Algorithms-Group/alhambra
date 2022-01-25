@@ -64,6 +64,7 @@ olddocs/generated/*
 cover/*
 MANIFEST
 
+.mypy_cache
 # Per-project virtualenvs
 .venv*/
 .conda*/

@@ -40,7 +40,6 @@ Functions for references
 ------------------------
 
 .. autosummary::
-    :toctree: _autosummary
 
     load_reference
     update_reference

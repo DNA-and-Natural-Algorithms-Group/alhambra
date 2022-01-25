@@ -2,7 +2,7 @@ import re
 import numpy as np
 import pytest
 
-from alhambra.mixes import MOLARITY_TOLERANCE, Component, FixedConcentration, FixedVolume, Mix, MultiFixedVolume, Strand, WellPos, load_reference, nM, uM, UR
+from alhambra.mixes import Component, FixedConcentration, FixedVolume, Mix, MultiFixedVolume, Strand, WellPos, load_reference, nM, uM, ureg
 import itertools
 import pandas as pd
 
@@ -101,21 +101,21 @@ def test_component_with_reference(reference: pd.DataFrame):
     d = c.with_reference(reference)
 
     assert c != d
-    assert abs(d.concentration - UR.Quantity(1000.0, "nM")) < MOLARITY_TOLERANCE
+    assert np.allclose(d.concentration, ureg.Quantity(1000.0, "nM"))
 
     with pytest.raises(ValueError):
-        Component("comp1", UR.Quantity(150.0, "nM")).with_reference(reference)
+        Component("comp1", ureg.Quantity(150.0, "nM")).with_reference(reference)
 
 def test_strand_with_reference(reference: pd.DataFrame):
     c = Strand("strand1")
     d = c.with_reference(reference)
 
     assert c != d
-    assert abs(d.concentration - UR.Quantity(1000.0, "nM")) < MOLARITY_TOLERANCE
+    assert np.allclose(d.concentration, ureg.Quantity(1000.0, "nM"))
     assert d.sequence == "AGAACC"
 
     with pytest.raises(ValueError):
-        Strand("strand1", UR.Quantity(150.0, "nM")).with_reference(reference)
+        Strand("strand1", ureg.Quantity(150.0, "nM")).with_reference(reference)
 
     with pytest.raises(ValueError):
         Strand("strand1", sequence="AGCTG").with_reference(reference)
@@ -124,17 +124,17 @@ def test_a_mix(reference: pd.DataFrame):
     c1 = Component("comp1")
     s1 = Strand("strand1")
     s2 = Strand("strand2")
-    s3 = Strand("strand3", UR("1000 nM"), "GGTG")
+    s3 = Strand("strand3", ureg("1000 nM"), "GGTG")
 
     m = Mix("test",
-    [MultiFixedVolume([s1, s2, s3], UR("10 uL"), compact_display=True),
-     FixedConcentration(c1, UR("100 nM")),
-     FixedVolume(s3, UR("10 uL"))
-    ], UR("50 uL"), fixed_concentration='strand3'
+    [MultiFixedVolume([s1, s2, s3], ureg("10 uL"), compact_display=True),
+     FixedConcentration(c1, ureg("100 nM")),
+     FixedVolume(s3, ureg("10 uL"))
+    ], ureg("50 uL"), fixed_concentration='strand3'
     ).with_reference(reference)
 
-    assert m.buffer_volume == UR("5 uL")
-    assert m.concentration == UR("400 nM")
+    assert m.buffer_volume == ureg("5 uL")
+    assert np.allclose(m.concentration, ureg("400 nM"))
 
     mdt = m._repr_markdown_().splitlines()
 
