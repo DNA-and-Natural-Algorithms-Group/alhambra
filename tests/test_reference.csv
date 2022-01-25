@@ -1,4 +1,4 @@
-Name,Plate,Well Position,Concentration (nM),Sequence
+Name,Plate,Well,Concentration (nM),Sequence
 comp1,P 1,A5,1000,
 strand1,P 2,D4,1000,AGAACC
 strand2,P 2,D5,1000,GAGGT
