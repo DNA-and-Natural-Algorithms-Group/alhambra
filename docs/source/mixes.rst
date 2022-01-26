@@ -9,15 +9,12 @@ Introductory notes
 - A *Mix* is a collection of Actions, each covering some Components.  It may have a fixed volume, or that may be determined by the components.  It may also have a fixed effective concentration (for use as a component), or that may be determined by a particular component.
 - A reference DataFrame can be used to add and check information about components.  
 
-
 Component classes
 -----------------
 
 .. currentmodule:: alhambra.mixes
  
 .. autosummary::
-   :toctree: _autosummary
-   :recursive:
    
   Component
   Strand
@@ -27,14 +24,21 @@ Action classes
 --------------
 
 .. autosummary::
-   :toctree: _autosummary
-   :recursive:
 
   FixedConcentration
   FixedVolume
   MultiFixedConcentration
   MultiFixedVolume
   FixedRatio
+
+Mixes
+-----
+
+.. autosummary::
+  
+  Mix
+  Mix.table
+  Mix.all_components
 
 Functions for references
 ------------------------
@@ -44,3 +48,21 @@ Functions for references
     load_reference
     update_reference
     compile_reference
+
+Abstract class details
+----------------------
+
+To extend 
+
+.. autosummary::
+
+  AbstractComponent
+  AbstractAction
+
+Implementation details
+----------------------
+
+.. autosummary::
+
+  WellPos
+  MixLine

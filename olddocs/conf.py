@@ -4,7 +4,8 @@
 # Largely adapted from Numpy's conf.py
 
 import sys, os, re
-sys.path.insert(0, os.path.abspath('../src')) 
+
+sys.path.insert(0, os.path.abspath("../src"))
 
 # -- General configuration -----------
 

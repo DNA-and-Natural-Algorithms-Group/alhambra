@@ -1,6 +1,6 @@
+import pytest
 import re
 import numpy as np
-import pytest
 
 from alhambra.mixes import (
     Component,
