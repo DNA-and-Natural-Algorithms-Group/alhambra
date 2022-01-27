@@ -1,8 +1,10 @@
+from typing import cast
 import pytest
 import re
 import numpy as np
 
 from alhambra.mixes import (
+    Q_,
     Component,
     FixedConcentration,
     FixedVolume,
@@ -140,6 +142,32 @@ def test_strand_with_reference(reference: pd.DataFrame):
     with pytest.raises(ValueError):
         Strand("strand1", sequence="AGCTG").with_reference(reference)
 
+def test_with_reference_get_first(reference: pd.DataFrame, caplog: pytest.LogCaptureFixture):
+    s = Strand("strand3").with_reference(reference)
+
+    r1 = caplog.records[0]
+    assert re.match(r"Strand %s has more than one location", r1.msg)
+    assert r1.args == (s.name, [('P 2', 'D7'), ('P 2', 'D5'), ('P 3', 'D7'), ('P 4', 'D7')])
+
+    assert s == Strand("strand3", Q_(1000, nM), "GGTG", place="P 2", well="D7")
+
+def test_with_reference_constraints_match_plate(reference: pd.DataFrame, caplog):
+    s = Strand("strand3", place="P 3").with_reference(reference)
+    assert s == Strand("strand3", Q_(2000, nM), "GGTG", place="P 3", well="D7")
+
+    c = Component("strand3", place="P 3").with_reference(reference)
+    assert c == Component("strand3", Q_(2000, nM), place="P 3", well="D7")
+
+def test_with_reference_constraints_match_well(reference: pd.DataFrame, caplog):
+    s = Strand("strand3", well="D5").with_reference(reference)
+    assert s == Strand("strand3", Q_(1000, nM), "GGTG", place="P 2", well="D5")
+
+    c = Component("strand3", well="D5").with_reference(reference)
+    assert c == Component("strand3", Q_(1000, nM), place="P 2", well="D5")
+
+def test_with_reference_constraints_match_seq(reference: pd.DataFrame, caplog):
+    s = Strand("strand3", sequence="GGTGAGG").with_reference(reference)
+    assert s == Strand("strand3", Q_(2000, nM), "GGTG AGG", place="P 4", well="D7")
 
 def test_a_mix(reference: pd.DataFrame):
     c1 = Component("comp1")
