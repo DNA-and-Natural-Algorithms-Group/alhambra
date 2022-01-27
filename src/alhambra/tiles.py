@@ -25,10 +25,14 @@ from typing import (
     Union,
     cast,
     overload,
+    TYPE_CHECKING
 )
 
 import drawSvg_svgy as draw
 from xgrow.xcolors import xcolors
+
+if TYPE_CHECKING:
+    from alhambra.tilesets import XgrowGlueOpts
 
 from .glues import Use
 
@@ -302,11 +306,11 @@ class Tile:
 
         return tile_factory.from_dict(d)
 
-    def to_xgrow(self, self_complementary_glues: bool = False) -> xgt.Tile:
-        if self._edges and not self_complementary_glues:
-            edges = [g.ident() for g in self._edges]
-        elif self._edges:
+    def to_xgrow(self, glue_handling: XgrowGlueOpts = 'perfect') -> xgt.Tile:
+        if self._edges and glue_handling == 'self-complementary':
             edges = [g.basename() for g in self._edges]
+        elif self._edges:
+            edges = [g.ident() for g in self._edges]
         else:
             raise ValueError
         return xgt.Tile(

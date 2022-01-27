@@ -3,7 +3,7 @@ Tiles, seeds, glues, and lattices for the 'flatish' tile motif.
 """
 from __future__ import annotations
 
-from typing import Any, ClassVar, Literal, Sequence, Type, TypeVar, Union, cast
+from typing import Any, ClassVar, Literal, Optional, Sequence, Type, TypeVar, Union, cast
 
 import numpy as np
 import scadnano
@@ -15,12 +15,15 @@ from alhambra.grid import (
     ScadnanoLattice,
     lattice_factory,
 )
+from alhambra.seq import Seq
+from alhambra.tilesets import XgrowGlueOpts
 
 from .glues import Glue
 from .seeds import Seed, seed_factory
 from .tiles import (
     BaseSSTile,
     BaseSSTSingle,
+    Color,
     HDupleTile,
     SSGlue,
     Tile,
@@ -80,6 +83,38 @@ class FlatishSingleTile10(BaseSSTSingle):
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [11, 10, 12, 9]]
     _scadnano_offsets = ((-1, -11), (-1, 10), (1, 12), (1, -9))
     _scadnano_5p_offset = (0, 21)
+
+# @dataclass
+# class FlatishSingleTile9WithMods(FlatishSingleTile9):
+#     "Flatish single tile, with domains (5'→3') of 12, 9, 11, and 10 nt.  North edge is 9nt."
+#     mod5_len: int = 0
+#     mod3_len: int = 0
+
+#     @property
+#     def domains(self) -> list[SSGlue]:
+#         ...
+
+#     def __init__(
+#         self,
+#         edges: Optional[list[Union[str, Glue]]] = None,
+#         name: Optional[str] = None,
+#         color: Optional[Color] = None,
+#         stoic: Optional[float] = None,
+#         sequence: Optional[Seq] = None,
+#         domains: Optional[list[SSGlue]] = None,
+#         note: Optional[str] = None,
+#         mod5: Seq | str | int | None = None,
+#         mod3: Seq | str | int | None = None,
+#     ):
+#         # Don't deal with the sequence just yet.
+#         super().__init__(self, edges, name, color, stoic, None, domains, note)
+
+        
+
+
+class FlatishSingleTile10WithMods(FlatishSingleTile10):
+    "Flatish single tile, with domains (5'→3') of 11, 10, 12, and 9 nt. North edge is 10nt."
+    ...
 
 
 class FlatishVDupleTile10_E2(VDupleTile, BaseSSTile):
@@ -321,7 +356,7 @@ class FlatishHSeed9(Seed):
 
     def to_xgrow(
         self,
-        self_complementary_glues: bool = False,
+        glues: XgrowGlueOpts = 'perfect',
         offset: tuple[int, int] = (0, 0),
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
 
@@ -342,7 +377,7 @@ class FlatishHSeed9(Seed):
                 aname = f"adapterNW_{adapt}"
                 aglue = self.adapter_tiles[adapt][0]
                 if isinstance(aglue, Glue):
-                    if self_complementary_glues:
+                    if glues == 'self-complementary':
                         aglue = aglue.basename()
                     else:
                         aglue = aglue.ident()
@@ -359,7 +394,7 @@ class FlatishHSeed9(Seed):
                 aname = "adapterSE_" + tile.name
             else:
                 aname = f"adapterSE_{adapt}"
-            if self_complementary_glues:
+            if glues == 'self-complementary':
                 edges = ["seed"] + [e.basename() for e in tile._edges[1:]]
             else:
                 edges = ["seed"] + [e.ident() for e in tile._edges[1:]]
@@ -403,7 +438,7 @@ class FlatishVSeed9(Seed):
 
     def to_xgrow(
         self,
-        self_complementary_glues: bool = False,
+        glues: XgrowGlueOpts = 'perfect',
         offset: tuple[int, int] = (0, 0),
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
 
@@ -424,7 +459,7 @@ class FlatishVSeed9(Seed):
                 aname = f"adapterNW_{adapt}"
                 aglue = self.adapter_tiles[adapt][0]
                 if isinstance(aglue, Glue):
-                    if self_complementary_glues:
+                    if glues == 'self-complementary':
                         aglue = aglue.basename()
                     else:
                         aglue = aglue.ident()
@@ -441,7 +476,7 @@ class FlatishVSeed9(Seed):
                 aname = "adapterSE_" + tile.name
             else:
                 aname = f"adapterSE_{adapt}"
-            if self_complementary_glues:
+            if glues == 'self-complementary':
                 edges = [e.basename() for e in tile._edges[:-1]] + ["seed"]
             else:
                 edges = [e.ident() for e in tile._edges[:-1]] + ["seed"]

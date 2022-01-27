@@ -18,6 +18,7 @@ from typing import (
     Optional,
     Sequence,
     Type,
+    TypeAlias,
     TypeVar,
     cast,
 )
@@ -79,6 +80,7 @@ _gl = {
 
 T = TypeVar("T")
 
+XgrowGlueOpts: TypeAlias = Literal['self-complementary', 'perfect']
 
 @dataclass(init=False)
 class TileSet(Serializable):
@@ -116,12 +118,13 @@ class TileSet(Serializable):
         self: TileSet,
         to_lattice: bool = True,
         _include_out: bool = False,
+        glues: XgrowGlueOpts = 'perfect',
         seed: str | int | Seed | None | Literal[False] = None,
         seed_offset: tuple[int, int] = (0, 0),
         **kwargs: Any,
     ) -> Any:  # FIXME
         """Run the tilesystem in Xgrow."""
-        xgrow_tileset = self.to_xgrow(seed=seed, seed_offset=seed_offset)
+        xgrow_tileset = self.to_xgrow(seed=seed, seed_offset=seed_offset, glues=glues)
 
         if not to_lattice:
             return (xgrow.run(xgrow_tileset, **kwargs),)
@@ -157,24 +160,41 @@ class TileSet(Serializable):
 
     def to_xgrow(
         self,
-        self_complementary_glues: bool = True,
+        glues: XgrowGlueOpts = 'perfect',
         seed: str | int | Seed | None | Literal[False] = None,
         seed_offset: tuple[int, int] = (0, 0),
     ) -> xgt.TileSet:
         "Convert Alhambra TileSet to an XGrow TileSet"
         self.tiles.refreshnames()
         self.glues.refreshnames()
-        tiles = [t.to_xgrow(self_complementary_glues) for t in self.tiles]
+        tiles = [t.to_xgrow(glues) for t in self.tiles]
 
         allglues = self.allglues
 
         # FIXME
         # bonds = [g.to_xgrow(self_complementary_glues) for g in self.glues]
-        bonds = [
-            xgt.Bond(g.name, 0)
-            for g in allglues
-            if g.name and ("null" in g.name or "inert" in g.name or "hairpin" in g.name)
-        ]
+        match glues:
+            case 'self-complementary':
+                bonds = [
+                    xgt.Bond(g.name, 0)
+                    for g in allglues
+                    if g.name and ("null" in g.name or "inert" in g.name or "hairpin" in g.name)
+                ]
+                xg_glues = []
+            case 'perfect':
+                bonds = [
+                    xgt.Bond(g.name, 0)
+                    for g in allglues
+                ] 
+                bonds += [
+                    xgt.Bond(g.complement.name, 0)
+                    for g in allglues if g.complement.name not in allglues
+                ]
+                xg_glues = [xgt.Glue(g.name, g.complement.name, 
+                                     g.abstractstrength) for g in allglues
+                                     ]
+            case _:
+                raise ValueError("Unknown xgrow glue option", glues)
 
         if seed is None:
             if self.seeds:
@@ -188,12 +208,10 @@ class TileSet(Serializable):
             seed_bonds = []
             initstate = None
         else:
-            seed_tiles, seed_bonds, initstate = seed.to_xgrow(
-                self_complementary_glues, offset=seed_offset
-            )
+            seed_tiles, seed_bonds, initstate = seed.to_xgrow(glues, offset=seed_offset)
 
         xgrow_tileset = xgt.TileSet(
-            seed_tiles + tiles, seed_bonds + bonds, initstate=initstate
+            seed_tiles + tiles, seed_bonds + bonds, initstate=initstate, glues=xg_glues
         )
 
         return xgrow_tileset
