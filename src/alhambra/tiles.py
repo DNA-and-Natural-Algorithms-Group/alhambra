@@ -101,6 +101,8 @@ class EdgeView(MutableSequence[Glue]):
         return self._edges.__getitem__(k)
 
     def __setitem__(self, k: int | str, v: Glue) -> None:
+        if isinstance(k, str):
+            k = self._tile._get_edge_index(k)
         self._tile.set_edge(k, v)
 
     def insert(self, index: int, value: Glue) -> None:
@@ -234,6 +236,10 @@ class Tile:
     def rotations(self) -> List[Tile]:
         raise NotImplementedError
 
+    @classmethod
+    def _get_edge_index(cls, v: str) -> int:
+        raise NotImplementedError
+    
     def ident(self) -> str:
         if self.name:
             return self.name
@@ -359,6 +365,10 @@ class SingleTile(Tile):
             EdgeLoc(D.W, (0, 0)),
         ]
 
+    @classmethod
+    def _get_edge_index(cls, v: str) -> int:
+        return "NESW".index(v)
+
     def abstract_diagram(
         self, tileset=None, draw_names: bool = True, draw_glues: bool = True
     ) -> draw.Group:
@@ -396,6 +406,10 @@ class VDupleTile(Tile):
         d = super().to_xgrow(self_complementary_glues)
         d.shape = "V"
         return d
+
+    @classmethod
+    def _get_edge_index(cls, v: str) -> int:
+        return ["N","NE","SE","S","SW","NW"].index(v)
 
     @property
     def edge_directions(self) -> List[D]:
@@ -479,6 +493,11 @@ class HDupleTile(Tile):
             EdgeLoc(D.S, (0, 0)),
             EdgeLoc(D.W, (0, 0)),
         ]
+
+    @classmethod
+    def _get_edge_index(cls, v: str) -> int:
+        return ["NW","NE","E","SE","SW","W"].index(v)
+
 
     def abstract_diagram(
         self, tileset=None, draw_names: bool = True, draw_glues: bool = True
