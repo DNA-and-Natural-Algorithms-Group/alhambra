@@ -19,7 +19,6 @@ from alhambra.mixes import (
 )
 import itertools
 import pandas as pd
-import hypothesis
 
 def test_wellpos_movement():
     "Ensure WellPos movements are correct, and fail when appropriate."
