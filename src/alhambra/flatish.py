@@ -58,7 +58,7 @@ __all__ = [
 
 def _add_domain_from_glue(
     s: scadnano.StrandBuilder[Any, Any], g: SSGlue, d: Literal[1, -1]
-):
+) -> scadnano.StrandBuilder:
     s.move(g.dna_length * d)
     if g.name is not None:
         s.with_domain_name(g.name)
@@ -67,7 +67,7 @@ def _add_domain_from_glue(
 
 def _add_loopout_from_glue(
     s: scadnano.StrandBuilder[Any, Any], g: SSGlue, d: Literal[1, -1]
-):
+) -> scadnano.StrandBuilder:
     s.loopout(s.current_helix + d, g.dna_length)
     if g.name is not None:
         s.with_domain_name(g.name)
@@ -354,7 +354,7 @@ class FlatishHSeed9(Seed):
     ):
         self.adapter_tiles = list(adapter_tiles)
 
-    def to_dict(self, glues_as_refs=False) -> dict:
+    def to_dict(self, glues_as_refs: bool = False) -> dict:
         d: dict[str, Any] = {}
         d["adapter_tiles"] = [
             [str(g), t.to_dict()] for g, t in self.adapter_tiles  # FIXME
@@ -364,7 +364,8 @@ class FlatishHSeed9(Seed):
 
     @classmethod
     def from_dict(cls: Type[T_FHS9], d: dict) -> T_FHS9:
-        return cls([(g, Tile.from_dict(t)) for g, t in d["adapter_tiles"]])
+        dat: tuple[str, dict] = d["adapter_tiles"]
+        return cls([(g, Tile.from_dict(t)) for g, t in dat])
 
     def to_xgrow(
         self,
@@ -437,7 +438,7 @@ class FlatishVSeed9(Seed):
     ):
         self.adapter_tiles = list(adapter_tiles)
 
-    def to_dict(self, glues_as_refs=False) -> dict:
+    def to_dict(self, glues_as_refs: bool = False) -> dict:
         d: dict[str, Any] = {}
         d["adapter_tiles"] = [
             [str(g), t.to_dict()] for g, t in self.adapter_tiles  # FIXME

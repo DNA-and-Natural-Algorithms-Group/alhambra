@@ -32,7 +32,7 @@ import drawSvg_svgy as draw
 from xgrow.xcolors import xcolors
 
 if TYPE_CHECKING:
-    from alhambra.tilesets import XgrowGlueOpts
+    from alhambra.tilesets import XgrowGlueOpts, TileSet
     import xgrow.tileset as xgt
 
 from .glues import Use
@@ -210,16 +210,16 @@ class Tile:
         return [g.use for g in self._edges]
 
     @use.setter
-    def use(self, uses: Iterable[Use]):
+    def use(self, uses: Iterable[Use]) -> None:
         for glue, use in zip(self._edges, uses):
             glue.use = use
 
     @property
-    def edges(self):
+    def edges(self) -> EdgeView:
         return EdgeView(self._edges, self)
 
     @edges.setter
-    def edges(self, e):
+    def edges(self, e: Iterable[Glue | str]) -> None:
         self._edges = e
 
     @property
@@ -230,7 +230,7 @@ class Tile:
     def edge_locations(self) -> List[EdgeLoc]:
         raise NotImplementedError
 
-    def set_edge(self, i: int, glue: Glue):
+    def set_edge(self, i: int, glue: Glue) -> None:
         self._edges[i] = glue
 
     def copy(self: T) -> T:
@@ -283,11 +283,11 @@ class Tile:
             # fixme: deal with None
         return b
 
-    def update_glues(self, gluedict: GlueList):
+    def update_glues(self, gluedict: GlueList) -> None:
         if self.edges is not None:
             self.edges = [gluedict.merge_glue(g) for g in self.edges]
 
-    def update_glues_and_list(self, gluedict: GlueList):
+    def update_glues_and_list(self, gluedict: GlueList) -> None:
         if self.edges is not None:
             self.edges = [gluedict.merge_glue_and_update_list(g) for g in self.edges]
 
@@ -323,7 +323,10 @@ class Tile:
         )
 
     def abstract_diagram(
-        self, tileset=None, draw_names: bool = True, draw_glues: bool = True
+        self,
+        tileset: TileSet | None = None,
+        draw_names: bool = True,
+        draw_glues: bool = True,
     ) -> draw.Group:
         raise NotImplementedError
 
@@ -376,7 +379,10 @@ class SingleTile(Tile):
         return "NESW".index(v)
 
     def abstract_diagram(
-        self, tileset=None, draw_names: bool = True, draw_glues: bool = True
+        self,
+        tileset: TileSet | None = None,
+        draw_names: bool = True,
+        draw_glues: bool = True,
     ) -> draw.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
@@ -433,7 +439,10 @@ class VDupleTile(Tile):
         ]
 
     def abstract_diagram(
-        self, tileset=None, draw_names: bool = True, draw_glues: bool = True
+        self,
+        tileset: TileSet | None = None,
+        draw_names: bool = True,
+        draw_glues: bool = True,
     ) -> draw.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
@@ -480,8 +489,8 @@ class VDupleTile(Tile):
 
 
 class HDupleTile(Tile):
-    def to_xgrow(self, self_complementary_glues: bool = False) -> xgt.Tile:
-        d = super().to_xgrow(self_complementary_glues)
+    def to_xgrow(self, glue_handling: XgrowGlueOpts = "perfect") -> xgt.Tile:
+        d = super().to_xgrow(glue_handling)
         d.shape = "H"
         return d
 
@@ -505,7 +514,10 @@ class HDupleTile(Tile):
         return ["NW", "NE", "E", "SE", "SW", "W"].index(v)
 
     def abstract_diagram(
-        self, tileset=None, draw_names: bool = True, draw_glues: bool = True
+        self,
+        tileset: TileSet | None = None,
+        draw_names: bool = True,
+        draw_glues: bool = True,
     ) -> draw.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
@@ -584,7 +596,7 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
 
     @property
     @abstractmethod
-    def edge_directions(self) -> list[str]:
+    def edge_directions(self) -> list[D]:
         ...
 
     @property
@@ -622,7 +634,7 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
         return Seq("-".join(str(glue.sequence) for glue in self.domains))
 
     @sequence.setter
-    def sequence(self, seq: Seq):
+    def sequence(self, seq: Seq) -> None:
         seq = Seq(seq)
         if seq.dna_length != self._sequence_length:
             raise ValueError
@@ -643,10 +655,10 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
         return super().edges  # type: ignore
 
     @edges.setter
-    def edges(self, edges: Sequence[Glue]):
+    def edges(self, edges: Sequence[Glue]) -> None:
         self._edges = [bd.merge(g) for bd, g in zip(self._base_edges, edges)]
 
-    def set_edge(self, i: int, glue: Glue):
+    def set_edge(self, i: int, glue: Glue) -> None:
         self._edges[i] = self._base_edges[i].merge(glue)
 
     def __repr__(self) -> str:
@@ -720,7 +732,7 @@ class TileFactory:
     def __init__(self):
         self.types = {}
 
-    def register(self, c: Type[Tile], n: str = None):
+    def register(self, c: Type[Tile], n: str = None) -> None:
         self.types[n if n is not None else c.__name__] = c
 
     def from_dict(self, d: dict[str, Any]) -> Tile:
@@ -804,7 +816,7 @@ SomeTile = TypeVar("SomeTile", bound=Tile)
 
 class TileList(Generic[SomeTile], UpdateListD[SomeTile]):
     def glues_from_tiles(self) -> GlueList:
-        gl = GlueList()
+        gl: GlueList[Glue] = GlueList()
         for tile in self:
             gl |= tile.edges
         return gl
