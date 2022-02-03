@@ -30,6 +30,7 @@ import stickydesign as sd
 import stickydesign.multimodel as multimodel
 import xgrow
 import xgrow.parseoutput
+from xgrow.parseoutput import XgrowOutput
 import xgrow.tileset as xgt
 from numpy import isin
 from stickydesign.energetics_daoe import EnergeticsDAOE
@@ -80,7 +81,8 @@ _gl = {
 
 T = TypeVar("T")
 
-XgrowGlueOpts: TypeAlias = Literal['self-complementary', 'perfect']
+XgrowGlueOpts: TypeAlias = Literal["self-complementary", "perfect"]
+
 
 @dataclass(init=False)
 class TileSet(Serializable):
@@ -118,7 +120,7 @@ class TileSet(Serializable):
         self: TileSet,
         to_lattice: bool = True,
         _include_out: bool = False,
-        glues: XgrowGlueOpts = 'perfect',
+        glues: XgrowGlueOpts = "perfect",
         seed: str | int | Seed | None | Literal[False] = None,
         seed_offset: tuple[int, int] = (0, 0),
         **kwargs: Any,
@@ -130,7 +132,7 @@ class TileSet(Serializable):
             return (xgrow.run(xgrow_tileset, **kwargs),)
 
         out = cast(
-            xgrow.XgrowOutput,
+            XgrowOutput,
             xgrow.run(
                 xgrow_tileset,
                 outputopts="array",
@@ -160,7 +162,7 @@ class TileSet(Serializable):
 
     def to_xgrow(
         self,
-        glues: XgrowGlueOpts = 'perfect',
+        glues: XgrowGlueOpts = "perfect",
         seed: str | int | Seed | None | Literal[False] = None,
         seed_offset: tuple[int, int] = (0, 0),
     ) -> xgt.TileSet:
@@ -174,25 +176,25 @@ class TileSet(Serializable):
         # FIXME
         # bonds = [g.to_xgrow(self_complementary_glues) for g in self.glues]
         match glues:
-            case 'self-complementary':
+            case "self-complementary":
                 bonds = [
                     xgt.Bond(g.name, 0)
                     for g in allglues
-                    if g.name and ("null" in g.name or "inert" in g.name or "hairpin" in g.name)
+                    if g.name
+                    and ("null" in g.name or "inert" in g.name or "hairpin" in g.name)
                 ]
                 xg_glues = []
-            case 'perfect':
-                bonds = [
-                    xgt.Bond(g.name, 0)
-                    for g in allglues
-                ] 
+            case "perfect":
+                bonds = [xgt.Bond(g.name, 0) for g in allglues]
                 bonds += [
                     xgt.Bond(g.complement.name, 0)
-                    for g in allglues if g.complement.name not in allglues
+                    for g in allglues
+                    if g.complement.name not in allglues
                 ]
-                xg_glues = [xgt.Glue(g.name, g.complement.name, 
-                                     g.abstractstrength) for g in allglues
-                                     ]
+                xg_glues = [
+                    xgt.Glue(g.name, g.complement.name, g.abstractstrength)
+                    for g in allglues
+                ]
             case _:
                 raise ValueError("Unknown xgrow glue option", glues)
 
