@@ -20,6 +20,7 @@ from alhambra.mixes import (
 import itertools
 import pandas as pd
 
+
 def test_wellpos_movement():
     "Ensure WellPos movements are correct, and fail when appropriate."
 
@@ -141,14 +142,21 @@ def test_strand_with_reference(reference: pd.DataFrame):
     with pytest.raises(ValueError):
         Strand("strand1", sequence="AGCTG").with_reference(reference)
 
-def test_with_reference_get_first(reference: pd.DataFrame, caplog: pytest.LogCaptureFixture):
+
+def test_with_reference_get_first(
+    reference: pd.DataFrame, caplog: pytest.LogCaptureFixture
+):
     s = Strand("strand3").with_reference(reference)
 
     r1 = caplog.records[0]
     assert re.match(r"Strand %s has more than one location", r1.msg)
-    assert r1.args == (s.name, [('P 2', 'D7'), ('P 2', 'D5'), ('P 3', 'D7'), ('P 4', 'D7')])
+    assert r1.args == (
+        s.name,
+        [("P 2", "D7"), ("P 2", "D5"), ("P 3", "D7"), ("P 4", "D7")],
+    )
 
     assert s == Strand("strand3", Q_(1000, nM), "GGTG", plate="P 2", well="D7")
+
 
 def test_with_reference_constraints_match_plate(reference: pd.DataFrame, caplog):
     s = Strand("strand3", plate="P 3").with_reference(reference)
@@ -157,6 +165,7 @@ def test_with_reference_constraints_match_plate(reference: pd.DataFrame, caplog)
     c = Component("strand3", plate="P 3").with_reference(reference)
     assert c == Component("strand3", Q_(2000, nM), plate="P 3", well="D7")
 
+
 def test_with_reference_constraints_match_well(reference: pd.DataFrame, caplog):
     s = Strand("strand3", well="D5").with_reference(reference)
     assert s == Strand("strand3", Q_(1000, nM), "GGTG", plate="P 2", well="D5")
@@ -164,9 +173,11 @@ def test_with_reference_constraints_match_well(reference: pd.DataFrame, caplog):
     c = Component("strand3", well="D5").with_reference(reference)
     assert c == Component("strand3", Q_(1000, nM), plate="P 2", well="D5")
 
+
 def test_with_reference_constraints_match_seq(reference: pd.DataFrame, caplog):
     s = Strand("strand3", sequence="GGTGAGG").with_reference(reference)
     assert s == Strand("strand3", Q_(2000, nM), "GGTG AGG", plate="P 4", well="D7")
+
 
 def test_a_mix(reference: pd.DataFrame):
     c1 = Component("comp1")
@@ -180,8 +191,8 @@ def test_a_mix(reference: pd.DataFrame):
             FixedConcentration(c1, "100 nM"),
             FixedVolume(s3, ureg("10 uL")),
         ],
-        "test",
-        ureg("50 uL"),
+        name="test",
+        fixed_total_volume=ureg("50 uL"),
         fixed_concentration="strand3",
     ).with_reference(reference)
 
