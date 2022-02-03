@@ -3,10 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Sequence, Type, TypeVar, cast
 
-import xgrow.tileset as xgt
 
 if TYPE_CHECKING:
     from alhambra.tilesets import XgrowGlueOpts
+    import xgrow.tileset as xgt
 
 from .glues import DXGlue, Glue
 
@@ -79,8 +79,10 @@ class DXTallRect(DXOrigamiSeed):
         return cls(**d)
 
     def to_xgrow(
-        self, glue_handling: XgrowGlueOpts = 'perfect'
+        self, glue_handling: XgrowGlueOpts = "perfect"
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
+        import xgrow.tileset as xgt
+
         xgtiles = []
         locs: list[tuple[int, int, str]] = []
         bonds = [xgt.Bond("seed", 10)]
@@ -92,7 +94,7 @@ class DXTallRect(DXOrigamiSeed):
         y = len(self.adapters) + 1
         x = 1
         for i, (eg, sg) in enumerate(self.adapters):
-            if glue_handling == 'self-complementary':
+            if glue_handling == "self-complementary":
                 egn, sgn = eg.basename(), sg.basename()
             else:
                 egn, sgn = eg.ident(), sg.ident()

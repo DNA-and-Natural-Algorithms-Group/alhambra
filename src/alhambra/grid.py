@@ -3,18 +3,17 @@ from __future__ import annotations
 import dataclasses
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Callable, Literal, Protocol, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, Protocol, Type, TypeVar, cast
 
 import numpy as np
 import scadnano
-from xgrow.tileset import Tile
 
 from alhambra.glues import Glue, SSGlue
 from alhambra.seeds import Seed
 from alhambra.seq import Seq
-from alhambra.tiles import D, SupportsGuards, TileSupportingScadnano
+from alhambra.tiles import D, SupportsGuards, Tile, TileSupportingScadnano
 
-if False:
+if TYPE_CHECKING:
     from alhambra.tilesets import TileSet
 
 

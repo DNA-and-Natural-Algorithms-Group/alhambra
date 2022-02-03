@@ -28,10 +28,7 @@ import numpy as np
 import pkg_resources
 import stickydesign as sd
 import stickydesign.multimodel as multimodel
-import xgrow
-import xgrow.parseoutput
-from xgrow.parseoutput import XgrowOutput
-import xgrow.tileset as xgt
+
 from numpy import isin
 from stickydesign.energetics_daoe import EnergeticsDAOE
 
@@ -63,6 +60,11 @@ if TYPE_CHECKING:
     import matplotlib.pyplot as plt
     import scadnano
     import seaborn as sns
+
+    # import xgrow
+    # import xgrow.parseoutput
+    # from xgrow.parseoutput import XgrowOutput
+    # import xgrow.tileset as xgt
 
 SELOGGER = logging.getLogger(__name__)
 
@@ -126,6 +128,10 @@ class TileSet(Serializable):
         **kwargs: Any,
     ) -> Any:  # FIXME
         """Run the tilesystem in Xgrow."""
+        import xgrow
+        import xgrow.parseoutput
+        from xgrow.parseoutput import XgrowOutput
+
         xgrow_tileset = self.to_xgrow(seed=seed, seed_offset=seed_offset, glues=glues)
 
         if not to_lattice:
@@ -167,6 +173,8 @@ class TileSet(Serializable):
         seed_offset: tuple[int, int] = (0, 0),
     ) -> xgt.TileSet:
         "Convert Alhambra TileSet to an XGrow TileSet"
+        import xgrow.tileset as xgt
+
         self.tiles.refreshnames()
         self.glues.refreshnames()
         tiles = [t.to_xgrow(glues) for t in self.tiles]

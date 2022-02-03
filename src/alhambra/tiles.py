@@ -25,7 +25,7 @@ from typing import (
     Union,
     cast,
     overload,
-    TYPE_CHECKING
+    TYPE_CHECKING,
 )
 
 import drawSvg_svgy as draw
@@ -33,6 +33,7 @@ from xgrow.xcolors import xcolors
 
 if TYPE_CHECKING:
     from alhambra.tilesets import XgrowGlueOpts
+    import xgrow.tileset as xgt
 
 from .glues import Use
 
@@ -40,7 +41,6 @@ try:
     import scadnano
 except ImportError:
     pass
-import xgrow.tileset as xgt
 
 from .classes import UpdateListD
 from .glues import DXGlue, Glue, GlueFactory, GlueList, SSGlue
@@ -243,7 +243,7 @@ class Tile:
     @classmethod
     def _get_edge_index(cls, v: str) -> int:
         raise NotImplementedError
-    
+
     def ident(self) -> str:
         if self.name:
             return self.name
@@ -306,8 +306,10 @@ class Tile:
 
         return tile_factory.from_dict(d)
 
-    def to_xgrow(self, glue_handling: XgrowGlueOpts = 'perfect') -> xgt.Tile:
-        if self._edges and glue_handling == 'self-complementary':
+    def to_xgrow(self, glue_handling: XgrowGlueOpts = "perfect") -> xgt.Tile:
+        import xgrow.tileset as xgt
+
+        if self._edges and glue_handling == "self-complementary":
             edges = [g.basename() for g in self._edges]
         elif self._edges:
             edges = [g.ident() for g in self._edges]
@@ -413,7 +415,7 @@ class VDupleTile(Tile):
 
     @classmethod
     def _get_edge_index(cls, v: str) -> int:
-        return ["N","NE","SE","S","SW","NW"].index(v)
+        return ["N", "NE", "SE", "S", "SW", "NW"].index(v)
 
     @property
     def edge_directions(self) -> List[D]:
@@ -500,8 +502,7 @@ class HDupleTile(Tile):
 
     @classmethod
     def _get_edge_index(cls, v: str) -> int:
-        return ["NW","NE","E","SE","SW","W"].index(v)
-
+        return ["NW", "NE", "E", "SE", "SW", "W"].index(v)
 
     def abstract_diagram(
         self, tileset=None, draw_names: bool = True, draw_glues: bool = True
