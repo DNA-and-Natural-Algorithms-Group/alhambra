@@ -1600,6 +1600,7 @@ class Mix(AbstractComponent):
     def infoline(self) -> str:
         elems = [
             f"Mix: {self.name}",
+            f"Strand Count: {len(self.all_components())}",
             f"Conc: {self.concentration:,.2f~#P}",
             f"Total Vol: {self.total_volume:,.2f~#P}",
         ]
