@@ -1605,7 +1605,7 @@ class Mix(AbstractComponent):
             f"Total Vol: {self.total_volume:,.2f~#P}",
         ]
         if self.test_tube_name:
-            elems.append("Test tube name: {self.test_tube_name}")
+            elems.append(f"Test tube name: {self.test_tube_name}")
         return ", ".join(elems)
 
     def __str__(self) -> str:
