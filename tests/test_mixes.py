@@ -192,6 +192,7 @@ def test_a_mix(reference: pd.DataFrame):
             FixedVolume(s3, ureg("10 uL")),
         ],
         name="test",
+        test_tube_name="tm1",
         fixed_total_volume=ureg("50 uL"),
         fixed_concentration="strand3",
     ).with_reference(reference)
@@ -202,7 +203,10 @@ def test_a_mix(reference: pd.DataFrame):
     mdt = m._repr_markdown_().splitlines()
 
     assert (
-        re.match(r"Table: Mix: test, Conc: 400.00 nM, Total Vol: 50.00", mdt[0])
+        re.match(
+            r"Table: Mix: test, Conc: 400.00 nM, Total Vol: 50.00 µl, Component Count: 4, Test tube name: tm1",
+            mdt[0],
+        )
         is not None
     )
 
