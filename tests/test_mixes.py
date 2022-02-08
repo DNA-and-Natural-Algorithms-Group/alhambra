@@ -9,8 +9,10 @@ from alhambra.mixes import (
     FixedConcentration,
     FixedVolume,
     Mix,
+    MultiFixedConcentration,
     MultiFixedVolume,
     Strand,
+    VolumeError,
     WellPos,
     load_reference,
     nM,
@@ -213,3 +215,21 @@ def test_a_mix(reference: pd.DataFrame):
     # FIXME: more tests of output
 
     # FIXME: test of chained mix
+
+
+def test_multifixedconc_min_volume(reference: pd.DataFrame):
+    s1 = Strand("strand1", "400 nM")
+    s2 = Strand("strand2", "200 nM")
+
+    m = Mix(
+        [MultiFixedConcentration([s1, s2], "50 nM", min_volume="20 uL")],
+        name="test",
+        fixed_total_volume="100 uL",
+    )
+    
+    with pytest.raises(VolumeError):
+        m.table()
+
+    m.fixed_total_volume = "200 uL"  # type: ignore  # Mypy doesn't understand on_setattr
+
+    m.table()
