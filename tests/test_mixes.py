@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import cast
 import pytest
 import re
@@ -112,7 +113,7 @@ def test_component_allcomps():
 
     assert len(ac) == 1
     assert ac.loc["A", "component"] == Component("A", 1 * uM)
-    assert np.allclose(ac.loc["A", "concentration_nM"], 1000.0)
+    assert ac.loc["A", "concentration_nM"] == Decimal('1000.0')
 
 
 @pytest.fixture
@@ -139,10 +140,10 @@ def test_component_with_reference(reference: Reference):
     d = c.with_reference(reference)
 
     assert c != d
-    assert np.allclose(d.concentration, ureg.Quantity(1000.0, "nM"))
+    assert d.concentration, ureg("1000.0 nM")
 
     with pytest.raises(ValueError):
-        Component("comp1", ureg.Quantity(150.0, "nM")).with_reference(reference)
+        Component("comp1", ureg("150.0 nM")).with_reference(reference)
 
 
 def test_strand_with_reference(reference: Reference):
@@ -150,11 +151,11 @@ def test_strand_with_reference(reference: Reference):
     d = c.with_reference(reference)
 
     assert c != d
-    assert np.allclose(d.concentration, ureg.Quantity(1000.0, "nM"))
+    assert d.concentration == ureg("1000.0 nM")
     assert d.sequence == "AGAACC"
 
     with pytest.raises(ValueError):
-        Strand("strand1", ureg.Quantity(150.0, "nM")).with_reference(reference)
+        Strand("strand1", ureg("150.0 nM")).with_reference(reference)
 
     with pytest.raises(ValueError):
         Strand("strand1", sequence="AGCTG").with_reference(reference)
@@ -215,7 +216,7 @@ def test_a_mix(reference: Reference):
     ).with_reference(reference)
 
     assert m.buffer_volume == ureg("5 uL")
-    assert np.allclose(m.concentration, ureg("400 nM"))
+    assert m.concentration == ureg("400 nM")
 
     mdt = m._repr_markdown_().splitlines()
 
