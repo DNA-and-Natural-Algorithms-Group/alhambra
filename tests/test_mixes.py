@@ -14,6 +14,7 @@ from alhambra.mixes import (
     Strand,
     VolumeError,
     WellPos,
+    Reference,
     load_reference,
     nM,
     uM,
@@ -116,10 +117,24 @@ def test_component_allcomps():
 
 @pytest.fixture
 def reference():
-    return load_reference("tests/test_reference.csv")
+    return Reference.from_csv("tests/test_reference.csv")
 
+def test_reference_saveload(tmp_path_factory: pytest.TempPathFactory, reference: Reference):
+    sf = tmp_path_factory.mktemp("exp") / "test.csv"
 
-def test_component_with_reference(reference: pd.DataFrame):
+    r = load_reference("tests/test_reference.csv")
+
+    assert r == reference
+
+    r.to_csv(sf)
+
+    r2 = Reference.from_csv(sf)
+
+    assert r == r2
+
+    assert r == r2.df
+
+def test_component_with_reference(reference: Reference):
     c = Component("comp1")
     d = c.with_reference(reference)
 
@@ -130,7 +145,7 @@ def test_component_with_reference(reference: pd.DataFrame):
         Component("comp1", ureg.Quantity(150.0, "nM")).with_reference(reference)
 
 
-def test_strand_with_reference(reference: pd.DataFrame):
+def test_strand_with_reference(reference: Reference):
     c = Strand("strand1")
     d = c.with_reference(reference)
 
@@ -146,7 +161,7 @@ def test_strand_with_reference(reference: pd.DataFrame):
 
 
 def test_with_reference_get_first(
-    reference: pd.DataFrame, caplog: pytest.LogCaptureFixture
+    reference: Reference, caplog: pytest.LogCaptureFixture
 ):
     s = Strand("strand3").with_reference(reference)
 
@@ -160,7 +175,7 @@ def test_with_reference_get_first(
     assert s == Strand("strand3", Q_(1000, nM), "GGTG", plate="P 2", well="D7")
 
 
-def test_with_reference_constraints_match_plate(reference: pd.DataFrame, caplog):
+def test_with_reference_constraints_match_plate(reference: Reference, caplog):
     s = Strand("strand3", plate="P 3").with_reference(reference)
     assert s == Strand("strand3", Q_(2000, nM), "GGTG", plate="P 3", well="D7")
 
@@ -168,7 +183,7 @@ def test_with_reference_constraints_match_plate(reference: pd.DataFrame, caplog)
     assert c == Component("strand3", Q_(2000, nM), plate="P 3", well="D7")
 
 
-def test_with_reference_constraints_match_well(reference: pd.DataFrame, caplog):
+def test_with_reference_constraints_match_well(reference: Reference, caplog):
     s = Strand("strand3", well="D5").with_reference(reference)
     assert s == Strand("strand3", Q_(1000, nM), "GGTG", plate="P 2", well="D5")
 
@@ -176,12 +191,12 @@ def test_with_reference_constraints_match_well(reference: pd.DataFrame, caplog):
     assert c == Component("strand3", Q_(1000, nM), plate="P 2", well="D5")
 
 
-def test_with_reference_constraints_match_seq(reference: pd.DataFrame, caplog):
+def test_with_reference_constraints_match_seq(reference: Reference, caplog):
     s = Strand("strand3", sequence="GGTGAGG").with_reference(reference)
     assert s == Strand("strand3", Q_(2000, nM), "GGTG AGG", plate="P 4", well="D7")
 
 
-def test_a_mix(reference: pd.DataFrame):
+def test_a_mix(reference: Reference):
     c1 = Component("comp1")
     s1 = Strand("strand1")
     s2 = Strand("strand2")
@@ -217,7 +232,7 @@ def test_a_mix(reference: pd.DataFrame):
     # FIXME: test of chained mix
 
 
-def test_multifixedconc_min_volume(reference: pd.DataFrame):
+def test_multifixedconc_min_volume(reference: Reference):
     s1 = Strand("strand1", "400 nM")
     s2 = Strand("strand2", "200 nM")
 
