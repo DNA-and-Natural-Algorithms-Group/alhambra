@@ -915,7 +915,7 @@ class FixedVolume(AbstractAction):
                 dest_conc=self.dest_concentration(mix_vol),
                 total_tx_vol=self.tx_volume(mix_vol),
                 plate=self.component.location[0],
-                wells=([well] if well else [])
+                wells=([well] if well else []),
             )
         ]
 
@@ -1084,7 +1084,9 @@ class MultiFixedVolume(AbstractAction):
     ) -> Sequence[Quantity[Decimal]]:
         return [
             x * y
-            for x,y in zip(self.source_concentrations, _ratio(self.each_volumes(mix_vol), mix_vol))
+            for x, y in zip(
+                self.source_concentrations, _ratio(self.each_volumes(mix_vol), mix_vol)
+            )
         ]
 
     def each_volumes(
@@ -1126,7 +1128,7 @@ class MultiFixedVolume(AbstractAction):
                     dc,
                     ev,
                     plate=comp.plate,
-                    wells=comp._well_list
+                    wells=comp._well_list,
                 )
                 for dc, ev, comp in zip(
                     self.dest_concentrations(mix_vol),
@@ -1182,7 +1184,6 @@ class MultiFixedVolume(AbstractAction):
             by=["plate", "ea_vols", "well"], ascending=[True, False, True]
         )
 
-
         names: list[list[str]] = []
         source_concs: list[Quantity[Decimal]] = []
         dest_concs: list[Quantity[Decimal]] = []
@@ -1192,8 +1193,10 @@ class MultiFixedVolume(AbstractAction):
         plates: list[str] = []
         wells_list: list[list[WellPos]] = []
 
-        for plate, plate_comps in locdf.groupby("plate"): # type: str, pd.DataFrame
-            for vol, plate_vol_comps in plate_comps.groupby("ea_vols"): # type: Quantity[Decimal], pd.DataFrame
+        for plate, plate_comps in locdf.groupby("plate"):  # type: str, pd.DataFrame
+            for vol, plate_vol_comps in plate_comps.groupby(
+                "ea_vols"
+            ):  # type: Quantity[Decimal], pd.DataFrame
                 if pd.isna(plate_vol_comps["well"].iloc[0]):
                     if not pd.isna(plate_vol_comps["well"]).all():
                         raise ValueError
@@ -1241,7 +1244,7 @@ class MultiFixedVolume(AbstractAction):
                 each_tx_vol=each_tx_vol,
                 total_tx_vol=total_tx_vol,
                 plate=plate,
-                wells=wells
+                wells=wells,
             )
             for name, source_conc, dest_conc, number, each_tx_vol, total_tx_vol, plate, wells in zip(
                 names,
@@ -1392,7 +1395,7 @@ class MultiFixedConcentration(AbstractAction):
                     dc,
                     ev,
                     plate=comp.plate,
-                    wells=comp._well_list
+                    wells=comp._well_list,
                 )
                 for dc, ev, comp in zip(
                     self.dest_concentrations(mix_vol),
@@ -1442,7 +1445,6 @@ class MultiFixedConcentration(AbstractAction):
             by=["plate", "ea_vols", "well"], ascending=[True, False, True]
         )
 
-
         names: list[list[str]] = []
         source_concs: list[Quantity[Decimal]] = []
         dest_concs: list[Quantity[Decimal]] = []
@@ -1452,8 +1454,10 @@ class MultiFixedConcentration(AbstractAction):
         plates: list[str] = []
         wells_list: list[list[WellPos]] = []
 
-        for plate, plate_comps in locdf.groupby("plate"): # type: str, pd.DataFrame
-            for vol, plate_vol_comps in plate_comps.groupby("ea_vols"): # type: Quantity[Decimal], pd.DataFrame
+        for plate, plate_comps in locdf.groupby("plate"):  # type: str, pd.DataFrame
+            for vol, plate_vol_comps in plate_comps.groupby(
+                "ea_vols"
+            ):  # type: Quantity[Decimal], pd.DataFrame
                 if pd.isna(plate_vol_comps["well"].iloc[0]):
                     if not pd.isna(plate_vol_comps["well"]).all():
                         raise ValueError
@@ -1466,7 +1470,7 @@ class MultiFixedConcentration(AbstractAction):
                     plates.append(plate)
                     wells_list.append([])
                     continue
-                
+
                 byrow = mixgaps(
                     sorted(list(plate_vol_comps["well"]), key=WellPos.key_byrow),
                     by="row",
@@ -1484,14 +1488,14 @@ class MultiFixedConcentration(AbstractAction):
 
                 plate_vol_comps.sort_values(by="sortkey", inplace=True)
 
-                names.append(plate_vol_comps["names"])
+                names.append(list(plate_vol_comps["names"]))
                 ea_vols.append((vol))
                 numbers.append((len(plate_vol_comps)))
                 tot_vols.append((vol * len(plate_vol_comps)))
                 source_concs.append((plate_vol_comps["source_concs"].iloc[0]))
                 dest_concs.append((plate_vol_comps["dest_concs"].iloc[0]))
                 plates.append(plate)
-                wells_list.append(plate_vol_comps["well"])
+                wells_list.append(list(plate_vol_comps["well"]))
 
         return [
             MixLine(
@@ -1502,7 +1506,7 @@ class MultiFixedConcentration(AbstractAction):
                 each_tx_vol=each_tx_vol,
                 total_tx_vol=total_tx_vol,
                 plate=p,
-                wells=wells
+                wells=wells,
             )
             for name, source_conc, dest_conc, number, each_tx_vol, total_tx_vol, p, wells in zip(
                 names,
@@ -1549,7 +1553,7 @@ class FixedRatio(AbstractAction):
                 str(self.dest_value) + "x",
                 self.tx_volume(mix_vol),
                 plate=self.component.plate,
-                wells=self.component._well_list
+                wells=self.component._well_list,
             )
         ]
 
@@ -1685,7 +1689,9 @@ class Mix(AbstractComponent):
     def validate(self, mixlines: Sequence[MixLine] | None = None) -> None:
         if mixlines is None:
             mixlines = self.mixlines()
-        ntx = [(m.names, m.total_tx_vol) for m in mixlines if m.total_tx_vol is not None]
+        ntx = [
+            (m.names, m.total_tx_vol) for m in mixlines if m.total_tx_vol is not None
+        ]
 
         nan_vols = [", ".join(n) for n, x in ntx if math.isnan(x.m)]
         if nan_vols:
@@ -1785,7 +1791,9 @@ class Mix(AbstractComponent):
                         (seq := getattr(row["component"], "sequence", None)) is not None
                     ):
                         new_tile.sequence |= seq
-                    new_tile.stoic = float(_ratio(Q_(row["concentration_nM"], nM), base_conc))
+                    new_tile.stoic = float(
+                        _ratio(Q_(row["concentration_nM"], nM), base_conc)
+                    )
                     newts.tiles.add(new_tile)
                     break
                 except KeyError:
