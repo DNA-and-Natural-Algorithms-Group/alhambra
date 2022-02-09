@@ -248,3 +248,20 @@ def test_multifixedconc_min_volume(reference: Reference):
     m.fixed_total_volume = "200 uL"  # type: ignore  # Mypy doesn't understand on_setattr
 
     m.table()
+
+def test_non_plates():
+    s1 = Strand("s1", "200 nM", plate="tube")
+
+    s2 = Strand("s2", "200 nM", plate="tube")
+
+    s3 = Strand("s3", "400 nM", plate="tube")
+
+    s4 = Strand("s4", "400 nM", plate="a different tube")
+
+    m = Mix([MultiFixedVolume([s1, s2, s3, s4], "1 uL", equal_conc="min_volume")], "test")
+
+    m.table()
+
+    ml = m.mixlines()
+
+    assert len(ml) == 4
