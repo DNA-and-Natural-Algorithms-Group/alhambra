@@ -16,9 +16,9 @@ def _generic_branch(direction, tiles, tile, n, f=False, gms=GlueMergeSpec([])):
         return [([tile], tile["ends"][_ENDER[direction]])]
     for tn in tiles:
         if gms.eq(tile["ends"][direction], comp(tn["ends"][_OE[direction]])):
-            branches += [
+            branches.extend(
                 ([tile] + x, y) for x, y in _generic_branch(direction, tiles, tn, n - 1)
-            ]
+            )
     return branches
 
 
@@ -30,14 +30,14 @@ def _latticedefect_tile(tiles, tile, direction="e", n=2, gms=GlueMergeSpec([])):
     neighborhoods = itertools.product(b1, b2)
     res = []
     for n in neighborhoods:
-        res += [
+        res.extend(
             (n, tile)
             for tile in tiles
             if (
                 gms.eq(n[0][1], comp(tile["ends"][_OE[_ENDER[d1]]]))
                 and gms.eq(n[1][1], comp(tile["ends"][_OE[_ENDER[d2]]]))
             )
-        ]
+        )
     return res
 
 

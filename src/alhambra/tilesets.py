@@ -194,11 +194,11 @@ class TileSet(Serializable):
                 xg_glues = []
             case "perfect":
                 bonds = [xgt.Bond(g.name, 0) for g in allglues]
-                bonds += [
+                bonds.extend(
                     xgt.Bond(g.complement.name, 0)
                     for g in allglues
                     if g.complement.name not in allglues
-                ]
+                )
                 xg_glues = [
                     xgt.Glue(g.name, g.complement.name, g.abstractstrength)
                     for g in allglues

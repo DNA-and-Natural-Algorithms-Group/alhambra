@@ -311,7 +311,7 @@ class _FastTileSet:
                 tile["fake"] = True
                 continue
             rs = [tile] + tile.rotations
-            alreadythere += [(t.ends, "label" in t.keys()) for t in rs]
+            alreadythere.extend((t.ends, "label" in t.keys()) for t in rs)
         if "seed" in ts.keys():
             for t in ts.seed["adapters"]:
                 if "ends" in t.keys():
@@ -620,13 +620,13 @@ def _findpotentialtilemerges(fts, equiv):
         t1 = fts.tilelist.tiles[ti]
         if not t1.used:
             continue
-        ppairs += [
+        ppairs.extend(
             (t1, t)
             for t in fts.tilelist.tiles[ti:]
             if (t1.color == t.color)
             and (t1.structure.name == t.structure.name)
             and (t1.name != t.name)
-        ]
+        )
     shuffle(ppairs)
     return ppairs
 
@@ -642,7 +642,7 @@ def _findpotentialgluemerges(fts, equiv):
                 & (fts.gluelist.structure[g1 + 1 :] == fts.gluelist.structure[g1])
             )[0]
         )
-        ppairs += [(g1, g2) for g2 in g2s]
+        ppairs.extend((g1, g2) for g2 in g2s)
     shuffle(ppairs)
     return ppairs
 
