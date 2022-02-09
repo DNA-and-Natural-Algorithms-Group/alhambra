@@ -232,9 +232,15 @@ def test_a_mix(reference: Reference):
         is not None
     )
 
-    # FIXME: more tests of output
+    ml = m.mixlines()
 
-    # FIXME: test of chained mix
+    assert sum(l.total_tx_vol for l in ml if not l.fake) == m.total_volume
+
+    for line in ml:
+        if line.fake:
+            continue
+        if line.each_tx_vol:
+            assert line.number * line.each_tx_vol == line.total_tx_vol
 
 
 def test_multifixedconc_min_volume(reference: Reference):
