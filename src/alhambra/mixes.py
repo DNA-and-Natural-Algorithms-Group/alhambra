@@ -277,20 +277,64 @@ class WellPos:
 
 @attrs.define(eq=True)
 class MixLine:
-    """Class for handling a line of a (processed) mix recipe."""
+    """Class for handling a line of a (processed) mix recipe.
+    
+    Each line should represent a single step, or series of similar steps (same volume per substep)
+    in the mixing process.
+
+    Parameters
+    ----------
+
+    names
+        A list of component names.  For a single step, use [name].
+
+    source_conc
+        The source concentration; may not be provided (will be left blank), or be a descriptive string.
+
+    dest_conc
+        The destination/target concentration; may not be provided (will be left blank), or be a descriptive string.
+
+    total_tx_vol
+        The total volume added to the mix by the step.  If zero, the amount will still be included in tables.  
+        If None, the amount will be blank.  If provided, and the line is not fake, the value must be correct
+        and interpretable for calculations involving the mix.
+
+    number
+        The number of components added / substeps
+
+    each_tx_vol
+        The volume per component / substep.  May be omitted, or a descriptive string.
+
+    plate
+        The plate name for the mix, a descriptive string for location / source type (eg, "tube") or None (omitted).
+        A single MixLine, at present, should not involve multiple plates.
+
+    wells
+        A list of wells for the components in a plate.  If the components are not in a plate, this must be an
+        empty list.  This *does not* parse strings; wells must be provided as WellPos instances.
+    
+    note
+        A note to add for the line
+
+    fake
+        Denotes that the line is not a real step, eg, for a summary/total information line.  The line
+        will be distinguished in some way in tables (eg, italics) and will not be included in calculations.
+    """
 
     names: list[str]
-    source_conc: Quantity[Decimal] | str | None
-    dest_conc: Quantity[Decimal] | str | None
-    total_tx_vol: Quantity[Decimal] | None
+    source_conc: Quantity[Decimal] | str | None = None
+    dest_conc: Quantity[Decimal] | str | None = None
+    total_tx_vol: Quantity[Decimal] | None = None
     number: int = 1
     each_tx_vol: Quantity[Decimal] | str | None = None
     plate: str | None = None
     wells: list[WellPos] = attrs.field(factory=list)
     note: str | None = None
+    fake: bool = False
 
     @property
     def location(self) -> str:
+        "A Markdown-formatted string for the location of the component/components."
         if len(self.wells) == 0:
             if self.plate is None:
                 return ""
@@ -325,50 +369,45 @@ class MixLine:
     def toline(self, incea: bool) -> Sequence[str]:
         if incea:
             return [
-                _formatter(getattr(self, x), x)
-                for x in [
-                    "names",
-                    "source_conc",
-                    "dest_conc",
-                    "number",
-                    "each_tx_vol",
-                    "total_tx_vol",
-                    "location",
-                    "note",
-                ]
+                   _formatter(self.names, italic=self.fake),
+                   _formatter(self.source_conc, italic=self.fake),
+                   _formatter(self.dest_conc, italic=self.fake),
+                   _formatter(self.number, italic=self.fake) if self.number != 1 else "",
+                   _formatter(self.each_tx_vol, italic=self.fake),
+                   _formatter(self.total_tx_vol, italic=self.fake),
+                   _formatter(self.location, italic=self.fake),
+                   _formatter(self.note, italic=self.fake),
             ]
         else:
             return [
-                _formatter(getattr(self, x))
-                for x in [
-                    "names",
-                    "source_conc",
-                    "dest_conc",
-                    "total_tx_vol",
-                    "location",
-                    "note",
-                ]
+                   _formatter(self.names, italic=self.fake),
+                   _formatter(self.source_conc, italic=self.fake),
+                   _formatter(self.dest_conc, italic=self.fake),
+                   _formatter(self.total_tx_vol, italic=self.fake),
+                   _formatter(self.location, italic=self.fake),
+                   _formatter(self.note, italic=self.fake),
             ]
 
 
-def _formatter(x: int | float | str | list[str] | None, t: str = "") -> str:
+def _formatter(x: int | float | str | list[str] | Quantity[Decimal] | None, italic: bool=False) -> str:
     match x:
         case int(y) | str(y):
-            if t == "number" and x == 1:
-                return ""
-            return str(y)
+            out = str(y)
         case None:
-            return ""
+            out = ""
         case float(y):
-            return f"{y:,.2f}"
+            out = f"{y:,.2f}"
         case Quantity() as y:
-            return f"{y:,.2f~#P}"
+            out = f"{y:,.2f~#P}"
         case list() | pd.Series() | np.array() as x:
-            return ", ".join(_formatter(y) for y in x)
+            out = ", ".join(_formatter(y) for y in x)
         case _:
             raise TypeError
-    raise TypeError
-
+    if not out:
+        return ""
+    if italic:
+        return "*"+out+"*"
+    return out
 
 class AbstractComponent(ABC):
     """Abstract class for a component in a mix."""
@@ -1663,7 +1702,7 @@ class Mix(AbstractComponent):
                 raise e
 
         mixlines.append(
-            MixLine(["*Total:*"], None, self.concentration, self.total_volume)
+            MixLine(["Total:"], None, self.concentration, self.total_volume, fake=True)
         )
 
         include_numbers = any(ml.number != 1 for ml in mixlines)
