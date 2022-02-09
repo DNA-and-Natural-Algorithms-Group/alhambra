@@ -278,7 +278,7 @@ class WellPos:
 @attrs.define(eq=True)
 class MixLine:
     """Class for handling a line of a (processed) mix recipe.
-    
+
     Each line should represent a single step, or series of similar steps (same volume per substep)
     in the mixing process.
 
@@ -295,7 +295,7 @@ class MixLine:
         The destination/target concentration; may not be provided (will be left blank), or be a descriptive string.
 
     total_tx_vol
-        The total volume added to the mix by the step.  If zero, the amount will still be included in tables.  
+        The total volume added to the mix by the step.  If zero, the amount will still be included in tables.
         If None, the amount will be blank.  If provided, and the line is not fake, the value must be correct
         and interpretable for calculations involving the mix.
 
@@ -312,7 +312,7 @@ class MixLine:
     wells
         A list of wells for the components in a plate.  If the components are not in a plate, this must be an
         empty list.  This *does not* parse strings; wells must be provided as WellPos instances.
-    
+
     note
         A note to add for the line
 
@@ -369,27 +369,29 @@ class MixLine:
     def toline(self, incea: bool) -> Sequence[str]:
         if incea:
             return [
-                   _formatter(self.names, italic=self.fake),
-                   _formatter(self.source_conc, italic=self.fake),
-                   _formatter(self.dest_conc, italic=self.fake),
-                   _formatter(self.number, italic=self.fake) if self.number != 1 else "",
-                   _formatter(self.each_tx_vol, italic=self.fake),
-                   _formatter(self.total_tx_vol, italic=self.fake),
-                   _formatter(self.location, italic=self.fake),
-                   _formatter(self.note, italic=self.fake),
+                _formatter(self.names, italic=self.fake),
+                _formatter(self.source_conc, italic=self.fake),
+                _formatter(self.dest_conc, italic=self.fake),
+                _formatter(self.number, italic=self.fake) if self.number != 1 else "",
+                _formatter(self.each_tx_vol, italic=self.fake),
+                _formatter(self.total_tx_vol, italic=self.fake),
+                _formatter(self.location, italic=self.fake),
+                _formatter(self.note, italic=self.fake),
             ]
         else:
             return [
-                   _formatter(self.names, italic=self.fake),
-                   _formatter(self.source_conc, italic=self.fake),
-                   _formatter(self.dest_conc, italic=self.fake),
-                   _formatter(self.total_tx_vol, italic=self.fake),
-                   _formatter(self.location, italic=self.fake),
-                   _formatter(self.note, italic=self.fake),
+                _formatter(self.names, italic=self.fake),
+                _formatter(self.source_conc, italic=self.fake),
+                _formatter(self.dest_conc, italic=self.fake),
+                _formatter(self.total_tx_vol, italic=self.fake),
+                _formatter(self.location, italic=self.fake),
+                _formatter(self.note, italic=self.fake),
             ]
 
 
-def _formatter(x: int | float | str | list[str] | Quantity[Decimal] | None, italic: bool=False) -> str:
+def _formatter(
+    x: int | float | str | list[str] | Quantity[Decimal] | None, italic: bool = False
+) -> str:
     match x:
         case int(y) | str(y):
             out = str(y)
@@ -406,8 +408,9 @@ def _formatter(x: int | float | str | list[str] | Quantity[Decimal] | None, ital
     if not out:
         return ""
     if italic:
-        return "*"+out+"*"
+        return "*" + out + "*"
     return out
+
 
 class AbstractComponent(ABC):
     """Abstract class for a component in a mix."""

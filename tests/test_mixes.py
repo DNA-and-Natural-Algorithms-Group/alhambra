@@ -254,6 +254,7 @@ def test_multifixedconc_min_volume(reference: Reference):
 
     m.table()
 
+
 def test_non_plates():
     s1 = Strand("s1", "200 nM", plate="tube")
 
@@ -263,7 +264,9 @@ def test_non_plates():
 
     s4 = Strand("s4", "400 nM", plate="a different tube")
 
-    m = Mix([MultiFixedVolume([s1, s2, s3, s4], "1 uL", equal_conc="min_volume")], "test")
+    m = Mix(
+        [MultiFixedVolume([s1, s2, s3, s4], "1 uL", equal_conc="min_volume")], "test"
+    )
 
     m.table()
 
