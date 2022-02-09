@@ -279,21 +279,55 @@ class WellPos:
 class MixLine:
     """Class for handling a line of a (processed) mix recipe."""
 
-    name: str | None
+    names: list[str]
     source_conc: Quantity[Decimal] | str | None
     dest_conc: Quantity[Decimal] | str | None
     total_tx_vol: Quantity[Decimal] | None
     number: int = 1
     each_tx_vol: Quantity[Decimal] | str | None = None
-    location: str | None = None
+    plate: str | None = None
+    wells: list[WellPos] = attrs.field(factory=list)
     note: str | None = None
+
+    @property
+    def location(self) -> str:
+        if len(self.wells) == 0:
+            if self.plate is None:
+                return ""
+            return f"{self.plate}"
+        elif len(self.wells) == 1:
+            return f"{self.plate}: {self.wells[0]}"
+
+        byrow = mixgaps(
+            sorted(list(self.wells), key=WellPos.key_byrow),
+            by="row",
+        )
+        bycol = mixgaps(
+            sorted(list(self.wells), key=WellPos.key_bycol),
+            by="col",
+        )
+
+        sortnext = WellPos.next_bycol if bycol <= byrow else WellPos.next_byrow
+
+        wells_formatted = []
+        next_well_iter = iter(self.wells)
+        prevpos = next(next_well_iter)
+        wells_formatted.append(f"**{prevpos}**")
+        for well in next_well_iter:
+            if sortnext(prevpos) != well:
+                wells_formatted.append(f"**{well}**")
+            else:
+                wells_formatted.append(f"{well}")
+            prevpos = well
+
+        return f"{self.plate}: {', '.join(wells_formatted)}"
 
     def toline(self, incea: bool) -> Sequence[str]:
         if incea:
             return [
                 _formatter(getattr(self, x), x)
                 for x in [
-                    "name",
+                    "names",
                     "source_conc",
                     "dest_conc",
                     "number",
@@ -307,7 +341,7 @@ class MixLine:
             return [
                 _formatter(getattr(self, x))
                 for x in [
-                    "name",
+                    "names",
                     "source_conc",
                     "dest_conc",
                     "total_tx_vol",
@@ -317,7 +351,7 @@ class MixLine:
             ]
 
 
-def _formatter(x: int | float | str | None, t: str = "") -> str:
+def _formatter(x: int | float | str | list[str] | None, t: str = "") -> str:
     match x:
         case int(y) | str(y):
             if t == "number" and x == 1:
@@ -329,6 +363,8 @@ def _formatter(x: int | float | str | None, t: str = "") -> str:
             return f"{y:,.2f}"
         case Quantity() as y:
             return f"{y:,.2f~#P}"
+        case list() | pd.Series() | np.array() as x:
+            return ", ".join(_formatter(y) for y in x)
         case _:
             raise TypeError
     raise TypeError
@@ -354,6 +390,12 @@ class AbstractComponent(ABC):
     @property
     def well(self) -> WellPos | None:
         return None
+
+    @property
+    def _well_list(self) -> list[WellPos]:
+        if self.well is not None:
+            return [self.well]
+        return []
 
     @property
     @abstractmethod
@@ -673,7 +715,7 @@ class AbstractAction(ABC):
 
     @abstractmethod
     def _mixlines(
-        self, mix_vol: Quantity[Decimal], locations: pd.DataFrame | None = None
+        self, mix_vol: Quantity[Decimal]
     ) -> Sequence[MixLine]:  # pragma: no cover
         ...
 
@@ -798,16 +840,16 @@ class FixedConcentration(AbstractAction):
     def _mixlines(
         self,
         mix_vol: Quantity[Decimal] = Q_(DNAN, uL),
-        locations: pd.DataFrame | None = None,
-    ) -> Sequence[MixLine]:
+    ) -> list[MixLine]:
 
         return [
             MixLine(
-                name=self.component.name,
+                names=[self.component.name],
                 source_conc=self.component.concentration,
                 dest_conc=self.dest_concentration(mix_vol),
                 total_tx_vol=self.tx_volume(mix_vol),
-                location=_format_location(self.component.location),
+                plate=self.component.plate,
+                wells=self.component._well_list,
             )
         ]
 
@@ -864,14 +906,16 @@ class FixedVolume(AbstractAction):
     def _mixlines(
         self, mix_vol: Quantity[Decimal], locations: pd.DataFrame | None = None
     ) -> Sequence[MixLine]:
+        well = self.component.location[1]
 
         return [
             MixLine(
-                name=self.component.name,
+                names=[self.component.name],
                 source_conc=self.component.concentration,
                 dest_conc=self.dest_concentration(mix_vol),
                 total_tx_vol=self.tx_volume(mix_vol),
-                location=_format_location(self.component.location),
+                plate=self.component.location[0],
+                wells=([well] if well else [])
             )
         ]
 
@@ -1077,11 +1121,12 @@ class MultiFixedVolume(AbstractAction):
         if not self.compact_display:
             ml = [
                 MixLine(
-                    comp.name,
+                    [comp.name],
                     comp.concentration,
                     dc,
                     ev,
-                    location=_format_location(comp.location),
+                    plate=comp.plate,
+                    wells=comp._well_list
                 )
                 for dc, ev, comp in zip(
                     self.dest_concentrations(mix_vol),
@@ -1096,7 +1141,7 @@ class MultiFixedVolume(AbstractAction):
             case ("max_fill", str(buffername)):
                 fv = self.fixed_volume * len(self.components) - sum(self.each_volumes())
                 if not fv == Q_(Decimal("0.0"), uL):
-                    ml.append(MixLine(buffername, None, None, fv))
+                    ml.append(MixLine([buffername], None, None, fv))
 
         return ml
 
@@ -1137,28 +1182,29 @@ class MultiFixedVolume(AbstractAction):
             by=["plate", "ea_vols", "well"], ascending=[True, False, True]
         )
 
-        names, source_concs, dest_concs, numbers, ea_vols, tot_vols, locations = (
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-        )
 
-        for plate, plate_comps in locdf.groupby("plate"):
-            for vol, plate_vol_comps in plate_comps.groupby("ea_vols"):
+        names: list[list[str]] = []
+        source_concs: list[Quantity[Decimal]] = []
+        dest_concs: list[Quantity[Decimal]] = []
+        numbers: list[int] = []
+        ea_vols: list[Quantity[Decimal]] = []
+        tot_vols: list[Quantity[Decimal]] = []
+        plates: list[str] = []
+        wells_list: list[list[WellPos]] = []
+
+        for plate, plate_comps in locdf.groupby("plate"): # type: str, pd.DataFrame
+            for vol, plate_vol_comps in plate_comps.groupby("ea_vols"): # type: Quantity[Decimal], pd.DataFrame
                 if pd.isna(plate_vol_comps["well"].iloc[0]):
                     if not pd.isna(plate_vol_comps["well"]).all():
                         raise ValueError
-                    names.append(", ".join(n for n in plate_vol_comps["names"]))
+                    names.append(list(plate_vol_comps["names"]))
                     ea_vols.append((vol))
                     tot_vols.append((vol * len(plate_vol_comps)))
                     numbers.append((len(plate_vol_comps)))
                     source_concs.append((plate_vol_comps["source_concs"].iloc[0]))
                     dest_concs.append((plate_vol_comps["dest_concs"].iloc[0]))
-                    locations.append(plate)
+                    plates.append(plate)
+                    wells_list.append([])
                     continue
                 byrow = mixgaps(
                     sorted(list(plate_vol_comps["well"]), key=WellPos.key_byrow),
@@ -1170,7 +1216,6 @@ class MultiFixedVolume(AbstractAction):
                 )
 
                 sortkey = WellPos.key_bycol if bycol <= byrow else WellPos.key_byrow
-                sortnext = WellPos.next_bycol if bycol <= byrow else WellPos.next_byrow
 
                 plate_vol_comps["sortkey"] = [
                     sortkey(c) for c in plate_vol_comps["well"]
@@ -1178,45 +1223,35 @@ class MultiFixedVolume(AbstractAction):
 
                 plate_vol_comps.sort_values(by="sortkey", inplace=True)
 
-                wells_formatted = []
-                next_well_iter = iter(plate_vol_comps["well"])
-                prevpos = next(next_well_iter)
-                wells_formatted.append(f"**{prevpos}**")
-                for well in next_well_iter:
-                    if sortnext(prevpos) != well:
-                        wells_formatted.append(f"**{well}**")
-                    else:
-                        wells_formatted.append(f"{well}")
-                    prevpos = well
-
-                names.append(", ".join(n for n in plate_vol_comps["names"]))
+                names.append(list(plate_vol_comps["names"]))
                 ea_vols.append((vol))
                 numbers.append((len(plate_vol_comps)))
                 tot_vols.append((vol * len(plate_vol_comps)))
                 source_concs.append((plate_vol_comps["source_concs"].iloc[0]))
                 dest_concs.append((plate_vol_comps["dest_concs"].iloc[0]))
-                locations.append(
-                    plate + ": " + ", ".join(str(w) for w in wells_formatted)
-                )
+                plates.append(plate)
+                wells_list.append(list(plate_vol_comps["well"]))
 
         return [
             MixLine(
-                name,
+                [name],
                 source_conc=source_conc,
                 dest_conc=dest_conc,
                 number=number,
                 each_tx_vol=each_tx_vol,
                 total_tx_vol=total_tx_vol,
-                location=location,
+                plate=plate,
+                wells=wells
             )
-            for name, source_conc, dest_conc, number, each_tx_vol, total_tx_vol, location in zip(
+            for name, source_conc, dest_conc, number, each_tx_vol, total_tx_vol, plate, wells in zip(
                 names,
                 source_concs,
                 dest_concs,
                 numbers,
                 ea_vols,
                 tot_vols,
-                locations,
+                plates,
+                wells_list,
                 strict=True,
             )
         ]
@@ -1352,11 +1387,12 @@ class MultiFixedConcentration(AbstractAction):
         if not self.compact_display:
             ml = [
                 MixLine(
-                    comp.name,
+                    [comp.name],
                     comp.concentration,
                     dc,
                     ev,
-                    location=_format_location(comp.location),
+                    plate=comp.plate,
+                    wells=comp._well_list
                 )
                 for dc, ev, comp in zip(
                     self.dest_concentrations(mix_vol),
@@ -1406,29 +1442,31 @@ class MultiFixedConcentration(AbstractAction):
             by=["plate", "ea_vols", "well"], ascending=[True, False, True]
         )
 
-        names, source_concs, dest_concs, numbres, ea_vols, tot_vols, locations = (
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-        )
 
-        for plate, plate_comps in locdf.groupby("plate"):
-            for vol, plate_vol_comps in plate_comps.groupby("ea_vols"):
+        names: list[list[str]] = []
+        source_concs: list[Quantity[Decimal]] = []
+        dest_concs: list[Quantity[Decimal]] = []
+        numbers: list[int] = []
+        ea_vols: list[Quantity[Decimal]] = []
+        tot_vols: list[Quantity[Decimal]] = []
+        plates: list[str] = []
+        wells_list: list[list[WellPos]] = []
+
+        for plate, plate_comps in locdf.groupby("plate"): # type: str, pd.DataFrame
+            for vol, plate_vol_comps in plate_comps.groupby("ea_vols"): # type: Quantity[Decimal], pd.DataFrame
                 if pd.isna(plate_vol_comps["well"].iloc[0]):
                     if not pd.isna(plate_vol_comps["well"]).all():
                         raise ValueError
-                    names.append(", ".join(n for n in plate_vol_comps["names"]))
+                    names.append(list(plate_vol_comps["names"]))
                     ea_vols.append((vol))
                     tot_vols.append((vol * len(plate_vol_comps)))
-                    numbres.append((len(plate_vol_comps)))
+                    numbers.append((len(plate_vol_comps)))
                     source_concs.append((plate_vol_comps["source_concs"].iloc[0]))
                     dest_concs.append((plate_vol_comps["dest_concs"].iloc[0]))
-                    locations.append(plate)
+                    plates.append(plate)
+                    wells_list.append([])
                     continue
+                
                 byrow = mixgaps(
                     sorted(list(plate_vol_comps["well"]), key=WellPos.key_byrow),
                     by="row",
@@ -1439,7 +1477,6 @@ class MultiFixedConcentration(AbstractAction):
                 )
 
                 sortkey = WellPos.key_bycol if bycol <= byrow else WellPos.key_byrow
-                sortnext = WellPos.next_bycol if bycol <= byrow else WellPos.next_byrow
 
                 plate_vol_comps["sortkey"] = [
                     sortkey(c) for c in plate_vol_comps["well"]
@@ -1447,26 +1484,14 @@ class MultiFixedConcentration(AbstractAction):
 
                 plate_vol_comps.sort_values(by="sortkey", inplace=True)
 
-                wells_formatted = []
-                next_well_iter = iter(plate_vol_comps["well"])
-                prevpos = next(next_well_iter)
-                wells_formatted.append(f"**{prevpos}**")
-                for well in next_well_iter:
-                    if sortnext(prevpos) != well:
-                        wells_formatted.append(f"**{well}**")
-                    else:
-                        wells_formatted.append(f"{well}")
-                    prevpos = well
-
-                names.append(", ".join(n for n in plate_vol_comps["names"]))
+                names.append(plate_vol_comps["names"])
                 ea_vols.append((vol))
-                numbres.append((len(plate_vol_comps)))
+                numbers.append((len(plate_vol_comps)))
                 tot_vols.append((vol * len(plate_vol_comps)))
                 source_concs.append((plate_vol_comps["source_concs"].iloc[0]))
                 dest_concs.append((plate_vol_comps["dest_concs"].iloc[0]))
-                locations.append(
-                    plate + ": " + ", ".join(str(w) for w in plate_vol_comps["well"])
-                )
+                plates.append(plate)
+                wells_list.append(plate_vol_comps["well"])
 
         return [
             MixLine(
@@ -1476,16 +1501,18 @@ class MultiFixedConcentration(AbstractAction):
                 number=number,
                 each_tx_vol=each_tx_vol,
                 total_tx_vol=total_tx_vol,
-                location=location,
+                plate=p,
+                wells=wells
             )
-            for name, source_conc, dest_conc, number, each_tx_vol, total_tx_vol, location in zip(
+            for name, source_conc, dest_conc, number, each_tx_vol, total_tx_vol, p, wells in zip(
                 names,
                 source_concs,
                 dest_concs,
-                numbres,
+                numbers,
                 ea_vols,
                 tot_vols,
-                locations,
+                plates,
+                wells_list,
                 strict=True,
             )
         ]
@@ -1514,14 +1541,15 @@ class FixedRatio(AbstractAction):
 
     def _mixlines(
         self, mix_vol: Quantity[Decimal], locations: pd.DataFrame | None = None
-    ) -> Sequence[MixLine]:
+    ) -> list[MixLine]:
         return [
             MixLine(
-                self.name,
+                [self.name],
                 str(self.source_value) + "x",
                 str(self.dest_value) + "x",
                 self.tx_volume(mix_vol),
-                location=_format_location(self.component.location),
+                plate=self.component.plate,
+                wells=self.component._well_list
             )
         ]
 
@@ -1631,7 +1659,7 @@ class Mix(AbstractComponent):
                 raise e
 
         mixlines.append(
-            MixLine("*Total:*", None, self.concentration, self.total_volume)
+            MixLine(["*Total:*"], None, self.concentration, self.total_volume)
         )
 
         include_numbers = any(ml.number != 1 for ml in mixlines)
@@ -1648,22 +1676,22 @@ class Mix(AbstractComponent):
         mixlines: list[MixLine] = []
 
         for action in self.actions:
-            mixlines += action._mixlines(tv, locations=self.reference)
+            mixlines += action._mixlines(tv)
 
         if self.fixed_total_volume is not None:
-            mixlines.append(MixLine("Buffer", None, None, self.buffer_volume))
+            mixlines.append(MixLine(["Buffer"], None, None, self.buffer_volume))
         return mixlines
 
     def validate(self, mixlines: Sequence[MixLine] | None = None) -> None:
         if mixlines is None:
             mixlines = self.mixlines()
-        ntx = [(m.name, m.total_tx_vol) for m in mixlines if m.total_tx_vol is not None]
+        ntx = [(m.names, m.total_tx_vol) for m in mixlines if m.total_tx_vol is not None]
 
-        nan_vols = [n for n, x in ntx if math.isnan(x.m)]
+        nan_vols = [", ".join(n) for n, x in ntx if math.isnan(x.m)]
         if nan_vols:
             raise VolumeError(
                 "Some volumes aren't defined (mix probably isn't fully specified): "
-                + ", ".join(x or "" for x in nan_vols)
+                + "; ".join(x or "" for x in nan_vols)
                 + "."
             )
 
@@ -1674,7 +1702,7 @@ class Mix(AbstractComponent):
                 "Some items have higher transfer volume than total mix volume of "
                 f"{tot_vol} "
                 "(target concentration probably too high for source): "
-                + ", ".join(f"f{n} at {x}" for n, x in high_vols)
+                + "; ".join(f"{', '.join(n)} at {x}" for n, x in high_vols)
                 + "."
             )
 
@@ -1689,7 +1717,7 @@ class Mix(AbstractComponent):
         if neg_vols:
             raise VolumeError(
                 "Some volumes are negative: "
-                + ", ".join(f"{n} at {x}" for n, x in neg_vols)
+                + "; ".join(f"{', '.join(n)} at {x}" for n, x in neg_vols)
                 + "."
             )
 
