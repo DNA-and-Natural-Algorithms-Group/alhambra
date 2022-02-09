@@ -232,9 +232,15 @@ def test_a_mix(reference: Reference):
         is not None
     )
 
-    # FIXME: more tests of output
+    ml = m.mixlines()
 
-    # FIXME: test of chained mix
+    assert sum(l.total_tx_vol for l in ml if not l.fake) == m.total_volume
+
+    for line in ml:
+        if line.fake:
+            continue
+        if line.each_tx_vol:
+            assert line.number * line.each_tx_vol == line.total_tx_vol
 
 
 def test_multifixedconc_min_volume(reference: Reference):
@@ -254,6 +260,7 @@ def test_multifixedconc_min_volume(reference: Reference):
 
     m.table()
 
+
 def test_non_plates():
     s1 = Strand("s1", "200 nM", plate="tube")
 
@@ -263,7 +270,9 @@ def test_non_plates():
 
     s4 = Strand("s4", "400 nM", plate="a different tube")
 
-    m = Mix([MultiFixedVolume([s1, s2, s3, s4], "1 uL", equal_conc="min_volume")], "test")
+    m = Mix(
+        [MultiFixedVolume([s1, s2, s3, s4], "1 uL", equal_conc="min_volume")], "test"
+    )
 
     m.table()
 
