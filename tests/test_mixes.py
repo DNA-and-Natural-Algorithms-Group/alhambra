@@ -113,14 +113,17 @@ def test_component_allcomps():
 
     assert len(ac) == 1
     assert ac.loc["A", "component"] == Component("A", 1 * uM)
-    assert ac.loc["A", "concentration_nM"] == Decimal('1000.0')
+    assert ac.loc["A", "concentration_nM"] == Decimal("1000.0")
 
 
 @pytest.fixture
 def reference():
     return Reference.from_csv("tests/test_reference.csv")
 
-def test_reference_saveload(tmp_path_factory: pytest.TempPathFactory, reference: Reference):
+
+def test_reference_saveload(
+    tmp_path_factory: pytest.TempPathFactory, reference: Reference
+):
     sf = tmp_path_factory.mktemp("exp") / "test.csv"
 
     r = load_reference("tests/test_reference.csv")
@@ -134,6 +137,7 @@ def test_reference_saveload(tmp_path_factory: pytest.TempPathFactory, reference:
     assert r == r2
 
     assert r == r2.df
+
 
 def test_component_with_reference(reference: Reference):
     c = Component("comp1")
@@ -242,7 +246,7 @@ def test_multifixedconc_min_volume(reference: Reference):
         name="test",
         fixed_total_volume="100 uL",
     )
-    
+
     with pytest.raises(VolumeError):
         m.table()
 
