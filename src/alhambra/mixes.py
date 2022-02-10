@@ -43,8 +43,9 @@ import attrs
 
 import warnings
 
-from pint.quantity import Quantity
+import scadnano as sc
 
+from pint.quantity import Quantity
 
 warnings.filterwarnings(
     "ignore",
@@ -90,7 +91,6 @@ nM = ureg.nM
 Q_ = ureg.Quantity
 "Convenient constructor for units, eg, :code:`Q_(5.0, 'nM')`"
 
-
 DNAN = Decimal("nan")
 ZERO_VOL = Q_(Decimal("0.0"), "µL")
 
@@ -118,7 +118,7 @@ T = TypeVar("T")
 
 @overload
 def _ratio(
-    top: Sequence[pint.Quantity[T]], bottom: Sequence[pint.Quantity[T]]
+        top: Sequence[pint.Quantity[T]], bottom: Sequence[pint.Quantity[T]]
 ) -> Sequence[T]:
     ...
 
@@ -139,8 +139,8 @@ def _ratio(top: pint.Quantity[T], bottom: pint.Quantity[T]) -> T:
 
 
 def _ratio(
-    top: pint.Quantity[T] | Sequence[pint.Quantity[T]],
-    bottom: pint.Quantity[T] | Sequence[pint.Quantity[T]],
+        top: pint.Quantity[T] | Sequence[pint.Quantity[T]],
+        bottom: pint.Quantity[T] | Sequence[pint.Quantity[T]],
 ) -> T | Sequence[T]:
     match (top, bottom):
         case (t, b) if isinstance(t, Sequence) and isinstance(b, Sequence):
@@ -171,7 +171,7 @@ class WellPos:
         rmax = 8 if self.platesize == 96 else 16
         if (v <= 0) or (v > rmax):
             raise ValueError(
-                f"Row {ROW_ALPHABET[v-1]} ({v}) out of bounds for plate size {self.platesize}"
+                f"Row {ROW_ALPHABET[v - 1]} ({v}) out of bounds for plate size {self.platesize}"
             )
 
     @col.validator
@@ -184,23 +184,23 @@ class WellPos:
 
     @overload
     def __init__(
-        self, ref_or_row: int, col: int, /, *, platesize: Literal[96, 384] = 96
+            self, ref_or_row: int, col: int, /, *, platesize: Literal[96, 384] = 96
     ) -> None:  # pragma: no cover
         ...
 
     @overload
     def __init__(
-        self, ref_or_row: str, col: None = None, /, *, platesize: Literal[96, 384] = 96
+            self, ref_or_row: str, col: None = None, /, *, platesize: Literal[96, 384] = 96
     ) -> None:  # pragma: no cover
         ...
 
     def __init__(
-        self,
-        ref_or_row: str | int,
-        col: int | None = None,
-        /,
-        *,
-        platesize: Literal[96, 384] = 96,
+            self,
+            ref_or_row: str | int,
+            col: int | None = None,
+            /,
+            *,
+            platesize: Literal[96, 384] = 96,
     ) -> None:
         match (ref_or_row, col):
             case (str(x), None):
@@ -227,7 +227,7 @@ class WellPos:
         object.__setattr__(self, "col", col)
 
     def __str__(self) -> str:
-        return f"{ROW_ALPHABET[self.row-1]}{self.col}"
+        return f"{ROW_ALPHABET[self.row - 1]}{self.col}"
 
     def __repr__(self) -> str:
         return f'WellPos("{self}")'
@@ -390,7 +390,7 @@ class MixLine:
 
 
 def _formatter(
-    x: int | float | str | list[str] | Quantity[Decimal] | None, italic: bool = False
+        x: int | float | str | list[str] | Quantity[Decimal] | None, italic: bool = False
 ) -> str:
     match x:
         case int(y) | str(y):
@@ -606,15 +606,15 @@ class Component(AbstractComponent):
         else:
             ref_by_name = reference.df.set_index("Name")
         ref_comps = ref_by_name.loc[
-            [self.name], :
-        ]  # using this format to force a dataframe result
+                    [self.name], :
+                    ]  # using this format to force a dataframe result
 
         mismatches = []
         matches = []
         for _, ref_comp in ref_comps.iterrows():
             ref_conc = ureg.Quantity(ref_comp["Concentration (nM)"], nM)
             if not math.isnan(self.concentration.m) and not (
-                ref_conc == self.concentration
+                    ref_conc == self.concentration
             ):
                 mismatches.append(("Concentration (nM)", ref_comp))
                 continue
@@ -664,15 +664,15 @@ class Strand(Component):
         else:
             ref_by_name = reference.df.set_index("Name")
         ref_comps = ref_by_name.loc[
-            [self.name], :
-        ]  # using this format to force a dataframe result
+                    [self.name], :
+                    ]  # using this format to force a dataframe result
 
         mismatches = []
         matches = []
         for _, ref_comp in ref_comps.iterrows():
             ref_conc = ureg.Quantity(ref_comp["Concentration (nM)"], nM)
             if not math.isnan(self.concentration.m) and not (
-                ref_conc == self.concentration
+                    ref_conc == self.concentration
             ):
                 mismatches.append(("Concentration (nM)", ref_comp))
                 continue
@@ -743,7 +743,7 @@ class AbstractAction(ABC):
 
     @abstractmethod
     def tx_volume(
-        self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
+            self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
     ) -> Quantity[Decimal]:  # pragma: no cover
         """The total volume transferred by the action to the sample.  May depend on the total mix volume.
 
@@ -757,13 +757,13 @@ class AbstractAction(ABC):
 
     @abstractmethod
     def _mixlines(
-        self, mix_vol: Quantity[Decimal]
+            self, mix_vol: Quantity[Decimal]
     ) -> Sequence[MixLine]:  # pragma: no cover
         ...
 
     @abstractmethod
     def all_components(
-        self, mix_vol: Quantity[Decimal]
+            self, mix_vol: Quantity[Decimal]
     ) -> pd.DataFrame:  # pragma: no cover
         """A dataframe containing all base components added by the action.
 
@@ -793,7 +793,7 @@ class AbstractAction(ABC):
         raise ValueError("Single destination concentration not defined.")
 
     def dest_concentrations(
-        self, mix_vol: pint.Quantity
+            self, mix_vol: pint.Quantity
     ) -> Sequence[Quantity[Decimal]]:
         raise ValueError
 
@@ -811,7 +811,7 @@ def findloc(locations: pd.DataFrame | None, name: str) -> str | None:
 
 
 def findloc_tuples(
-    locations: pd.DataFrame | None, name: str
+        locations: pd.DataFrame | None, name: str
 ) -> tuple[str, str, WellPos | str] | None:
     if locations is None:
         return None
@@ -855,12 +855,12 @@ class FixedConcentration(AbstractAction):
     )
 
     def dest_concentration(
-        self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
+            self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
     ) -> Quantity[Decimal]:
         return self.fixed_concentration
 
     def dest_concentrations(
-        self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
+            self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
     ) -> Sequence[Quantity[Decimal]]:
         return [self.dest_concentration(mix_vol)]
 
@@ -880,10 +880,9 @@ class FixedConcentration(AbstractAction):
         return comps
 
     def _mixlines(
-        self,
-        mix_vol: Quantity[Decimal] = Q_(DNAN, uL),
+            self,
+            mix_vol: Quantity[Decimal] = Q_(DNAN, uL),
     ) -> list[MixLine]:
-
         return [
             MixLine(
                 names=[self.component.name],
@@ -925,12 +924,12 @@ class FixedVolume(AbstractAction):
     )
 
     def dest_concentration(
-        self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
+            self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
     ) -> Quantity[Decimal]:
         return self.component.concentration * _ratio(self.fixed_volume, mix_vol)
 
     def dest_concentrations(
-        self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
+            self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
     ) -> Sequence[Quantity[Decimal]]:
         return [self.dest_concentration(mix_vol)]
 
@@ -946,7 +945,7 @@ class FixedVolume(AbstractAction):
         return comps
 
     def _mixlines(
-        self, mix_vol: Quantity[Decimal], locations: pd.DataFrame | None = None
+            self, mix_vol: Quantity[Decimal], locations: pd.DataFrame | None = None
     ) -> Sequence[MixLine]:
         well = self.component.location[1]
 
@@ -1104,9 +1103,9 @@ class MultiFixedVolume(AbstractAction):
         newdf = _empty_components()
 
         for comp, dc, sc in zip(
-            self.components,
-            self.dest_concentrations(mix_vol),
-            self.source_concentrations,
+                self.components,
+                self.dest_concentrations(mix_vol),
+                self.source_concentrations,
         ):
             comps = comp.all_components()
             comps.concentration_nM *= _ratio(dc, sc)
@@ -1122,7 +1121,7 @@ class MultiFixedVolume(AbstractAction):
         return newdf
 
     def dest_concentrations(
-        self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
+            self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
     ) -> Sequence[Quantity[Decimal]]:
         return [
             x * y
@@ -1132,7 +1131,7 @@ class MultiFixedVolume(AbstractAction):
         ]
 
     def each_volumes(
-        self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
+            self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
     ) -> Sequence[Quantity[Decimal]]:
         match self.equal_conc:
             case str("min_volume"):
@@ -1160,7 +1159,7 @@ class MultiFixedVolume(AbstractAction):
         return sum(self.each_volumes(mix_vol), ureg("0.0 uL"))
 
     def _mixlines(
-        self, mix_vol: Quantity[Decimal], locations: pd.DataFrame | None = None
+            self, mix_vol: Quantity[Decimal], locations: pd.DataFrame | None = None
     ) -> Sequence[MixLine]:
         if not self.compact_display:
             ml = [
@@ -1237,7 +1236,7 @@ class MultiFixedVolume(AbstractAction):
 
         for plate, plate_comps in locdf.groupby("plate"):  # type: str, pd.DataFrame
             for vol, plate_vol_comps in plate_comps.groupby(
-                "ea_vols"
+                    "ea_vols"
             ):  # type: Quantity[Decimal], pd.DataFrame
                 if pd.isna(plate_vol_comps["well"].iloc[0]):
                     if not pd.isna(plate_vol_comps["well"]).all():
@@ -1380,9 +1379,9 @@ class MultiFixedConcentration(AbstractAction):
         newdf = _empty_components()
 
         for comp, dc, sc in zip(
-            self.components,
-            self.dest_concentrations(mix_vol),
-            self.source_concentrations,
+                self.components,
+                self.dest_concentrations(mix_vol),
+                self.source_concentrations,
         ):
             comps = comp.all_components()
             comps.concentration_nM *= _ratio(dc, sc)
@@ -1398,12 +1397,12 @@ class MultiFixedConcentration(AbstractAction):
         return newdf
 
     def dest_concentrations(
-        self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
+            self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
     ) -> Sequence[Quantity[Decimal]]:
         return [self.fixed_concentration] * len(self.components)
 
     def each_volumes(
-        self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
+            self, mix_vol: Quantity[Decimal] = Q_(DNAN, uL)
     ) -> Sequence[Quantity[Decimal]]:
         ea_vols = [
             mix_vol * r
@@ -1427,7 +1426,7 @@ class MultiFixedConcentration(AbstractAction):
         return sum(self.each_volumes(mix_vol), Q_(Decimal("0"), "uL"))
 
     def _mixlines(
-        self, mix_vol: Quantity[Decimal], locations: pd.DataFrame | None = None
+            self, mix_vol: Quantity[Decimal], locations: pd.DataFrame | None = None
     ) -> Sequence[MixLine]:
         if not self.compact_display:
             ml = [
@@ -1498,7 +1497,7 @@ class MultiFixedConcentration(AbstractAction):
 
         for plate, plate_comps in locdf.groupby("plate"):  # type: str, pd.DataFrame
             for vol, plate_vol_comps in plate_comps.groupby(
-                "ea_vols"
+                    "ea_vols"
             ):  # type: Quantity[Decimal], pd.DataFrame
                 if pd.isna(plate_vol_comps["well"].iloc[0]):
                     if not pd.isna(plate_vol_comps["well"]).all():
@@ -1586,7 +1585,7 @@ class FixedRatio(AbstractAction):
         return v
 
     def _mixlines(
-        self, mix_vol: Quantity[Decimal], locations: pd.DataFrame | None = None
+            self, mix_vol: Quantity[Decimal], locations: pd.DataFrame | None = None
     ) -> list[MixLine]:
         return [
             MixLine(
@@ -1663,7 +1662,7 @@ class Mix(AbstractComponent):
         otherwise, the sum of the transfer volumes of each component.
         """
         if self.fixed_total_volume is not None and not (
-            math.isnan(self.fixed_total_volume.m)
+                math.isnan(self.fixed_total_volume.m)
         ):
             return self.fixed_total_volume
         else:
@@ -1801,11 +1800,11 @@ class Mix(AbstractComponent):
         return f"Table: {self.infoline()}\n\n" + self.table()
 
     def to_tileset(
-        self,
-        tilesets_or_lists: TileSet | TileList | Iterable[TileSet | TileList],
-        *,
-        seed: bool | Seed = False,
-        base_conc: pint.Quantity | str = Q_(100.0, nM),
+            self,
+            tilesets_or_lists: TileSet | TileList | Iterable[TileSet | TileList],
+            *,
+            seed: bool | Seed = False,
+            base_conc: pint.Quantity | str = Q_(100.0, nM),
     ) -> TileSet:
         """
         Given some :any:`TileSet`\ s, or lists of :any:`Tile`\ s from which to
@@ -1830,7 +1829,7 @@ class Mix(AbstractComponent):
                         tile = tl_or_ts[name]
                     new_tile = tile.copy()
                     if isinstance(new_tile, BaseSSTile) and (
-                        (seq := getattr(row["component"], "sequence", None)) is not None
+                            (seq := getattr(row["component"], "sequence", None)) is not None
                     ):
                         new_tile.sequence |= seq
                     new_tile.stoic = float(
@@ -1868,6 +1867,268 @@ class Mix(AbstractComponent):
     @property
     def location(self) -> tuple[None | str, WellPos | None]:
         return (None, None)
+
+
+    def vol_to_tube_names(self, validate: bool = True) -> dict[Quantity[Decimal], list[str]]:
+        """
+        :return:
+             dict mapping a volume `vol` to a list of names of strands in this mix that should be pipetted
+             with volume `vol`
+        """
+        mixlines = list(self.mixlines())
+
+        if validate:
+            try:
+                self.validate(mixlines=mixlines)
+            except ValueError as e:
+                e.args = e.args + (self.vol_to_tube_names(validate=False),)
+                raise e
+
+        result: dict[Quantity[Decimal], list[str]] = {}
+        for mixline in mixlines:
+            if len(mixline.names) == 0 or (len(mixline.names) == 1 and mixline.names[0].lower() == 'buffer'):
+                continue
+            if mixline.plate.lower() != 'tube':
+                continue
+            assert mixline.each_tx_vol not in result
+            result[mixline.each_tx_vol] = mixline.names
+
+        return result
+
+
+    def _tube_map_from_mixline(self, mixline: MixLine) -> str:
+        joined_names = '\n'.join(mixline.names)
+        return f'## tubes, {mixline.each_tx_vol} each\n{joined_names}'
+
+    def tubes_markdown(self) -> str:
+        """
+        :return:
+            a Markdown string indicating which strands in test tubes to pipette, grouped by the volume
+            of each
+        """
+        entries = []
+        for vol, names in self.vol_to_tube_names().items():
+            joined_names = '\n'.join(names)
+            entry = f'## tubes, {vol} each\n{joined_names}'
+            entries.append(entry)
+        return '\n'.join(entries)
+
+
+    def plate_maps(self, plate_type: sc.PlateType = sc.PlateType.wells96,
+                   validate: bool = True,
+                   # combine_volumes_in_plate: bool = False
+                   ) \
+            -> list[PlateMap]:
+        """
+        Similar to :meth:`table`, but indicates only the strands to mix from each plate,
+        in the form of a :class:`PlateMap`.
+
+        NOTE: this ignores any strands in the :class:`Mix` that are in test tubes. To get a list of strand
+        names in test tubes, call :meth:`Mix.vol_to_tube_names` or :meth:`Mix.tubes_markdown`.
+
+        By calling :meth:`PlateMap.to_markdown` on each plate map,
+        one can create a Markdown representation of each plate map, for example,
+
+        .. code-block::
+
+            plate 1, 5 uL each
+            |     | 1    | 2      | 3      | 4    | 5        | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|------|--------|--------|------|----------|-----|-----|-----|-----|------|------|------|
+            | A   | mon0 | mon0_F |        | adp0 |          |     |     |     |     |      |      |      |
+            | B   | mon1 | mon1_Q | mon1_F | adp1 | adp_sst1 |     |     |     |     |      |      |      |
+            | C   | mon2 | mon2_F | mon2_Q | adp2 | adp_sst2 |     |     |     |     |      |      |      |
+            | D   | mon3 | mon3_Q | mon3_F | adp3 | adp_sst3 |     |     |     |     |      |      |      |
+            | E   | mon4 |        | mon4_Q | adp4 | adp_sst4 |     |     |     |     |      |      |      |
+            | F   |      |        |        | adp5 |          |     |     |     |     |      |      |      |
+            | G   |      |        |        |      |          |     |     |     |     |      |      |      |
+            | H   |      |        |        |      |          |     |     |     |     |      |      |      |
+
+        or, with the `well_marker` parameter of :meth:`PlateMap.to_markdown` set to ``'X'``, for instance
+        (in case you don't need to see the strand names and just want to see which wells are marked):
+
+        .. code-block::
+
+            plate 1, 5 uL each
+            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
+            | A   | *   | *   |     | *   |     |     |     |     |     |      |      |      |
+            | B   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | C   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | D   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | E   | *   |     | *   | *   | *   |     |     |     |     |      |      |      |
+            | F   |     |     |     | *   |     |     |     |     |     |      |      |      |
+            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
+            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
+
+        Parameters
+        ----------
+
+        plate_type
+            96-well or 384-well plate; default is 96-well. Is a scadnano PlateType object; see
+            https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.PlateType
+
+        validate
+            Ensure volumes make sense.
+
+
+        Returns
+        -------
+            A list of all plate maps.
+        """
+        '''
+        not implementing the parameter `combine_volumes_in_plate` for now; eventual docstrings for it below
+
+        If `combine_volumes_in_plate` is False (default), if multiple volumes are needed from a single plate,
+        then one plate map is generated for each volume. If True, then in each well that is used,
+        in addition to whatever else is written (strand name, or `well_marker` if it is specified),
+        a volume is also given the line below (if rendered using a Markdown renderer). For example:
+
+        .. code-block::
+
+            plate 1, NOTE different volumes in each well
+            |     | 1          | 2           | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|------------|-------------|-----|-----|-----|-----|-----|-----|-----|------|------|------|
+            | A   | m0<br>1 uL | a<br>2 uL   |     |     |     |     |     |     |     |      |      |      |
+            | B   | m1<br>1 uL | b<br>2 uL   |     |     |     |     |     |     |     |      |      |      |
+            | C   | m2<br>1 uL | c<br>3.5 uL |     |     |     |     |     |     |     |      |      |      |
+            | D   | m3<br>2 uL | d<br>3.5 uL |     |     |     |     |     |     |     |      |      |      |
+            | E   | m4<br>2 uL |             |     |     |     |     |     |     |     |      |      |      |
+            | F   |            |             |     |     |     |     |     |     |     |      |      |      |
+            | G   |            |             |     |     |     |     |     |     |     |      |      |      |
+            | H   |            |             |     |     |     |     |     |     |     |      |      |      |
+
+        combine_volumes_in_plate
+            If False (default), if multiple volumes are needed from a single plate, then one plate
+            map is generated for each volume. If True, then in each well that is used, in addition to
+            whatever else is written (strand name, or `well_marker` if it is specified),
+            a volume is also given.
+        '''
+        mixlines = list(self.mixlines())
+
+        if validate:
+            try:
+                self.validate(mixlines=mixlines)
+            except ValueError as e:
+                e.args = e.args + (self.plate_map_markdown(validate=False),)
+                raise e
+
+        plate_maps: list[PlateMap] = []
+        # each MixLine but the last is a (plate, volume) pair
+        for mixline in mixlines:
+            if len(mixline.names) == 0 or (len(mixline.names) == 1 and mixline.names[0].lower() == 'buffer'):
+                continue
+            if mixline.plate.lower() == 'tube':
+                continue
+            plate_map = self._plate_map_from_mixline(mixline, plate_type)
+            plate_maps.append(plate_map)
+
+        return plate_maps
+
+
+    def _plate_map_from_mixline(self, mixline: MixLine, plate_type: sc.PlateType) -> PlateMap:
+        assert mixline.plate != 'tube'
+
+        well_to_strand_name = {}
+        for strand_name, well in zip(mixline.names, mixline.wells):
+            well_str = str(well)
+            well_to_strand_name[well_str] = strand_name
+
+        plate_map = PlateMap(plate_name=mixline.plate, plate_type=plate_type, vol_each=mixline.each_tx_vol,
+                             well_to_strand_name=well_to_strand_name)
+        return plate_map
+
+
+@attrs.define()
+class PlateMap:
+    """
+    Represents a "plate map", i.e., a drawing of a 96-well or 384-well plate, indicating which subset
+    of wells in the plate have strands. It is an intermediate representation of structured data about
+    the plate map that is converted to a visual form, such as Markdown, via the export_* methods.
+    """
+
+    plate_name: str
+    plate_type: sc.PlateType
+    vol_each: Quantity[Decimal]
+    well_to_strand_name: dict[str, str]
+
+    def to_markdown(self,
+                    well_marker: Optional[str] = None,
+                    tablefmt="github",
+                    floatfmt="g",
+                    numalign="default",
+                    stralign="default",
+                    missingval="",
+                    showindex="default",
+                    disable_numparse=False,
+                    colalign=None
+                    ) -> str:
+        """
+        Exports this plate map to Markdown format, with a header indicating information such as the
+        plate's name and volume to pipette. It uses the Python tabulate package
+        (https://pypi.org/project/tabulate/).
+        The parameters are identical to that of the `tabulate` function and are passed along to it,
+        except for `tabular_data` and `headers`, which are computed from this plate map.
+
+
+        :param well_marker:
+            By default the strand's name is put in the relevant plate entry. If `well_marker` is specified,
+            then it is put there instead. This is useful for printing plate maps that just put,
+            for instance, an `'X'` in the well to pipette (e.g., specify `well_marker` = `'X'`),
+            e.g., for experimental mixes that use only some strands in the plate.
+        :param tablefmt:
+            By default set to `'github'` to create a Markdown table. For other options see
+            https://github.com/astanin/python-tabulate#readme
+        :param floatfmt:
+            See https://github.com/astanin/python-tabulate#readme
+        :param numalign:
+            See https://github.com/astanin/python-tabulate#readme
+        :param stralign:
+            See https://github.com/astanin/python-tabulate#readme
+        :param missingval:
+            See https://github.com/astanin/python-tabulate#readme
+        :param showindex:
+            See https://github.com/astanin/python-tabulate#readme
+        :param disable_numparse:
+            See https://github.com/astanin/python-tabulate#readme
+        :param colalign:
+            See https://github.com/astanin/python-tabulate#readme
+        :return:
+            a Markdown representation of this plate map
+        """
+        num_rows = len(self.plate_type.rows())
+        num_cols = len(self.plate_type.cols())
+        table = [[' ' for _ in range(num_cols + 1)] for _ in range(num_rows)]
+
+        for r in range(num_rows):
+            table[r][0] = self.plate_type.rows()[r]
+
+        plate_coord = sc.PlateCoordinate(self.plate_type)
+        for c in range(1, num_cols + 1):
+            for r in range(num_rows):
+                well_str = plate_coord.well()
+                plate_coord.increment()
+                if well_str in self.well_to_strand_name:
+                    strand_name = self.well_to_strand_name[well_str]
+                    well_marker_to_use = well_marker if well_marker is not None else strand_name
+                    table[r][c] = well_marker_to_use
+
+        title = f'## {self.plate_name}, {self.vol_each} each'
+        header = [' '] + [str(col) for col in self.plate_type.cols()]
+        from tabulate import tabulate
+        markdown_table = tabulate(
+            tabular_data=table,
+            headers=header,
+            tablefmt=tablefmt,
+            floatfmt=floatfmt,
+            numalign=numalign,
+            stralign=stralign,
+            missingval=missingval,
+            showindex=showindex,
+            disable_numparse=disable_numparse,
+            colalign=colalign,
+        )
+        markdown = f'{title}\n{markdown_table}'
+        return markdown
 
 
 def _format_location(loc: tuple[str | None, WellPos | None]) -> str:
@@ -1920,12 +2181,12 @@ class Reference:
         return len(self.df)
 
     def search(
-        self,
-        name: str | None = None,
-        plate: str | None = None,
-        well: str | WellPos | None = None,
-        concentration: str | pint.Quantity[Decimal] | None = None,
-        sequence: str | None = None,
+            self,
+            name: str | None = None,
+            plate: str | None = None,
+            well: str | WellPos | None = None,
+            concentration: str | pint.Quantity[Decimal] | None = None,
+            sequence: str | None = None,
     ) -> Reference:
         well = _parse_wellpos_optional(well)
         concentration = _parse_conc_optional(concentration)
@@ -1945,12 +2206,12 @@ class Reference:
         return Reference(cdf)
 
     def get_concentration(
-        self,
-        name: str | None = None,
-        plate: str | None = None,
-        well: str | WellPos | None = None,
-        concentration: str | pint.Quantity | None = None,
-        sequence: str | None = None,
+            self,
+            name: str | None = None,
+            plate: str | None = None,
+            well: str | WellPos | None = None,
+            concentration: str | pint.Quantity | None = None,
+            sequence: str | None = None,
     ) -> pint.Quantity[Decimal]:
         valref = self.search(name, plate, well, concentration, sequence)
 
@@ -1983,7 +2244,7 @@ class Reference:
         self.df.to_csv(filename, index=None, float_format="%.6f")
 
     def update(
-        self: Reference, files: Sequence[RefFile] | RefFile, round: int = -1
+            self: Reference, files: Sequence[RefFile] | RefFile, round: int = -1
     ) -> Reference:
         """
         Update reference information.
@@ -1991,9 +2252,9 @@ class Reference:
         This updates an existing reference dataframe with new files, with the same methods as :func:`compile_reference`.
         """
         if isinstance(files, str) or (
-            len(files) == 2
-            and isinstance(files[1], str)
-            and not Path(files[1]).exists()
+                len(files) == 2
+                and isinstance(files[1], str)
+                and not Path(files[1]).exists()
         ):
             files = [cast(RefFile, files)]
 
@@ -2028,8 +2289,8 @@ class Reference:
                     filetype = "plate-specs"
 
                     sheet.loc[:, "Concentration (nM)"] = 1000 * sheet.loc[
-                        :, "Measured Concentration µM "
-                    ].round(round)
+                                                                :, "Measured Concentration µM "
+                                                                ].round(round)
                     sheet.loc[:, "Sequence"] = [
                         x.replace(" ", "") for x in sheet.loc[:, "Sequence"]
                     ]
@@ -2073,8 +2334,8 @@ class Reference:
                         pd.concat(
                             data.values(), keys=data.keys(), names=["Plate"], copy=False
                         )
-                        .reset_index()
-                        .drop(columns=["level_1"])
+                            .reset_index()
+                            .drop(columns=["level_1"])
                     )
                     all_seqs.rename(
                         {"Well Position": "Well"}, axis="columns", inplace=True
