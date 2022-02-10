@@ -321,23 +321,31 @@ class MixLine:
         will be distinguished in some way in tables (eg, italics) and will not be included in calculations.
     """
 
-    names: list[str]
+    names: list[str] = attrs.field(converter=list)
     source_conc: Quantity[Decimal] | str | None = None
     dest_conc: Quantity[Decimal] | str | None = None
     total_tx_vol: Quantity[Decimal] | None = None
     number: int = 1
     each_tx_vol: Quantity[Decimal] | str | None = None
-    plate: str | None = None
+    plate: str = ""
     wells: list[WellPos] = attrs.field(factory=list)
     note: str | None = None
     fake: bool = False
+
+    @wells.validator
+    def _check_wells(self, _: str, v: Any) -> None:
+        if (not isinstance(v, list)) or any(not isinstance(x, WellPos) for x in v):
+            raise TypeError(f"MixLine.wells of {v} is not a list of WellPos.")
+
+    @names.validator
+    def _check_names(self, _: str, v: Any) -> None:
+        if (not isinstance(v, list)) or any(not isinstance(x, str) for x in v):
+            raise TypeError(f"MixLine.names of {v} is not a list of strings.")
 
     @property
     def location(self) -> str:
         "A Markdown-formatted string for the location of the component/components."
         if len(self.wells) == 0:
-            if self.plate is None:
-                return ""
             return f"{self.plate}"
         elif len(self.wells) == 1:
             return f"{self.plate}: {self.wells[0]}"
@@ -564,7 +572,11 @@ class Component(AbstractComponent):
     concentration: Quantity[Decimal] = attrs.field(
         converter=_parse_conc_optional, default=None, on_setattr=attrs.setters.convert
     )
-    plate: str | None = attrs.field(default=None, kw_only=True)
+    # FIXME: this is not a great way to do this: should make code not give None
+    # Fortuitously, mypy doesn't support this converter, so problems should give type errors.
+    plate: str = attrs.field(
+        default="", kw_only=True, converter=(lambda v: "" if v is None else v)
+    )
     well: WellPos | None = attrs.field(
         converter=_parse_wellpos_optional,
         default=None,
@@ -1278,7 +1290,7 @@ class MultiFixedVolume(AbstractAction):
 
         return [
             MixLine(
-                [name],
+                name,
                 source_conc=source_conc,
                 dest_conc=dest_conc,
                 number=number,
