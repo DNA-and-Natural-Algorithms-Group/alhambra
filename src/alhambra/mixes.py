@@ -7,6 +7,7 @@ from __future__ import annotations
 import io
 from abc import ABC, abstractmethod
 from decimal import Decimal
+import enum
 
 import logging
 import math
@@ -32,8 +33,6 @@ import pandas as pd
 import pint
 from tabulate import tabulate, TableFormat
 
-import decimal
-
 from alhambra.seeds import Seed
 
 from .tiles import TileList
@@ -42,8 +41,6 @@ from .tilesets import TileSet
 import attrs
 
 import warnings
-
-import scadnano as sc
 
 from pint.quantity import Quantity
 
@@ -273,6 +270,46 @@ class WellPos:
             self.col + (self.row + 1) // (RMAX + 1),
             platesize=self.platesize,
         )
+
+    def is_last(self) -> bool:
+        """
+        :return:
+            whether WellPos is the last well on this type of plate
+        """
+        rows = _96WELL_PLATE_ROWS if self.platesize == 96 else _384WELL_PLATE_ROWS
+        cols = _96WELL_PLATE_COLS if self.platesize == 96 else _384WELL_PLATE_COLS
+        return self.row == len(rows) and self.col == len(cols)
+
+    def advance(self, order: Literal["row", "col"] = "col") -> WellPos:
+        """
+        Advances to the "next" well position. Default is column-major order, i.e.,
+        A1, B1, C1, D1, E1, F1, G1, H1, A2, B2, ...
+        To switch to row-major order, select `order` as `'row'`, i.e.,
+        A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, B1, B2, ...
+
+        :return:
+            new WellPos representing the next well position
+        """
+        rows = _96WELL_PLATE_ROWS if self.platesize == 96 else _384WELL_PLATE_ROWS
+        cols = _96WELL_PLATE_COLS if self.platesize == 96 else _384WELL_PLATE_COLS
+        next_row = self.row
+        next_col = self.col
+        if order == "col":
+            next_row += 1
+            if next_row == len(rows) + 1:
+                next_row = 1
+                next_col += 1
+                if next_col == len(cols) + 1:
+                    raise ValueError("cannot advance WellPos; already on last well")
+        else:
+            next_col += 1
+            if next_col == len(cols) + 1:
+                next_col = 1
+                next_row += 1
+                if next_row == len(rows) + 1:
+                    raise ValueError("cannot advance WellPos; already on last well")
+
+        return WellPos(next_row, next_col, platesize=self.platesize)
 
 
 @attrs.define(eq=True)
@@ -1616,6 +1653,79 @@ class FixedRatio(AbstractAction):
         )
 
 
+_96WELL_PLATE_ROWS: list[str] = ["A", "B", "C", "D", "E", "F", "G", "H"]
+_96WELL_PLATE_COLS: list[int] = list(range(1, 13))
+
+_384WELL_PLATE_ROWS: list[str] = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+]
+_384WELL_PLATE_COLS: list[int] = list(range(1, 25))
+
+
+@enum.unique
+class PlateType(enum.Enum):
+    """Represents two different types of plates in which DNA sequences can be ordered."""
+
+    wells96 = 96
+    """96-well plate."""
+
+    wells384 = 384
+    """384-well plate."""
+
+    def rows(self) -> list[str]:
+        """
+        :return:
+            list of all rows in this plate (as letters 'A', 'B', ...)
+        """
+        return _96WELL_PLATE_ROWS if self is PlateType.wells96 else _384WELL_PLATE_ROWS
+
+    def cols(self) -> list[int]:
+        """
+        :return:
+            list of all columns in this plate (as integers 1, 2, ...)
+        """
+        return _96WELL_PLATE_COLS if self is PlateType.wells96 else _384WELL_PLATE_COLS
+
+    def num_wells_per_plate(self) -> int:
+        """
+        :return:
+            number of wells in this plate type
+        """
+        if self is PlateType.wells96:
+            return 96
+        elif self is PlateType.wells384:
+            return 384
+        else:
+            raise AssertionError("unreachable")
+
+    def min_wells_per_plate(self) -> int:
+        """
+        :return:
+            minimum number of wells in this plate type to avoid extra charge by IDT
+        """
+        if self is PlateType.wells96:
+            return 24
+        elif self is PlateType.wells384:
+            return 96
+        else:
+            raise AssertionError("unreachable")
+
+
 @attrs.define()
 class Mix(AbstractComponent):
     """Class denoting a Mix, a collection of source components mixed to
@@ -1929,7 +2039,7 @@ class Mix(AbstractComponent):
 
     def plate_maps(
         self,
-        plate_type: sc.PlateType = sc.PlateType.wells96,
+        plate_type: PlateType = PlateType.wells96,
         validate: bool = True,
         # combine_volumes_in_plate: bool = False
     ) -> list[PlateMap]:
@@ -1978,8 +2088,7 @@ class Mix(AbstractComponent):
         ----------
 
         plate_type
-            96-well or 384-well plate; default is 96-well. Is a scadnano PlateType object; see
-            https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.PlateType
+            96-well or 384-well plate; default is 96-well.
 
         validate
             Ensure volumes make sense.
@@ -2041,7 +2150,7 @@ class Mix(AbstractComponent):
         return plate_maps
 
     def _plate_map_from_mixline(
-        self, mixline: MixLine, plate_type: sc.PlateType
+        self, mixline: MixLine, plate_type: PlateType
     ) -> PlateMap:
         assert mixline.plate != "tube"
 
@@ -2068,7 +2177,7 @@ class PlateMap:
     """
 
     plate_name: str
-    plate_type: sc.PlateType
+    plate_type: PlateType
     vol_each: Quantity[Decimal]
     well_to_strand_name: dict[str, str]
 
@@ -2124,17 +2233,18 @@ class PlateMap:
         for r in range(num_rows):
             table[r][0] = self.plate_type.rows()[r]
 
-        plate_coord = sc.PlateCoordinate(self.plate_type)
+        well_pos = WellPos(1, 1, platesize=self.plate_type.num_wells_per_plate())
         for c in range(1, num_cols + 1):
             for r in range(num_rows):
-                well_str = plate_coord.well()
-                plate_coord.increment()
+                well_str = str(well_pos)
                 if well_str in self.well_to_strand_name:
                     strand_name = self.well_to_strand_name[well_str]
                     well_marker_to_use = (
                         well_marker if well_marker is not None else strand_name
                     )
                     table[r][c] = well_marker_to_use
+                if not well_pos.is_last():
+                    well_pos = well_pos.advance()
 
         title = f"## {self.plate_name}, {self.vol_each} each"
         header = [" "] + [str(col) for col in self.plate_type.cols()]
