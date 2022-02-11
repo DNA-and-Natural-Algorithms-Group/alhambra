@@ -2276,7 +2276,7 @@ class PlateMap:
         title = f"## {self.plate_name}, {self.vol_each} each"
         header = [" "] + [str(col) for col in self.plate_type.cols()]
 
-        markdown_table = tabulate(
+        table = tabulate(
             tabular_data=table,
             headers=header,
             tablefmt=tablefmt,
@@ -2288,8 +2288,8 @@ class PlateMap:
             disable_numparse=disable_numparse,
             colalign=colalign,
         )
-        markdown = f"{title}\n{markdown_table}"
-        return markdown
+        table_with_title = f"{title}\n{table}"
+        return table_with_title
 
 
 def _format_location(loc: tuple[str | None, WellPos | None]) -> str:
