@@ -279,3 +279,67 @@ def test_non_plates():
     ml = m.mixlines()
 
     assert len(ml) == 4
+
+
+def test_combine_plate_actions():
+    from alhambra.mixes import Strand, Mix, MultiFixedConcentration
+
+    s1 = Strand("s1", "40 uM", plate="plate1", well='A1')
+    s2 = Strand("s2", "40 uM", plate="plate1", well='A2')
+    s3 = Strand("s3", "40 uM", plate="plate2", well='B1')
+    s4 = Strand("s4", "40 uM", plate="plate2", well='B2')
+    mix = Mix(
+        actions=[
+            MultiFixedConcentration([s1, s3], fixed_concentration="10 uM"),
+            MultiFixedConcentration([s2, s4], fixed_concentration="10 uM"),
+        ],
+        name="test",
+        fixed_total_volume="40uL",
+    )
+
+    combine_plate_actions = True
+    pms = mix.plate_maps(combine_plate_actions=combine_plate_actions)
+    assert len(pms) == 2
+
+    assert len(pms[0].well_to_strand_name) == 2
+    assert len(pms[1].well_to_strand_name) == 2
+    assert 'A1' in pms[0].well_to_strand_name
+    assert 'A2' in pms[0].well_to_strand_name
+    assert 'B1' in pms[1].well_to_strand_name
+    assert 'B2' in pms[1].well_to_strand_name
+    assert pms[0].well_to_strand_name['A1'] == 's1'
+    assert pms[0].well_to_strand_name['A2'] == 's2'
+    assert pms[1].well_to_strand_name['B1'] == 's3'
+    assert pms[1].well_to_strand_name['B2'] == 's4'
+
+def test_combine_plate_actions_false():
+    # this is sort of a "control" for the previous test; make sure we can reproduce old behavior
+    from alhambra.mixes import Strand, Mix, MultiFixedConcentration
+
+    s1 = Strand("s1", "40 uM", plate="plate1", well='A1')
+    s2 = Strand("s2", "40 uM", plate="plate1", well='A2')
+    s3 = Strand("s3", "40 uM", plate="plate2", well='B1')
+    s4 = Strand("s4", "40 uM", plate="plate2", well='B2')
+    mix = Mix(
+        actions=[
+            MultiFixedConcentration([s1, s3], fixed_concentration="10 uM"),
+            MultiFixedConcentration([s2, s4], fixed_concentration="10 uM"),
+        ],
+        name="test",
+        fixed_total_volume="40uL",
+    )
+
+    combine_plate_actions = False
+    pms = mix.plate_maps(combine_plate_actions=combine_plate_actions)
+    assert len(pms) == 4
+
+    assert len(pms[0].well_to_strand_name) == 1
+    assert len(pms[1].well_to_strand_name) == 1
+    assert 'A1' in pms[0].well_to_strand_name
+    assert 'B1' in pms[1].well_to_strand_name
+    assert 'A2' in pms[2].well_to_strand_name
+    assert 'B2' in pms[3].well_to_strand_name
+    assert pms[0].well_to_strand_name['A1'] == 's1'
+    assert pms[1].well_to_strand_name['B1'] == 's3'
+    assert pms[2].well_to_strand_name['A2'] == 's2'
+    assert pms[3].well_to_strand_name['B2'] == 's4'
