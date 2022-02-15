@@ -24,7 +24,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    overload,
+    overload, Tuple,
 )
 from pathlib import Path
 
@@ -358,7 +358,7 @@ class MixLine:
         will be distinguished in some way in tables (eg, italics) and will not be included in calculations.
     """
 
-    names: list[str] = attrs.field(converter=list)
+    names: list[str] = attrs.field(factory=list)
     source_conc: Quantity[Decimal] | str | None = None
     dest_conc: Quantity[Decimal] | str | None = None
     total_tx_vol: Quantity[Decimal] | None = None
@@ -437,18 +437,17 @@ class MixLine:
 def _formatter(
     x: int | float | str | list[str] | Quantity[Decimal] | None, italic: bool = False
 ) -> str:
-    match x:
-        case int(y) | str(y):
-            out = str(y)
-        case None:
+    if isinstance(x, (int, str)):
+            out = str(x)
+    elif x is None:
             out = ""
-        case float(y):
-            out = f"{y:,.2f}"
-        case Quantity() as y:
-            out = f"{y:,.2f~#P}"
-        case list() | pd.Series() | np.array() as x:
+    elif isinstance(x, float):
+            out = f"{x:,.2f}"
+    elif isinstance(x, Quantity):
+            out = f"{x:,.2f~#P}"
+    elif isinstance(x, (list, np.ndarray, pd.Series)):
             out = ", ".join(_formatter(y) for y in x)
-        case _:
+    else:
             raise TypeError
     if not out:
         return ""
@@ -467,12 +466,12 @@ class AbstractComponent(ABC):
         ...
 
     @property
-    def location(self) -> tuple[None | str, WellPos | None]:
-        return (None, None)
+    def location(self) -> tuple[str, WellPos | None]:
+        return ("", None)
 
     @property
-    def plate(self) -> None | str:
-        return None
+    def plate(self) -> str:
+        return ""
 
     @property
     def well(self) -> WellPos | None:
@@ -636,7 +635,7 @@ class Component(AbstractComponent):
         return False
 
     @property
-    def location(self) -> tuple[str | None, WellPos | None]:
+    def location(self) -> tuple[str, WellPos | None]:
         return (self.plate, self.well)
 
     def all_components(self) -> pd.DataFrame:
@@ -2033,8 +2032,8 @@ class Mix(AbstractComponent):
         return new
 
     @property
-    def location(self) -> tuple[None | str, WellPos | None]:
-        return (None, None)
+    def location(self) -> tuple[str, WellPos | None]:
+        return ("", None)
 
     def vol_to_tube_names(
         self, validate: bool = True
@@ -2087,6 +2086,7 @@ class Mix(AbstractComponent):
         self,
         plate_type: PlateType = PlateType.wells96,
         validate: bool = True,
+        combine_plate_actions: bool = True,
         # combine_volumes_in_plate: bool = False
     ) -> list[PlateMap]:
         """
@@ -2139,6 +2139,10 @@ class Mix(AbstractComponent):
         validate
             Ensure volumes make sense.
 
+        combine_plate_actions
+            If True, then if multiple actions in the Mix take the same volume from the same plate,
+            they will be combined into a single :class:`PlateMap`.
+
 
         Returns
         -------
@@ -2181,7 +2185,9 @@ class Mix(AbstractComponent):
                 e.args = e.args + (self.plate_map_markdown(validate=False),)
                 raise e
 
-        plate_maps: list[PlateMap] = []
+        # not used if combine_plate_actions is False
+        plate_maps_dict: dict[Tuple[str,Quantity[Decimal]], PlateMap] = {}
+        plate_maps = []
         # each MixLine but the last is a (plate, volume) pair
         for mixline in mixlines:
             if len(mixline.names) == 0 or (
@@ -2190,14 +2196,22 @@ class Mix(AbstractComponent):
                 continue
             if mixline.plate.lower() == "tube":
                 continue
-            plate_map = self._plate_map_from_mixline(mixline, plate_type)
-            plate_maps.append(plate_map)
+            existing_plate = None
+            key = (mixline.plate, mixline.each_tx_vol)
+            if combine_plate_actions:
+                existing_plate = plate_maps_dict.get(key)
+            plate_map = self._plate_map_from_mixline(mixline, plate_type, existing_plate)
+            if combine_plate_actions:
+                plate_maps_dict[key] = plate_map
+            if existing_plate is None:
+                plate_maps.append(plate_map)
 
         return plate_maps
 
     def _plate_map_from_mixline(
-        self, mixline: MixLine, plate_type: PlateType
+        self, mixline: MixLine, plate_type: PlateType, existing_plate_map: PlateMap | None,
     ) -> PlateMap:
+        # If existing_plate is None, return new plate map; otherwise update existing_plate_map and return it
         assert mixline.plate != "tube"
 
         well_to_strand_name = {}
@@ -2205,13 +2219,26 @@ class Mix(AbstractComponent):
             well_str = str(well)
             well_to_strand_name[well_str] = strand_name
 
-        plate_map = PlateMap(
-            plate_name=mixline.plate,
-            plate_type=plate_type,
-            vol_each=mixline.each_tx_vol,
-            well_to_strand_name=well_to_strand_name,
-        )
-        return plate_map
+        if existing_plate_map is None:
+            plate_map = PlateMap(
+                plate_name=mixline.plate,
+                plate_type=plate_type,
+                vol_each=mixline.each_tx_vol,
+                well_to_strand_name=well_to_strand_name,
+            )
+            return plate_map
+        else:
+            assert plate_type == existing_plate_map.plate_type
+            assert mixline.plate == existing_plate_map.plate_name
+            assert mixline.each_tx_vol == existing_plate_map.vol_each
+
+            for well_str, strand_name in well_to_strand_name.items():
+                if well_str in existing_plate_map.well_to_strand_name:
+                    raise ValueError(f'a previous mix action already specified well {well_str} '
+                                     f'with strand {strand_name}, '
+                                     f'but each strand in a mix must be unique')
+                existing_plate_map.well_to_strand_name[well_str] = strand_name
+            return existing_plate_map
 
 
 _ALL_TABLEFMTS = [
@@ -2563,11 +2590,10 @@ class Reference:
         return self.df.__getitem__(key)
 
     def __eq__(self: Reference, other: object):
-        match other:
-            case Reference() as r:
-                return ((r.df == self.df) | (r.df.isna() & self.df.isna())).all().all()
-            case pd.DataFrame() as rdf:
-                return ((rdf == self.df) | (rdf.isna() & self.df.isna())).all().all()
+        if isinstance(other, Reference):
+                return ((other.df == self.df) | (other.df.isna() & self.df.isna())).all().all()
+        elif isinstance(other, pd.DataFrame):
+                return ((other == self.df) | (other.isna() & self.df.isna())).all().all()
         return False
 
     def __len__(self) -> int:
@@ -2618,7 +2644,7 @@ class Reference:
         raise ValueError("Did not find any matching components.")
 
     @classmethod
-    def from_csv(cls, filename_or_file: str | PathLike[str]) -> Reference:
+    def from_csv(cls, filename_or_file: str | io.TextIOBase | PathLike[str]) -> Reference:
         """
         Load reference information from a CSV file.
 
