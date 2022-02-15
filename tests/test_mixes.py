@@ -281,6 +281,39 @@ def test_non_plates():
     assert len(ml) == 4
 
 
+def test_intermediate_mix_sufficient_volume():
+    s1 = Strand("s1", "100 uM", plate="plate1", well='A1')
+    s2 = Strand("s2", "100 uM", plate="plate1", well='A2')
+    s3 = Strand("s3", "100 uM", plate="plate1", well='B3')
+    s4 = Strand("s4", "100 uM", plate="plate1", well='B4')
+
+    i1_mix = Mix(
+        actions=[
+            MultiFixedConcentration([s1, s2], fixed_concentration="10 uM"),
+        ],
+        name="intermediate mix 1",
+        fixed_total_volume="15uL",
+    )
+    i2_mix = Mix(
+        actions=[
+            MultiFixedConcentration([s3, s4], fixed_concentration="5 uM"),
+        ],
+        name="intermediate mix 2",
+        fixed_total_volume="15uL",
+    )
+
+    # 15 is enough for i1_mix but not i2_mix, which requires 20 uL in final_mix
+    final_mix = Mix(
+        actions=[
+            MultiFixedConcentration([i1_mix, i2_mix], fixed_concentration="1 uM"),
+        ],
+        name="final mix",
+        fixed_total_volume="100uL",
+    )
+
+    with pytest.raises(VolumeError):
+        final_mix.table()
+
 def test_combine_plate_actions():
     from alhambra.mixes import Strand, Mix, MultiFixedConcentration
 
@@ -343,3 +376,4 @@ def test_combine_plate_actions_false():
     assert pms[1].well_to_strand_name['B1'] == 's3'
     assert pms[2].well_to_strand_name['A2'] == 's2'
     assert pms[3].well_to_strand_name['B2'] == 's4'
+
