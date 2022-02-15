@@ -188,10 +188,10 @@ class UpdateListD(Generic[T_NMI]):
         ...
 
     @overload
-    def search(self: T, regex: str, match: Literal[True]) -> list[re.Match, T_NMI]:
+    def search(self: T, regex: str, match: Literal[True]) -> list[tuple[re.Match, T_NMI]]:
         ...
 
-    def search(self: T, regex: str, match: bool = False) -> T:
+    def search(self: T, regex: str, match: bool = False) -> T | list[tuple[re.Match, T_NMI]]:
         r = re.compile(regex)
         if not match:
             return self.__class__(v for v in self.data.values() if r.search(v.ident()))
