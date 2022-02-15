@@ -1,3 +1,12 @@
+# NOTE
+
+**This is a development branch that breaks many features. To install the
+the prerelease, use the [1.1 release](https://github.com/DNA-and-Natural-Algorithms-Group/alhambra/releases/tag/v1.1.0), or the [main branch](https://github.com/DNA-and-Natural-Algorithms-Group/alhambra/tree/main), or just use
+
+```
+pip install -U alhambra
+```
+
 # Introduction
 
 Alhambra, formerly tilesetdesigner, is a package for designing DNA tile
@@ -14,8 +23,7 @@ flexibly take inputs of YAML or similar formats.
 
 # Installation
 
-Alhambra is designed to be installed as a Python package.  To install the
-the prerelease, use
+Alhambra is designed to be installed as a Python package. 
 
 ```
 pip install -U 'alhambra @ git+https://github.com/DNA-and-Natural-Algorithms-Group/alhambra@v2'
