@@ -15,7 +15,7 @@ Other classes in the base module are:
 
 .. autosummary::
    :toctree: generated/
-	     
+
    Tile
    TileList
    Glue
