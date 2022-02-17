@@ -46,7 +46,7 @@ jobs:
           mkdir -p .mypy_cache
       - name: Mypy
         run: |
-          mypy --cache-dir .mypy_cache --install-types --non-interactive ./src
+          mypy --cache-dir .mypy_cache --install-types --non-interactive ./src/alhambra
   tests:
     needs: "mypy"
     runs-on: ${{ matrix.os }}
