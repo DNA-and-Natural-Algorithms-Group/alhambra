@@ -41,8 +41,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools_scm[toml] wheel setuptools
-          python -m pip install --upgrade attrs types-attrs types-tabulate 
+          python -m pip install --upgrade attrs types-attrs types-tabulate types-PyYAML types-toml
           python -m pip install --upgrade "git+git://github.com/python/mypy.git"
+          python -m pip install --upgrade .[all]
           mkdir -p .mypy_cache
       - name: Mypy
         run: |
