@@ -4,7 +4,7 @@ seed:
   type: longrect
   use_adapters: [ A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13 ]
   createseqs: true
-  adapters: 
+  adapters:
     - { ends: [hp, B2], loc: 1, tilebase: DMn, name: A1, extra: 1h }
     - { ends: [M, r0_v2], loc: 2, tilebase: BN02, name: A2 }
     - { ends: [i00_1, i00_4], loc: 3, tilebase: t00_1, name: A3 }
@@ -22,10 +22,10 @@ tiles:
   # SET-INDEPENDENT TILES
   # Maintain-size boundary. Double-maintain-north
 - { color: purple, type: tile_daoe_doublehoriz_35up, ends: [B2/, hp, hp, B2, B1, M/], name: DMn, extra: 2h3h }
-  # Double-maintain-south. 
+  # Double-maintain-south.
 - { color: purple, type: tile_daoe_doublevert_35up, ends: [Ms/, B1s, B2s, hp, hp, B2s/], name: DMs, extra: 4h5h }
   # SET-DEPENDENT BOUNDARY TILES
-  # Maintain signals, north. Need ends [Bn1, Mn, OUT, IN], 
+  # Maintain signals, north. Need ends [Bn1, Mn, OUT, IN],
   # plus Bn1_X versions if necessary for contraction with signal propagation.
 - { ends: [B1/, M, ibn1, r0_h1/], type: tile_daoe_5up, name: BN01 }
 - { ends: [B1/, M, r0_v2, ibn2/], type: tile_daoe_5up, name: BN02 }
@@ -40,7 +40,7 @@ tiles:
 - { ends: [r0_v2/, r0_h1, ibs2, ibs1/], type: tile_daoe_3up, name: BS03 }
 - { ends: [r1_v1/, ibs1, Ms, B1s/], type: tile_daoe_5up, name: BS11, color: pink }
 - { ends: [r1_v2/, r0_h1, ibs2, ibs1/], type: tile_daoe_3up, name: BS13 }
-  # RULE TILES 
+  # RULE TILES
 - { color: blue1, type: tile_daoe_5up, ends: [r0_v1/, i00_1, i00_4, r0_h1/], name: t00_1 }
 - { color: blue2, type: tile_daoe_3up, ends: [r0_v2/, r0_h1, i00_2, i00_1/], name: t00_2 }
 - { color: blue3, type: tile_daoe_5up, ends: [i00_2/, r0_h2, r0_v2, i00_3/], name: t00_3 }

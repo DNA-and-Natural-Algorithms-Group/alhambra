@@ -37,7 +37,7 @@ the following key/value pairs:
 -  info: a mapping of system information
 -  guards: a list of guard strands and sequences
 -  xgrow_params: (or xgrow_options) a mapping of xgrow options
-   
+
 tiles
 -----
 

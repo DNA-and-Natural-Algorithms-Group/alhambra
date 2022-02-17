@@ -26,7 +26,7 @@ we’ll create a new TileSet directly:
 .. code:: ipython3
 
     import alhambra
-    
+
     ts = alhambra.TileSet(
         { 'tiles': [
             {'name': 'A', 'structure': 'tile_daoe_5up', 'ends': ['a','a','b','b']},
@@ -63,7 +63,7 @@ abstract tile diagrams:
 .. code:: ipython3
 
     import xgrow
-    
+
     ts.run_xgrow({'block': 3, 'Gse': 10.9}, perfect=True)
 
 .. code:: ipython3
@@ -169,36 +169,36 @@ orientation. So we can move straight to designing strands:
     spuriousSSM score=automatic template=alhambratemp-temp.st wc=alhambratemp-temp.wc eq=alhambratemp-temp.eq verboten_weak=1.5 quiet=ALL
     Automatic: counted 256 base-pairing stacks in target structures.
     Automatic: counted 134 unique base equivalence classes.
-    
-    constrained S = <GTCCTGAATTACACCAGCCATGTCTG ATGGCTGGACCTAAGATTGAAGCACCCTAGATCGAAGCCCTGTAATTC AAGTAGCCTGCTTCAATCTTAGGTGGGCTTCGATCTAGGGACCTGATC GTCCTGATCAGGTGGCTACTTGTCTG  AGGACCATTACCACCTCACTCCAGAC GAGTGAGGACTCGGTCTGATTCCACCTGAATTACGTTCCCTGGTAATG GCGTCTCCTGGAATCAGACCGAGTGGGAACGTAATTCAGGACCCGTAG AGGACCTACGGGTGGAGACGCCAGAC>  N=304 
-    
+
+    constrained S = <GTCCTGAATTACACCAGCCATGTCTG ATGGCTGGACCTAAGATTGAAGCACCCTAGATCGAAGCCCTGTAATTC AAGTAGCCTGCTTCAATCTTAGGTGGGCTTCGATCTAGGGACCTGATC GTCCTGATCAGGTGGCTACTTGTCTG  AGGACCATTACCACCTCACTCCAGAC GAGTGAGGACTCGGTCTGATTCCACCTGAATTACGTTCCCTGGTAATG GCGTCTCCTGGAATCAGACCGAGTGGGAACGTAATTCAGGACCCGTAG AGGACCTACGGGTGGAGACGCCAGAC>  N=304
+
     Found 84 bases that can probably be changed freely.
-    
-    
+
+
     spurious counts identity matches as well as WC matches.
     spurious(testS, 3,8, testwc, testeq)
-    C =  
+    C =
        170    50     7     3     2     2
        533   150    38     9     2     0
        664   196    75    28    16     9
     spurious0(testS, 3,8)
-    C0 =  
+    C0 =
        170    50     7     3     2     2
        653   254   126    81    58    44
        688   212    83    28    16     9
     spurious1(testS, 5,10)
-    C1 =  
+    C1 =
         53    16     5     1     0     0
         83    29    13     7     4     2
        156    51    16     5     1     0
     spurious: intraS =     0.01117, interS =     0.00302, interC  =     0.00135, beta = 5.000, mismatch = 25.000
     verboten: weak   =     1.50000, strong =     2.00000, regular =     0.50000
-    ** score_verboten score =   180.50000 
-    ** score_spurious score =   207.41493 
-    ** score_bonds    score =  -188.36308 
-    ** [verboten spurious bonds] = [    2.16216     1.00000     0.03906]-weighted score =   590.32727 
-    
-    
+    ** score_verboten score =   180.50000
+    ** score_spurious score =   207.41493
+    ** score_bonds    score =  -188.36308
+    ** [verboten spurious bonds] = [    2.16216     1.00000     0.03906]-weighted score =   590.32727
+
+
            0 steps,        0 seconds : score =     590.3272655064 (bored=0,bmax=1609)
            1 steps,        0 seconds : score =     553.6007033032 (bored=0,bmax=1609)
            4 steps,        0 seconds : score =     537.3876095197 (bored=2,bmax=1609)
@@ -299,31 +299,31 @@ orientation. So we can move straight to designing strands:
         1304 steps,        1 seconds : score =       7.0887131823 (bored=22,bmax=1609)
         1441 steps,        1 seconds : score =       7.0798323670 (bored=136,bmax=1609)
         3049 steps,        1 seconds : score =       7.0798323670 FINAL
-    
+
     spurious counts identity matches as well as WC matches.
     spurious(testS, 3,8, testwc, testeq)
-    C =  
+    C =
        152    26     0     0     0     0
        486   100    20     0     0     0
        704   173    27     3     0     0
     spurious0(testS, 3,8)
-    C0 =  
+    C0 =
        152    26     0     0     0     0
        606   204   108    72    56    44
        728   189    35     3     0     0
     spurious1(testS, 5,10)
-    C1 =  
+    C1 =
         49    10     2     0     0     0
        136    36     5     0     0     0
        163    46     6     0     0     0
     spurious: intraS =     0.01117, interS =     0.00302, interC  =     0.00135, beta = 5.000, mismatch = 25.000
     verboten: weak   =     1.50000, strong =     2.00000, regular =     0.50000
-    ** score_verboten score =     0.00000 
-    ** score_spurious score =    14.91455 
-    ** score_bonds    score =  -200.56874 
-    ** [verboten spurious bonds] = [    2.16216     1.00000     0.03906]-weighted score =     7.07983 
-    
-    
+    ** score_verboten score =     0.00000
+    ** score_spurious score =    14.91455
+    ** score_bonds    score =  -200.56874
+    ** [verboten spurious bonds] = [    2.16216     1.00000     0.03906]-weighted score =     7.07983
+
+
     GTCCTGAGTCGCACCAACGCTGTCTG AGCGTTGGACTACCGATCCAGTCACCATCGTCCGAATGCCTGCGACTC ACGAAGCCTGACTGGATCGGTAGTGGCATTCGGACGATGGACAACGGC GTCCTGCCGTTGTGGCTTCGTGTCTG  AGGACCTTCAGCACCTAGCTCCAGAC GAGCTAGGACTGTGAGAGCATCCACCTCGGCTACGGTTCCTGCTGAAG GCAACACCTGGATGCTCTCACAGTGGAACCGTAGCCGAGGACGCCTTG AGGACCAAGGCGTGGTGTTGCCAGAC
     Processing results of spuriousSSM.
     Done, results saved to 'alhambratemp.mfe'
@@ -437,7 +437,7 @@ The rotations of a `Tile` can be obtained using `Tile.rotations`.
 Reduction
 +++++++++
 
-Tile or glue reduction ([EvWi2018]_) of a :py:class:`TileSet` is done through two methods: :meth:`TileSet.reduce_tiles` for tiles, and :meth:`TileSet.reduce_ends` for glues.  
+Tile or glue reduction ([EvWi2018]_) of a :py:class:`TileSet` is done through two methods: :meth:`TileSet.reduce_tiles` for tiles, and :meth:`TileSet.reduce_ends` for glues.
 
 By default, each returns an "equiv" array that denotes what glues in the TileSet are equivalent (note that, if the set is modified, the equiv array may no longer be valid).  These can use the Python multiprocessing library to run concurrently in multiple threads.  As the searches are nondeterministic, multiple runs may give different results, and thus repeated tries are supported.
 

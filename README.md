@@ -23,7 +23,7 @@ flexibly take inputs of YAML or similar formats.
 
 # Installation
 
-Alhambra is designed to be installed as a Python package. 
+Alhambra is designed to be installed as a Python package.
 
 ```
 pip install -U 'alhambra @ git+https://github.com/DNA-and-Natural-Algorithms-Group/alhambra@v2'
