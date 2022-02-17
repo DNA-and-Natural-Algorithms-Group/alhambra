@@ -49,7 +49,7 @@ jobs:
         run: |
           mypy --cache-dir .mypy_cache --install-types --non-interactive --show-traceback ./src/alhambra
   tests:
-    needs: "mypy"
+    #needs: "mypy"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
