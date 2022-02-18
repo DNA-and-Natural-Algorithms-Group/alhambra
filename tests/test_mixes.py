@@ -270,7 +270,7 @@ def test_mix_min_volume(reference: Reference):
         [FixedConcentration(s1, "10 nM")],
         name="test",
         fixed_total_volume="100 uL",
-        min_volume = "20 uL",
+        min_volume="20 uL",
     )
 
     with pytest.raises(VolumeError):
@@ -293,8 +293,9 @@ def test_non_plates():
     s4 = Strand("s4", "400 nM", plate="a different tube")
 
     m = Mix(
-        [MultiFixedVolume([s1, s2, s3, s4], "1 uL", equal_conc="min_volume")], "test",
-        min_volume='0 uL',
+        [MultiFixedVolume([s1, s2, s3, s4], "1 uL", equal_conc="min_volume")],
+        "test",
+        min_volume="0 uL",
     )
 
     m.table()
@@ -352,7 +353,7 @@ def test_combine_plate_actions():
         ],
         name="test",
         fixed_total_volume="40uL",
-        min_volume='0 uL',
+        min_volume="0 uL",
     )
 
     combine_plate_actions = True
@@ -386,7 +387,7 @@ def test_combine_plate_actions_false():
         ],
         name="test",
         fixed_total_volume="40uL",
-        min_volume='0 uL',
+        min_volume="0 uL",
     )
 
     combine_plate_actions = False
