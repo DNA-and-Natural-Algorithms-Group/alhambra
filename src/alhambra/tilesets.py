@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import collections
 import copy
-import datetime
 import logging
 import warnings
 from dataclasses import dataclass, field
-from random import shuffle
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -16,23 +13,19 @@ from typing import (
     Literal,
     Mapping,
     Optional,
-    Sequence,
     Type,
     TypeAlias,
     TypeVar,
+    Union,
     cast,
 )
 
 import drawSvg_svgy as draw
 import numpy as np
-import pkg_resources
-import stickydesign as sd
-import stickydesign.multimodel as multimodel
+
 
 from numpy import isin
-from stickydesign.energetics_daoe import EnergeticsDAOE
 
-from alhambra import seq, util
 from alhambra.classes import Serializable
 from alhambra.grid import (
     AbstractLattice,
@@ -59,14 +52,8 @@ from .tiles import (
 if TYPE_CHECKING:
     import matplotlib.pyplot as plt
     import scadnano
-    import seaborn as sns
-
-    # import xgrow
-    # import xgrow.parseoutput
-    # from xgrow.parseoutput import XgrowOutput
-    # import xgrow.tileset as xgt
-
-SELOGGER = logging.getLogger(__name__)
+    import xgrow.parseoutput
+    import xgrow.tileset as xgt
 
 _gl = {
     EdgeLoc(D.N, (0, 0)): (0, 0, 10, 0),
@@ -103,14 +90,14 @@ class TileSet(Serializable):
         seeds: Mapping[str | int, Seed] | None = None,
         *,
         lattices: Mapping[str | int, Lattice] | None = None,
-        guards: Iterable[str] = tuple(),
+        guards: Mapping[str | int, list[str]] = dict(),
         params: dict | None = None,
     ) -> None:
         self.tiles = TileList(tiles)
         self.glues = GlueList(glues)
         self.seeds = dict(seeds) if seeds else dict()
         self.lattices = dict(lattices) if lattices else dict()
-        self.guards = list(guards)
+        self.guards = dict(guards)
         if params is not None:
             self.params = params
         else:
@@ -159,7 +146,16 @@ class TileSet(Serializable):
             if tile_name in self.tiles.data.keys():
                 newarray[ix] = tile_name
 
-        a = AbstractLattice(newarray, seed, seed_offset)
+        match seed:
+            case None:
+                if len(self.seeds) > 0:
+                    seed = next(iter(self.seeds.values()))
+            case False:
+                seed = None
+            case int(x) | str(x):
+                seed = self.seeds[cast(Union[int, str], x)]
+
+        a = AbstractLattice(newarray, cast(Optional[Seed], seed), seed_offset)
 
         if not _include_out:
             return a
@@ -214,11 +210,11 @@ class TileSet(Serializable):
         if seed is not False and (isinstance(seed, str) or isinstance(seed, int)):
             seed = self.seeds[seed]
         if seed is False:
-            seed_tiles = []
-            seed_bonds = []
+            seed_tiles: list[xgt.Tile] = []
+            seed_bonds: list[xgt.Bond] = []
             initstate = None
         else:
-            seed_tiles, seed_bonds, initstate = seed.to_xgrow(glues, offset=seed_offset)
+            seed_tiles, seed_bonds, initstate = cast(Seed, seed).to_xgrow(glues, offset=seed_offset)
 
         xgrow_tileset = xgt.TileSet(
             seed_tiles + tiles, seed_bonds + bonds, initstate=initstate, glues=xg_glues
@@ -264,7 +260,7 @@ class TileSet(Serializable):
         return self.summary()
 
     @classmethod
-    def from_scadnano(cls: Type[T], des: scadnano.Design, ret_fails=False) -> T:
+    def from_scadnano(cls: Type[TileSet], des: scadnano.Design, ret_fails=False) -> TileSet:
         """Create TileSet from Scadnano Design."""
         import scadnano
 
@@ -288,8 +284,8 @@ class TileSet(Serializable):
                 else:
                     tiles.add(t)
 
-        ts.tiles = tiles
-        ts.lattices = [ScadnanoLattice(positions)]
+        ts.tiles = cast(TileList[Tile], tiles)
+        ts.lattices = {0: cast(Lattice, ScadnanoLattice(positions))}
         return ts
 
     def to_scadnano(self, lattice: LatticeSupportingScadnano = None) -> scadnano.Design:
@@ -306,7 +302,7 @@ class TileSet(Serializable):
         raise ValueError
 
     def to_dict(self) -> dict:
-        d = {}
+        d: dict[str, Any] = {}
         self.tiles.refreshnames()
         self.glues.refreshnames()
         allglues = self.glues | self.tiles.glues_from_tiles()
@@ -327,7 +323,7 @@ class TileSet(Serializable):
         return d
 
     @classmethod
-    def from_dict(cls: Type[T], d: dict) -> T:
+    def from_dict(cls: Type[TileSet], d: dict) -> TileSet:
         ts = cls()
         ts.tiles = TileList(Tile.from_dict(x) for x in d.get("tiles", []))
         ts.glues = GlueList(Glue.from_dict(x) for x in d.get("glues", []))
@@ -479,8 +475,8 @@ class TileSet(Serializable):
 
         if seed is True:
             try:
-                seed = self.seeds.values()[0]
-            except KeyError:
+                seed = next(iter(self.seeds.values()))
+            except StopIteration:
                 seed = False
         elif isinstance(seed, str):
             seed = self.seeds[seed]
