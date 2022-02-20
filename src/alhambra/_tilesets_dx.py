@@ -3,18 +3,26 @@
 from __future__ import annotations
 
 from collections import Counter
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence
-
+from datetime import datetime, timezone
+import logging
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, Sequence, cast
+from random import shuffle
+import stickydesign.multimodel as multimodel
 import numpy as np
 import stickydesign
 
-from .glues import DXGlue
+SELOGGER = logging.getLogger(__name__)
+
+from stickydesign.energetics_daoe import EnergeticsDAOE
+
+from .glues import DXGlue, GlueList
 from .util import (  # DEFAULT_ENERGETICS,; DEFAULT_SD2_MULTIMODEL_ENERGETICS,
     DEFAULT_MM_ENERGETICS_NAMES,
     DEFAULT_MULTIMODEL_ENERGETICS,
     DEFAULT_REGION_ENERGETICS,
+    DEFAULT_ENERGETICS
 )
+from . import seq, util
 
 if TYPE_CHECKING:
     from .tilesets import TileSet
@@ -73,17 +81,17 @@ def stickydesign_create_dx_glue_sequences(
         sdopts = {}
     if ecpars is None:
         ecpars = {}
-    info = {}
+    info: dict[str, Any] = {}
     info["method"] = method
-    info["time"] = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
-    info["sd_version"] = sd.version.__version__
+    info["time"] = datetime.now(tz=timezone.utc).isoformat()
+    info["sd_version"] = stickydesign.version.__version__
 
     if not energetics:
         if method == "multimodel":
             all_energetics = DEFAULT_MULTIMODEL_ENERGETICS
         else:
             energetics = DEFAULT_ENERGETICS
-    if method == "multimodel" and not isinstance(energetics, collections.Iterable):
+    if method == "multimodel" and not isinstance(energetics, Iterable):
         raise ValueError("Energetics must be an iterable for multimodel.")
     elif method == "multimodel":
         all_energetics = cast(list[EnergeticsDAOE], energetics)
@@ -118,14 +126,14 @@ def stickydesign_create_dx_glue_sequences(
         end.fseq for end in ends if end.etype == "DT" and seq.is_definite(end.fseq)
     ]
     if oldDTseqs:
-        oldDTarray = sd.endarray(oldDTseqs, "DT")
+        oldDTarray = stickydesign.endarray(oldDTseqs, "DT")
     else:
         oldDTarray = None
     oldTDseqs = [
         end.fseq for end in ends if end.etype == "TD" and seq.is_definite(end.fseq)
     ]
     if oldTDseqs:
-        oldTDarray = sd.endarray(oldTDseqs, "TD")
+        oldTDarray = stickydesign.endarray(oldTDseqs, "TD")
     else:
         oldTDarray = None
 
@@ -137,8 +145,8 @@ def stickydesign_create_dx_glue_sequences(
     # TODO: tests needs to test this
     targets = []
     if len(oldDTseqs) == 0 and len(oldTDseqs) == 0:
-        targets.append(sd.enhist("DT", 5, energetics=energetics)[2]["emedian"])
-        targets.append(sd.enhist("TD", 5, energetics=energetics)[2]["emedian"])
+        targets.append(stickydesign.enhist("DT", 5, energetics=energetics)[2]["emedian"])
+        targets.append(stickydesign.enhist("TD", 5, energetics=energetics)[2]["emedian"])
     if oldDTarray:
         targets.append(energetics.matching_uniform(oldDTarray))
     if oldTDarray:
@@ -158,7 +166,7 @@ def stickydesign_create_dx_glue_sequences(
         if TDtemplates or DTtemplates:
             raise NotImplementedError
         # Create new sequences.
-        newTDseqs = sd.easyends(
+        newTDseqs = stickydesign.easyends(
             "TD",
             5,
             number=len(newTD),
@@ -167,7 +175,7 @@ def stickydesign_create_dx_glue_sequences(
             **sdopts,
         ).tolist()
 
-        newDTseqs = sd.easyends(
+        newDTseqs = stickydesign.easyends(
             "DT",
             5,
             number=len(newDT),
@@ -192,7 +200,7 @@ def stickydesign_create_dx_glue_sequences(
                 all_energetics, templates=TDtemplates, devmethod=devmethod, **ecpars
             )
 
-            e, presetavail = sd.easyends(
+            e, presetavail = stickydesign.easyends(
                 "TD",
                 5,
                 number=len(newTD),
@@ -233,7 +241,7 @@ def stickydesign_create_dx_glue_sequences(
         presetavail = None
 
         for i, echoose in enumerate(endchoosersDT):
-            e, presetavail = sd.easyends(
+            e, presetavail = stickydesign.easyends(
                 "DT",
                 5,
                 number=len(newDT),
@@ -250,8 +258,8 @@ def stickydesign_create_dx_glue_sequences(
 
         arr = [
             [
-                sd.endarray(oldTDseqs + x.tolist(), "TD"),
-                sd.endarray(oldDTseqs + y.tolist(), "DT"),
+                stickydesign.endarray(oldTDseqs + x.tolist(), "TD"),
+                stickydesign.endarray(oldDTseqs + y.tolist(), "DT"),
             ]
             for x, y in zip(newTDseqs, newDTseqs)
         ]
@@ -421,9 +429,9 @@ def dx_plot_adjacent_regions(self: TileSet, energetics=None):
     regions = [t.structure._side_bound_regions(t) for t in self.tiles]
     regions = [[x.lower() for x in y] for y in regions]
     allregions = sum(regions, [])
-    count = [[Counter(x) for x in y] for y in regions]
+    count: list[list[Counter]] = [[Counter(x) for x in y] for y in regions]
     gc_count = [[x["g"] + x["c"] for x in c] for c in count]
-    gc_counts = sum(gc_count, [])
+    gc_counts: list[int] = sum(gc_count, [])
 
     ens = energetics.matching_uniform(stickydesign.endarray(allregions, "DT"))
     from matplotlib import pylab
@@ -459,11 +467,11 @@ def dx_plot_side_strands(self: TileSet, energetics=None):
     regions = [t.structure._short_bound_full(t) for t in self.tiles]
     regions = [[x.lower() for x in y] for y in regions]
     allregions = sum(regions, [])
-    count = [[Counter(x) for x in y] for y in regions]
+    count: list[list[Counter]] = [[Counter(x) for x in y] for y in regions]
     gc_count = [[x["g"] + x["c"] for x in c] for c in count]
-    gc_counts = sum(gc_count, [])
+    gc_counts: list[int] = sum(gc_count, [])
 
-    ens = energetics.matching_uniform(sd.endarray(allregions, "DT"))
+    ens = energetics.matching_uniform(stickydesign.endarray(allregions, "DT"))
     from matplotlib import pylab
 
     pylab.figure(figsize=(10, 4))

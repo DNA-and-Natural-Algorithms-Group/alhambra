@@ -18,13 +18,19 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
 )
 from warnings import warn
+
+from matplotlib.pyplot import isinteractive
 
 from .classes import UpdateListD
 from .seq import Seq
 
 T = TypeVar("T")
+
+GlueA = TypeVar("GlueA", bound="Glue")
+GlueB = TypeVar("GlueB", bound="Glue")
 
 
 class Use(Enum):
@@ -45,13 +51,13 @@ class Use(Enum):
         if self == other:
             return self
         match (self, other):
-            case (Use.UNSET, x) | (x, Use.UNSET):
+            case (Use.UNSET, x) | (x, Use.UNSET):  # type: ignore
                 return x
-            case (Use.UNUSED, x) | (x, Use.UNUSED) if 2 <= x.value <= 4:
+            case (Use.UNUSED, x) | (x, Use.UNUSED) if 2 <= x.value <= 4:  # type: ignore
                 return x
-            case (Use.INPUT, Use.OUTPUT) | (Use.OUTPUT, Use.INPUT):
+            case (Use.INPUT, Use.OUTPUT) | (Use.OUTPUT, Use.INPUT):  # type: ignore
                 return Use.BOTH
-            case (Use.BOTH, x) | (x, Use.BOTH) if 2 <= x.value <= 4:
+            case (Use.BOTH, x) | (x, Use.BOTH) if 2 <= x.value <= 4:  # type: ignore
                 return Use.BOTH
         raise ValueError
 
@@ -135,7 +141,7 @@ class Glue:
             return self.name
 
     @property
-    def complement(self) -> Glue:
+    def complement(self: GlueA) -> GlueA:
         c = self.copy()
         c._into_complement()
         return c
@@ -150,7 +156,7 @@ class Glue:
         else:
             raise NotImplementedError
 
-    def merge(self, other: Glue) -> Glue:
+    def merge(self: Glue, other: Glue) -> Glue:
         if type(other) == Glue:
             return Glue(
                 merge_items(self.name, other.name),
@@ -171,10 +177,12 @@ class Glue:
     def __ror__(self, other: Glue) -> Glue:
         return self.merge(other)
 
-    def __eq__(self, o: Glue | str) -> bool:
-        if isinstance(o, str):
-            o = Glue(o)
-        return self.ident() == o.ident()
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, str):
+            other = Glue(other)
+        if not isinstance(other, Glue):
+            return False
+        return self.ident() == other.ident()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -224,7 +232,7 @@ class SSGlue(Glue):
         note: Optional[str] = None,
         use: Optional[Use] = None,
     ):
-        super().__init__(name, note, use)
+        super().__init__(name, note, Use.UNSET)
 
         if isinstance(length, int):
             lseq: Seq | None = Seq("N" * length)
@@ -440,38 +448,38 @@ class DXGlue(Glue):
             return "<dxend {} ({})>".format(self.name, getattr(self, "etype", "?"))
 
 
-SomeGlue = TypeVar("SomeGlue", bound=Glue)
 
-
-class GlueList(Generic[SomeGlue], UpdateListD[SomeGlue]):
+class GlueList(Generic[GlueA], UpdateListD[GlueA]):
     def merge_complements(self):
-        newitems: dict[str, SomeGlue] = {}
+        newitems: dict[str, GlueA] = {}
         for v in self:
             c = v.complement
             kc = c.ident()
             if kc in self.data:
-                self.data[kc] = self.data[kc].merge(c)
+                self.data[kc] = cast(GlueA, self.data[kc].merge(c))
             else:
                 newitems[kc] = c
         self.data.update(newitems)
 
-    def merge_glue(self, g: SomeGlue) -> SomeGlue:
+    def merge_glue(self, g: GlueA) -> GlueA:
         if g.ident() in self.data:
-            g = self.data[g.ident()].merge(g)
+            g = cast(GlueA, self.data[g.ident()].merge(g))
         c = g.complement
         if c.ident() in self.data:
-            g = self.data[c.ident()].complement.merge(g)
+            g = cast(GlueA, self.data[c.ident()].complement.merge(g))
         return g
 
-    def merge_glue_and_update_list(self, g: SomeGlue) -> SomeGlue:
+    def merge_glue_and_update_list(self, g: GlueA) -> GlueA:
         kg = g.ident()
         if kg in self.data:
-            g = self.data[kg].merge(g)
+            g = cast(
+                GlueA, self.data[kg].merge(g)
+            )  # Glue merges can only constrain type
             self.data[kg] = g
         c = g.complement
         kc = c.ident()
         if kc in self.data:
-            c = self.data[kc].merge(c)
+            c = cast(GlueA, self.data[kc].merge(c))
             self.data[kc] = c
             g = c.complement
             if kg in self.data:
