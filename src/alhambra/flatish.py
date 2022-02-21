@@ -365,7 +365,9 @@ class FlatishHSeed9(Seed):
     @classmethod
     def from_dict(cls: Type[T_FHS9], d: dict) -> T_FHS9:
         dat: tuple[str, dict] = d["adapter_tiles"]
-        return cls([(SSGlue(g), cast(FlatishSingleTile9, Tile.from_dict(t))) for g, t in dat]) # FIXME: should check tiles
+        return cls(
+            [(SSGlue(g), cast(FlatishSingleTile9, Tile.from_dict(t))) for g, t in dat]
+        )  # FIXME: should check tiles
 
     def to_xgrow(
         self,
@@ -448,7 +450,12 @@ class FlatishVSeed9(Seed):
 
     @classmethod
     def from_dict(cls, d: dict) -> FlatishVSeed9:
-        return cls([(SSGlue(g), cast(FlatishSingleTile9, Tile.from_dict(t))) for g, t in d["adapter_tiles"]])
+        return cls(
+            [
+                (SSGlue(g), cast(FlatishSingleTile9, Tile.from_dict(t)))
+                for g, t in d["adapter_tiles"]
+            ]
+        )
 
     def to_xgrow(
         self,

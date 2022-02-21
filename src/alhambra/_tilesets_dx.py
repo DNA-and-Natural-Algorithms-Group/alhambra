@@ -20,7 +20,7 @@ from .util import (  # DEFAULT_ENERGETICS,; DEFAULT_SD2_MULTIMODEL_ENERGETICS,
     DEFAULT_MM_ENERGETICS_NAMES,
     DEFAULT_MULTIMODEL_ENERGETICS,
     DEFAULT_REGION_ENERGETICS,
-    DEFAULT_ENERGETICS
+    DEFAULT_ENERGETICS,
 )
 from . import seq, util
 
@@ -145,8 +145,12 @@ def stickydesign_create_dx_glue_sequences(
     # TODO: tests needs to test this
     targets = []
     if len(oldDTseqs) == 0 and len(oldTDseqs) == 0:
-        targets.append(stickydesign.enhist("DT", 5, energetics=energetics)[2]["emedian"])
-        targets.append(stickydesign.enhist("TD", 5, energetics=energetics)[2]["emedian"])
+        targets.append(
+            stickydesign.enhist("DT", 5, energetics=energetics)[2]["emedian"]
+        )
+        targets.append(
+            stickydesign.enhist("TD", 5, energetics=energetics)[2]["emedian"]
+        )
     if oldDTarray:
         targets.append(energetics.matching_uniform(oldDTarray))
     if oldTDarray:
@@ -404,8 +408,8 @@ def dx_plot_se_lv(
     if pltcmd is None:
         pltcmd = sns.lvplot
 
-    pltcmd(data=m, **kwargs) # type: ignore
-    pltcmd(data=s, marker="x", **kwargs) # type: ignore
+    pltcmd(data=m, **kwargs)  # type: ignore
+    pltcmd(data=s, marker="x", **kwargs)  # type: ignore
     if title:
         plt.title(title)
     plt.ylabel("Energy (kcal/mol)")

@@ -84,7 +84,7 @@ class EdgeLoc:
 EL = EdgeLoc
 
 
-class EdgeView():
+class EdgeView:
     """A class to ensure that tile edge glue manipulations are handled through the tile."""
 
     _edges: List[Glue]
