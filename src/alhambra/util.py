@@ -61,6 +61,7 @@ def setup_multi(method, ncores=None):
             MPOBJECT = rc.load_balanced_view()
         MAPPER = MPOBJECT.map
 
+
 class ProgressLogger(object):
     def __init__(self, logger, N, seconds_interval=60):
         self.logger = logger

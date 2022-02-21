@@ -446,7 +446,6 @@ class DXGlue(Glue):
             return "<dxend {} ({})>".format(self.name, getattr(self, "etype", "?"))
 
 
-
 class GlueList(Generic[GlueA], UpdateListD[GlueA]):
     def merge_complements(self):
         newitems: dict[str, GlueA] = {}

@@ -83,7 +83,7 @@ class DXTallRect(DXOrigamiSeed):
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
 
-        if offset != (0,0):
+        if offset != (0, 0):
             raise NotImplementedError
 
         xgtiles = []

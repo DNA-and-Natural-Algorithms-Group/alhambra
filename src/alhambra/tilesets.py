@@ -36,7 +36,7 @@ from alhambra.grid import (
     lattice_factory,
 )
 
-#from . import fastreduceD as fastreduce
+# from . import fastreduceD as fastreduce
 from .glues import Glue, GlueList
 from .seeds import Seed, seed_factory
 from .tiles import (
@@ -214,7 +214,9 @@ class TileSet(Serializable):
             seed_bonds: list[xgt.Bond] = []
             initstate = None
         else:
-            seed_tiles, seed_bonds, initstate = cast(Seed, seed).to_xgrow(glues, offset=seed_offset)
+            seed_tiles, seed_bonds, initstate = cast(Seed, seed).to_xgrow(
+                glues, offset=seed_offset
+            )
 
         xgrow_tileset = xgt.TileSet(
             seed_tiles + tiles, seed_bonds + bonds, initstate=initstate, glues=xg_glues
@@ -260,7 +262,9 @@ class TileSet(Serializable):
         return self.summary()
 
     @classmethod
-    def from_scadnano(cls: Type[TileSet], des: scadnano.Design, ret_fails=False) -> TileSet:
+    def from_scadnano(
+        cls: Type[TileSet], des: scadnano.Design, ret_fails=False
+    ) -> TileSet:
         """Create TileSet from Scadnano Design."""
         import scadnano
 
@@ -657,12 +661,12 @@ class TileSet(Serializable):
         # )
 
     # FIXME: disabled temporarily for mypy main branch
-    from ._tilesets_dx import ( # type: ignore 
+    from ._tilesets_dx import (  # type: ignore
         dx_plot_adjacent_regions,
         dx_plot_se_hists,
         dx_plot_se_lv,
         dx_plot_side_strands,
-    ) # type: ignore
+    )  # type: ignore
 
     def apply_equiv(self, equiv):
         """

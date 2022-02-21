@@ -14,7 +14,7 @@ from typing import (
     TypeVar,
     cast,
     overload,
-    TYPE_CHECKING
+    TYPE_CHECKING,
 )
 
 if TYPE_CHECKING:
