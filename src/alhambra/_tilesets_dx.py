@@ -404,8 +404,8 @@ def dx_plot_se_lv(
     if pltcmd is None:
         pltcmd = sns.lvplot
 
-    pltcmd(data=m, **kwargs)
-    pltcmd(data=s, marker="x", **kwargs)
+    pltcmd(data=m, **kwargs) # type: ignore
+    pltcmd(data=s, marker="x", **kwargs) # type: ignore
     if title:
         plt.title(title)
     plt.ylabel("Energy (kcal/mol)")
@@ -428,7 +428,7 @@ def dx_plot_adjacent_regions(self: TileSet, energetics=None):
 
     regions = [t.structure._side_bound_regions(t) for t in self.tiles]
     regions = [[x.lower() for x in y] for y in regions]
-    allregions = sum(regions, [])
+    allregions: list[str] = sum(regions, [])
     count: list[list[Counter]] = [[Counter(x) for x in y] for y in regions]
     gc_count = [[x["g"] + x["c"] for x in c] for c in count]
     gc_counts: list[int] = sum(gc_count, [])
@@ -466,7 +466,7 @@ def dx_plot_side_strands(self: TileSet, energetics=None):
 
     regions = [t.structure._short_bound_full(t) for t in self.tiles]
     regions = [[x.lower() for x in y] for y in regions]
-    allregions = sum(regions, [])
+    allregions: list[str] = sum(regions, [])
     count: list[list[Counter]] = [[Counter(x) for x in y] for y in regions]
     gc_count = [[x["g"] + x["c"] for x in c] for c in count]
     gc_counts: list[int] = sum(gc_count, [])

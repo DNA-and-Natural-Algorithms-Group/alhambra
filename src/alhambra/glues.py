@@ -22,8 +22,6 @@ from typing import (
 )
 from warnings import warn
 
-from matplotlib.pyplot import isinteractive
-
 from .classes import UpdateListD
 from .seq import Seq
 
@@ -485,3 +483,6 @@ class GlueList(Generic[GlueA], UpdateListD[GlueA]):
             if kg in self.data:
                 self.data[kg] = g
         return g
+
+    def to_endarrays(self) -> Any:
+        raise NotImplementedError
