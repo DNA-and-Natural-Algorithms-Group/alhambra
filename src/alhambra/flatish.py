@@ -350,7 +350,7 @@ class FlatishHSeed9(Seed):
     adapter_tiles: list[tuple[Glue | str, FlatishSingleTile9]]
 
     def __init__(
-        self, adapter_tiles: Sequence[tuple[SSGlue | str, FlatishSingleTile9]] = tuple()
+        self, adapter_tiles: Sequence[tuple[Glue | str, FlatishSingleTile9]] = tuple()
     ):
         self.adapter_tiles = list(adapter_tiles)
 
@@ -366,7 +366,7 @@ class FlatishHSeed9(Seed):
     def from_dict(cls: Type[T_FHS9], d: dict) -> T_FHS9:
         dat: tuple[str, dict] = d["adapter_tiles"]
         return cls(
-            [(SSGlue(g), cast(FlatishSingleTile9, Tile.from_dict(t))) for g, t in dat]
+            [(Glue(g), cast(FlatishSingleTile9, Tile.from_dict(t))) for g, t in dat]
         )  # FIXME: should check tiles
 
     def to_xgrow(
@@ -436,7 +436,7 @@ class FlatishVSeed9(Seed):
     adapter_tiles: list[tuple[Glue | str, FlatishSingleTile9]]
 
     def __init__(
-        self, adapter_tiles: Sequence[tuple[SSGlue | str, FlatishSingleTile9]] = tuple()
+        self, adapter_tiles: Sequence[tuple[Glue | str, FlatishSingleTile9]] = tuple()
     ):
         self.adapter_tiles = list(adapter_tiles)
 
@@ -452,7 +452,7 @@ class FlatishVSeed9(Seed):
     def from_dict(cls, d: dict) -> FlatishVSeed9:
         return cls(
             [
-                (SSGlue(g), cast(FlatishSingleTile9, Tile.from_dict(t)))
+                (Glue(g), cast(FlatishSingleTile9, Tile.from_dict(t)))
                 for g, t in d["adapter_tiles"]
             ]
         )
