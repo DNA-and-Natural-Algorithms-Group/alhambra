@@ -656,12 +656,13 @@ class TileSet(Serializable):
         #     self, direction=direction, depth=depth, pp=pp, rotate=rotate
         # )
 
-    from ._tilesets_dx import (
+    # FIXME: disabled temporarily for mypy main branch
+    from ._tilesets_dx import ( # type: ignore 
         dx_plot_adjacent_regions,
         dx_plot_se_hists,
         dx_plot_se_lv,
         dx_plot_side_strands,
-    )
+    ) # type: ignore
 
     def apply_equiv(self, equiv):
         """
