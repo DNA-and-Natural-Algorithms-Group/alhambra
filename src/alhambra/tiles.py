@@ -9,11 +9,13 @@ from typing import (
     Any,
     ClassVar,
     Collection,
+    Generator,
     Generic,
     Iterable,
     Iterator,
     List,
     Literal,
+    MutableMapping,
     MutableSequence,
     Optional,
     Protocol,
@@ -34,6 +36,8 @@ from xgrow.xcolors import xcolors
 if TYPE_CHECKING:
     from alhambra.tilesets import XgrowGlueOpts, TileSet
     import xgrow.tileset as xgt
+
+import attrs
 
 from .glues import Use
 
@@ -80,7 +84,7 @@ class EdgeLoc:
 EL = EdgeLoc
 
 
-class EdgeView(MutableSequence[Glue]):
+class EdgeView():
     """A class to ensure that tile edge glue manipulations are handled through the tile."""
 
     _edges: List[Glue]
@@ -112,8 +116,16 @@ class EdgeView(MutableSequence[Glue]):
     def insert(self, index: int, value: Glue) -> None:
         return self._edges.insert(index, value)
 
-    def __delitem__(self, k: int) -> None:
-        self._edges.__delitem__(k)
+    def __delitem__(self, k: int | str) -> None:
+        raise NotImplementedError
+
+    def __iter__(self) -> Iterator[Glue]:
+        return iter(self._edges)
+
+    def __next__(self) -> Generator[Glue, None, None]:
+        for x in self._edges:
+            yield x
+        raise StopIteration
 
     def __len__(self) -> int:
         return self._edges.__len__()
@@ -125,7 +137,7 @@ class EdgeView(MutableSequence[Glue]):
         return self._edges.__str__()
 
 
-class UseView(MutableSequence[Use]):
+class UseView(MutableMapping[int, Use]):
     """A class to ensure that tile edge use manipulations are handled through the tile."""
 
     _tile: Tile
@@ -153,9 +165,6 @@ class UseView(MutableSequence[Use]):
         self._tile._edges[k].use = v
 
     def insert(self, index: int, value: Use) -> None:
-        raise NotImplementedError
-
-    def __delitem__(self, k: int) -> None:
         raise NotImplementedError
 
     def __len__(self) -> int:
@@ -220,7 +229,7 @@ class Tile:
 
     @edges.setter
     def edges(self, e: Iterable[Glue | str]) -> None:
-        self._edges = e
+        self._edges = [g if isinstance(g, Glue) else Glue(g) for g in e]
 
     @property
     def edge_directions(self) -> List[D]:
@@ -283,13 +292,13 @@ class Tile:
             # fixme: deal with None
         return b
 
-    def update_glues(self, gluedict: GlueList) -> None:
+    def update_glues(self, gluedict: GlueList[Glue]) -> None:
         if self.edges is not None:
-            self.edges = [gluedict.merge_glue(g) for g in self.edges]
+            self._edges = [gluedict.merge_glue(g) for g in self.edges]
 
-    def update_glues_and_list(self, gluedict: GlueList) -> None:
+    def update_glues_and_list(self, gluedict: GlueList[Glue]) -> None:
         if self.edges is not None:
-            self.edges = [gluedict.merge_glue_and_update_list(g) for g in self.edges]
+            self._edges = [gluedict.merge_glue_and_update_list(g) for g in self.edges]
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> Tile:
@@ -414,7 +423,7 @@ class SingleTile(Tile):
 
 
 class VDupleTile(Tile):
-    def to_xgrow(self, self_complementary_glues: bool = False) -> xgt.Tile:
+    def to_xgrow(self, self_complementary_glues: XgrowGlueOpts = "perfect") -> xgt.Tile:
         d = super().to_xgrow(self_complementary_glues)
         d.shape = "V"
         return d

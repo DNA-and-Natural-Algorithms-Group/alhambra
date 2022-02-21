@@ -24,7 +24,7 @@ class Seed(ABC):
 
     @abstractmethod
     def to_xgrow(
-        self, self_complementary_glues=False, offset: tuple[int, int] = (0, 0)
+        self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0, 0)
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         """Create xgrow implementation of the seed.
 
@@ -79,9 +79,12 @@ class DXTallRect(DXOrigamiSeed):
         return cls(**d)
 
     def to_xgrow(
-        self, glue_handling: XgrowGlueOpts = "perfect"
+        self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0, 0)
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
+
+        if offset != (0,0):
+            raise NotImplementedError
 
         xgtiles = []
         locs: list[tuple[int, int, str]] = []

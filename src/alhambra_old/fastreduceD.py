@@ -14,7 +14,11 @@ from typing import (
     TypeVar,
     cast,
     overload,
+    TYPE_CHECKING
 )
+
+if TYPE_CHECKING:
+    from .tilesets import TileSet
 
 import numpy as np
 
@@ -122,32 +126,32 @@ Equiv = npt.NDArray[np.int64]
 
 class FGlueList:
     def __init__(self, glues: GlueList[Glue]):
-        self.name = []
-        self.strength = []
-        self.type = []
-        self.complement = []
-        self.use = []
+        name = []
+        strength = []
+        type = []
+        complement = []
+        use = []
         self.tonum = {}
 
         for i, g in enumerate(glues):
             g = cast(Glue, g)
-            self.name.append(g.ident())
-            self.name.append(g.ident() + "*")
-            self.complement.append(2 * i + 1)
-            self.complement.append(2 * i)
-            self.type.append(g.type)
-            self.type.append(g.type)
+            name.append(g.ident())
+            name.append(g.ident() + "*")
+            complement.append(2 * i + 1)
+            complement.append(2 * i)
+            type.append(g.type)
+            type.append(g.type)
             self.tonum.update({g.ident(): 2 * i, g.ident() + "*": 2 * i + 1})
-            self.strength.append(g.abstractstrength)
-            self.strength.append(g.abstractstrength)
+            strength.append(g.abstractstrength)
+            strength.append(g.abstractstrength)
             assert g.use is not None
-            self.use.append(g.use.value)
-            self.use.append(g.use.invert().value)
-        self.name = np.array(self.name)
-        self.strength = np.array(self.strength)
-        self.type = np.array(self.type)
-        self.complement = np.array(self.complement)
-        self.use = np.array(self.use)
+            use.append(g.use.value)
+            use.append(g.use.invert().value)
+        self.name = np.array(name)
+        self.strength = np.array(strength)
+        self.type = np.array(type)
+        self.complement = np.array(complement)
+        self.use = np.array(use)
 
     def blankequiv(self) -> Equiv:
         return np.arange(0, len(self.name))
@@ -184,8 +188,8 @@ class FTileList:
     vtiles: FTilesArray
 
     def __init__(self, tiles: TileList[Tile], gluelist: FGlueList):
-        self.tiles = []
-        self.totile = {}
+        self.tiles: list[FTile] = []
+        self.totile: dict[str, FTile] = {}
         for t in tiles:
             glues = np.array([gluelist.tonum[x.ident()] for x in t.edges])
             if t.is_fake:
@@ -439,7 +443,7 @@ class _FastTileSet:
 
     def applyequiv(self, ts: TileSet, equiv) -> TileSet:
         ts = ts.copy()
-        alreadythere = []
+        alreadythere: list[tuple[list[Glue], bool]] = []
         for tile in ts.tiles:
             tile.edges = [
                 self.gluelist.name[equiv[self.gluelist.tonum[e.ident()]]]
@@ -449,7 +453,7 @@ class _FastTileSet:
                 tile.fake = True
                 continue
             rs = [tile] + tile.rotations
-            alreadythere.extend((t.edges, False) for t in rs)
+            alreadythere.extend((list(t.edges), False) for t in rs)
         # FIXME
         # if "seed" in ts.keys():
         #    for t in ts.seed["adapters"]:

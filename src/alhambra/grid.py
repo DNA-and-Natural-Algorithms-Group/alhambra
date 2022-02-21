@@ -79,7 +79,7 @@ class ScadnanoLattice(LatticeSupportingScadnano, Lattice):
         raise NotADirectoryError
 
 
-T_AL = TypeVar("T_AL", bound="Type[AbstractLattice]")
+AL = TypeVar("AL", bound="AbstractLattice")
 
 
 def _skip_polyT_and_inertname(glue: Glue) -> bool:
@@ -127,7 +127,7 @@ class AbstractLattice(Lattice):
         return list(np.unique(self.grid))
 
     @classmethod
-    def fromdict(cls: Type[T_AL], d: dict[str, Any]) -> T_AL:
+    def fromdict(cls: Type[AL], d: dict[str, Any]) -> AL:
         return cls(np.array(d["grid"]))
 
     @classmethod
