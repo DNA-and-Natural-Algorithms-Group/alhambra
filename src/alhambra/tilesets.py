@@ -36,7 +36,7 @@ from alhambra.grid import (
     lattice_factory,
 )
 
-from . import fastreduceD as fastreduce
+#from . import fastreduceD as fastreduce
 from .glues import Glue, GlueList
 from .seeds import Seed, seed_factory
 from .tiles import (
@@ -578,9 +578,11 @@ class TileSet(Serializable):
         reduced: single TileSet or equiv, or list
             The reduced system/systems
         """
-        return fastreduce.reduce_tiles(
-            self, preserve, tries, threads, returntype, best, key, initequiv
-        )
+        raise NotImplementedError
+        # from fastreduceD import fastreduce
+        # return fastreduce.reduce_tiles(
+        #     self, preserve, tries, threads, returntype, best, key, initequiv
+        # )
 
     def reduce_ends(
         self,
@@ -637,19 +639,22 @@ class TileSet(Serializable):
         reduced: single TileSet or equiv, or list
             The reduced system/systems
         """
-        return fastreduce.reduce_ends(
-            self, preserve, tries, threads, returntype, best, key, initequiv
-        )
+        raise NotImplementedError
+        # from fastreduceD import fastreduce
+        # return fastreduce.reduce_ends(
+        #     self, preserve, tries, threads, returntype, best, key, initequiv
+        # )
 
     def latticedefects(self, direction="e", depth=2, pp=True, rotate=False):
         """
         Calculate and show possible small lattice defect configurations.
         """
-        from . import latticedefect
+        raise NotImplementedError
+        # from . import latticedefect
 
-        return latticedefect.latticedefects(
-            self, direction=direction, depth=depth, pp=pp, rotate=rotate
-        )
+        # return latticedefect.latticedefects(
+        #     self, direction=direction, depth=depth, pp=pp, rotate=rotate
+        # )
 
     from ._tilesets_dx import (
         dx_plot_adjacent_regions,
