@@ -2484,13 +2484,14 @@ class PlateMap:
     plate_type: PlateType
     """Type of this plate (96-well or 384-well)."""
 
-    vol_each: Quantity[Decimal]
-    """Volume to pipette of each strand listed in this plate."""
-
     well_to_strand_name: dict[str, str]
     """dictionary mapping the name of each well (e.g., "C4") to the name of the strand in that well.
 
     Wells with no strand in the PlateMap are not keys in the dictionary."""
+
+    vol_each: Quantity[Decimal] | None = None
+    """Volume to pipette of each strand listed in this plate. (optional in case you simply want 
+    to create a plate map listing the strand names without instructions to pipette)"""
 
     def __str__(self) -> str:
         return self.to_table()
@@ -2609,7 +2610,8 @@ class PlateMap:
                 if not well_pos.is_last():
                     well_pos = well_pos.advance()
 
-        raw_title = f'plate "{self.plate_name}", {self.vol_each} each'
+        raw_title = f'plate "{self.plate_name}"' + \
+                    (f', {self.vol_each} each' if self.vol_each is not None else '')
         title = _format_title(raw_title, title_level, tablefmt)
 
         header = [" "] + [str(col) for col in self.plate_type.cols()]
@@ -2746,6 +2748,30 @@ class Reference:
 
     def __len__(self) -> int:
         return len(self.df)
+
+    def plate_map(self, name: str) -> PlateMap:
+        """
+        :param name:
+            Name of plate to make a :class:`PlateMap` for.
+        :return:
+            a :class:`PlateMap` consisting of all strands in this Reference object from plate named
+            `name`. Currently always makes a 96-well plate. (TODO: figure out how to tell if it
+            is supposed to be a 384-well plate).
+        """
+        well_to_strand_name = {}
+        for row in self.df.itertuples():
+            if row.Plate == name: # type: ignore
+                well = row.Well
+                sequence = row.Sequence
+                strand = Strand(name=row.Name, sequence=sequence)
+                well_to_strand_name[well] = strand.name
+
+        plate_map = PlateMap(
+            plate_name=name,
+            plate_type=PlateType.wells96,
+            well_to_strand_name=well_to_strand_name,
+        )
+        return plate_map
 
     def search(
         self,
