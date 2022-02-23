@@ -2762,9 +2762,9 @@ class Reference:
         well_to_strand_name = {}
         for row in self.df.itertuples():
             if row.Plate == name:  # type: ignore
-                well = row.Well
-                sequence = row.Sequence
-                strand = Strand(name=row.Name, sequence=sequence)
+                well = row.Well  # type: ignore
+                sequence = row.Sequence  # type: ignore
+                strand = Strand(name=row.Name, sequence=sequence)  # type: ignore
                 well_to_strand_name[well] = strand.name
 
         plate_map = PlateMap(
