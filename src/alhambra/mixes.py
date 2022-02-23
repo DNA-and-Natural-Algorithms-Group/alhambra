@@ -2610,8 +2610,9 @@ class PlateMap:
                 if not well_pos.is_last():
                     well_pos = well_pos.advance()
 
-        raw_title = f'plate "{self.plate_name}"' + \
-                    (f', {self.vol_each} each' if self.vol_each is not None else '')
+        raw_title = f'plate "{self.plate_name}"' + (
+            f", {self.vol_each} each" if self.vol_each is not None else ""
+        )
         title = _format_title(raw_title, title_level, tablefmt)
 
         header = [" "] + [str(col) for col in self.plate_type.cols()]
@@ -2760,7 +2761,7 @@ class Reference:
         """
         well_to_strand_name = {}
         for row in self.df.itertuples():
-            if row.Plate == name: # type: ignore
+            if row.Plate == name:  # type: ignore
                 well = row.Well
                 sequence = row.Sequence
                 strand = Strand(name=row.Name, sequence=sequence)
