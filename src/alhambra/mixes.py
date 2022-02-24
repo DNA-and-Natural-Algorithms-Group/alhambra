@@ -2750,7 +2750,9 @@ class Reference:
     def __len__(self) -> int:
         return len(self.df)
 
-    def plate_map(self, name: str, plate_type: PlateType = PlateType.wells96) -> PlateMap:
+    def plate_map(
+        self, name: str, plate_type: PlateType = PlateType.wells96
+    ) -> PlateMap:
         """
         :param name:
             Name of plate to make a :class:`PlateMap` for.
