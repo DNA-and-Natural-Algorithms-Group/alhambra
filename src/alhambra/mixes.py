@@ -2750,14 +2750,16 @@ class Reference:
     def __len__(self) -> int:
         return len(self.df)
 
-    def plate_map(self, name: str) -> PlateMap:
+    def plate_map(self, name: str, plate_type: PlateType = PlateType.wells96) -> PlateMap:
         """
         :param name:
             Name of plate to make a :class:`PlateMap` for.
+        :param plate_type:
+            Either :data:`PlateType.wells96` or :data:`PlateType.wells384`;
+            default is :data:`PlateType.wells96`.
         :return:
             a :class:`PlateMap` consisting of all strands in this Reference object from plate named
-            `name`. Currently always makes a 96-well plate. (TODO: figure out how to tell if it
-            is supposed to be a 384-well plate).
+            `name`. Currently always makes a 96-well plate.
         """
         well_to_strand_name = {}
         for row in self.df.itertuples():
@@ -2769,7 +2771,7 @@ class Reference:
 
         plate_map = PlateMap(
             plate_name=name,
-            plate_type=PlateType.wells96,
+            plate_type=plate_type,
             well_to_strand_name=well_to_strand_name,
         )
         return plate_map
