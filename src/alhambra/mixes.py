@@ -86,7 +86,7 @@ __all__ = (
 log = logging.getLogger("alhambra")
 
 ureg = pint.UnitRegistry(non_int_type=Decimal)
-ureg.default_format = "~#P"
+ureg.default_format = "~P"
 
 uL = ureg.uL
 uM = ureg.uM
