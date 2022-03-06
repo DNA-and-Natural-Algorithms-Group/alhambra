@@ -86,7 +86,7 @@ __all__ = (
 log = logging.getLogger("alhambra")
 
 ureg = pint.UnitRegistry(non_int_type=Decimal)
-ureg.default_format = "~#P"
+ureg.default_format = "~P"
 
 uL = ureg.uL
 uM = ureg.uM
@@ -1993,8 +1993,9 @@ class Mix(AbstractComponent):
                 and mixline.each_tx_vol != ZERO_VOL
                 and mixline.each_tx_vol < self.min_volume
             ):
+                # FIXME: why do these need :f?
                 msg = (
-                    f"Some items have lower transfer volume than min_volume = {self.min_volume}\n"
+                    f"Some items have lower transfer volume than {self.min_volume}\n"
                     f'This is in creating mix "{self.name}", '
                     f"attempting to pipette {mixline.each_tx_vol} of these components:\n"
                     f"{mixline.names}"
@@ -2178,6 +2179,73 @@ class Mix(AbstractComponent):
             entries.append(entry)
         return "\n".join(entries)
 
+    def display_instructions(
+        self,
+        plate_type: PlateType = PlateType.wells96,
+        validate: bool = True,
+        combine_plate_actions: bool = True,
+        well_marker: None | str | Callable[[str], str] = None,
+        title_level: Literal[1, 2, 3, 4, 5, 6] = 3,
+        warn_unsupported_title_format: bool = True,
+        buffer_name: str = "Buffer",
+        tablefmt: str | TableFormat = "pipe",
+        include_plate_maps: bool = True,
+    ) -> None:
+        """
+        Displays in a Jupyter notebook the result of calling :meth:`Mix.instructions()`.
+
+        :param plate_type:
+            96-well or 384-well plate; default is 96-well.
+        :param validate:
+            Ensure volumes make sense.
+        :param combine_plate_actions:
+            If True, then if multiple actions in the Mix take the same volume from the same plate,
+            they will be combined into a single :class:`PlateMap`.
+        :param well_marker:
+            By default the strand's name is put in the relevant plate entry. If `well_marker` is specified
+            and is a string, then that string is put into every well with a strand in the plate map instead.
+            This is useful for printing plate maps that just put,
+            for instance, an `'X'` in the well to pipette (e.g., specify ``well_marker='X'``),
+            e.g., for experimental mixes that use only some strands in the plate.
+            To enable the string to depend on the well position
+            (instead of being the same string in every well), `well_marker` can also be a function
+            that takes as input a string representing the well (such as ``"B3"`` or ``"E11"``),
+            and outputs a string. For example, giving the identity function
+            ``mix.to_table(well_marker=lambda x: x)`` puts the well address itself in the well.
+        :param title_level:
+            The "title" is the first line of the returned string, which contains the plate's name
+            and volume to pipette. The `title_level` controls the size, with 1 being the largest size,
+            (header level 1, e.g., # title in Markdown or <h1>title</h1> in HTML).
+        :param warn_unsupported_title_format:
+            If True, prints a warning if `tablefmt` is a currently unsupported option for the title.
+            The currently supported formats for the title are 'github', 'html', 'unsafehtml', 'rst',
+            'latex', 'latex_raw', 'latex_booktabs', "latex_longtable". If `tablefmt` is another valid
+            option, then the title will be the Markdown format, i.e., same as for `tablefmt` = 'github'.
+        :param tablefmt:
+            By default set to `'github'` to create a Markdown table. For other options see
+            https://github.com/astanin/python-tabulate#readme
+        :param include_plate_maps:
+            If True, include plate maps as part of displayed instructions, otherwise only include the
+            more compact mixing table (which is always displayed regardless of this parameter).
+        :return:
+            pipetting instructions in the form of strings combining results of :meth:`Mix.table` and
+            :meth:`Mix.plate_maps`
+        """
+        from IPython.display import display, Markdown
+
+        ins_str = self.instructions(
+            plate_type=plate_type,
+            validate=validate,
+            combine_plate_actions=combine_plate_actions,
+            well_marker=well_marker,
+            title_level=title_level,
+            warn_unsupported_title_format=warn_unsupported_title_format,
+            buffer_name=buffer_name,
+            tablefmt=tablefmt,
+            include_plate_maps=include_plate_maps,
+        )
+        display(Markdown(ins_str))
+
     def instructions(
         self,
         plate_type: PlateType = PlateType.wells96,
@@ -2188,6 +2256,7 @@ class Mix(AbstractComponent):
         warn_unsupported_title_format: bool = True,
         buffer_name: str = "Buffer",
         tablefmt: str | TableFormat = "pipe",
+        include_plate_maps: bool = True,
     ) -> str:
         """
         Returns string combiniing the string results of calling :meth:`Mix.table` and
@@ -2223,6 +2292,9 @@ class Mix(AbstractComponent):
         :param tablefmt:
             By default set to `'github'` to create a Markdown table. For other options see
             https://github.com/astanin/python-tabulate#readme
+        :param include_plate_maps:
+            If True, include plate maps as part of displayed instructions, otherwise only include the
+            more compact mixing table (which is always displayed regardless of this parameter).
         :return:
             pipetting instructions in the form of strings combining results of :meth:`Mix.table` and
             :meth:`Mix.plate_maps`
@@ -2233,19 +2305,21 @@ class Mix(AbstractComponent):
             tablefmt=tablefmt,
         )
         plate_map_strs = []
-        plate_maps = self.plate_maps(
-            plate_type=plate_type,
-            validate=validate,
-            combine_plate_actions=combine_plate_actions,
-        )
-        for plate_map in plate_maps:
-            plate_map_str = plate_map.to_table(
-                well_marker=well_marker,
-                title_level=title_level,
-                warn_unsupported_title_format=warn_unsupported_title_format,
-                tablefmt=tablefmt,
+
+        if include_plate_maps:
+            plate_maps = self.plate_maps(
+                plate_type=plate_type,
+                validate=validate,
+                combine_plate_actions=combine_plate_actions,
             )
-            plate_map_strs.append(plate_map_str)
+            for plate_map in plate_maps:
+                plate_map_str = plate_map.to_table(
+                    well_marker=well_marker,
+                    title_level=title_level,
+                    warn_unsupported_title_format=warn_unsupported_title_format,
+                    tablefmt=tablefmt,
+                )
+                plate_map_strs.append(plate_map_str)
 
         # make title for whole instructions a bit bigger, if we can
         table_title_level = title_level if title_level == 1 else title_level - 1
@@ -2255,7 +2329,12 @@ class Mix(AbstractComponent):
         table_title = _format_title(
             raw_table_title, level=table_title_level, tablefmt=tablefmt
         )
-        return table_title + "\n\n" + table_str + "\n\n" + "\n\n".join(plate_map_strs)
+        return (
+            table_title
+            + "\n\n"
+            + table_str
+            + ("\n\n" + "\n\n".join(plate_map_strs) if len(plate_map_strs) > 0 else "")
+        )
 
     def plate_maps(
         self,
@@ -2376,6 +2455,8 @@ class Mix(AbstractComponent):
             ):
                 continue
             if mixline.plate.lower() == "tube":
+                continue
+            if mixline.plate == "":
                 continue
             existing_plate = None
             key = (mixline.plate, mixline.each_tx_vol)
