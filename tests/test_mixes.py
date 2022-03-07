@@ -232,7 +232,7 @@ def test_a_mix(reference: Reference):
         is not None
     )
 
-    ml = m.mixlines()
+    ml = m.mixlines(tablefmt='pipe')
 
     assert sum(l.total_tx_vol for l in ml if not l.fake) == m.total_volume
 
@@ -300,7 +300,7 @@ def test_non_plates():
 
     m.table()
 
-    ml = m.mixlines()
+    ml = m.mixlines(tablefmt='pipe')
 
     assert len(ml) == 4
 
