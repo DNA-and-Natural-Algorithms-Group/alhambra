@@ -226,7 +226,7 @@ def test_a_mix(reference: Reference):
 
     assert (
         re.match(
-            r"Table: Mix: test, Conc: 400.00 nM, Total Vol: 50.00 µl, Component Count: 4, Test tube name: tm1",
+            r"Table: Mix: test, Conc: 400.00 nM, Total Vol: 50.00 µl, Test tube name: tm1",
             mdt[0],
         )
         is not None

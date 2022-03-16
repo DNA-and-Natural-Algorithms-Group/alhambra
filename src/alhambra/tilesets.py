@@ -268,7 +268,7 @@ class TileSet(Serializable):
 
     @classmethod
     def from_scadnano(
-        cls: Type[TileSet], des: scadnano.Design, ret_fails: bool=False
+        cls: Type[TileSet], des: scadnano.Design, ret_fails: bool = False
     ) -> TileSet:
         """Create TileSet from Scadnano Design."""
         import scadnano
