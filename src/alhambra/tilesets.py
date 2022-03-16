@@ -258,12 +258,17 @@ class TileSet(Serializable):
             **info
         )
 
-    def __str__(self):
+    def __repr__(self) -> str:
+        self.tiles.refreshnames()
+        self.glues.refreshnames()
+        return f"TileSet({len(self.tiles)} tiles, {len(self.glues)} glues)"
+
+    def __str__(self) -> str:
         return self.summary()
 
     @classmethod
     def from_scadnano(
-        cls: Type[TileSet], des: scadnano.Design, ret_fails=False
+        cls: Type[TileSet], des: scadnano.Design, ret_fails: bool=False
     ) -> TileSet:
         """Create TileSet from Scadnano Design."""
         import scadnano
@@ -360,7 +365,7 @@ class TileSet(Serializable):
         x: int | slice | None = None,
         y: int | slice | None = None,
         copy: bool = False,
-    ):
+    ) -> list[Tile]:
         """Return a list of (unique) tiles in a lattice, potentially taking a slice of the lattice.
 
         Parameters
