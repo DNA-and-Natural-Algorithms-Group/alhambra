@@ -31,7 +31,7 @@ GlueA = TypeVar("GlueA", bound="Glue")
 GlueB = TypeVar("GlueB", bound="Glue")
 
 
-class Use(Enum):
+class Use(int, Enum):
     UNUSED = 0
     NULL = 1
     INPUT = 2
