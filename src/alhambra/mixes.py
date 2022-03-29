@@ -506,6 +506,8 @@ def _formatter(
 ) -> str:
     if isinstance(x, (int, str)):
         out = str(x)
+        if tablefmt in _TABLEFMTS_NEWLINES_SIGNIFICANT:
+            out = out.replace("\n", " ")
     elif x is None:
         out = ""
     elif isinstance(x, float):
@@ -2719,6 +2721,14 @@ _SUPPORTED_TABLEFMTS_TITLE = [
     html_with_borders_tablefmt,
 ]
 
+_TABLEFMTS_NEWLINES_SIGNIFICANT = [
+    "github",
+    "pipe",
+    "simple",
+    "grid",
+    "rst",
+]
+
 
 @attrs.define()
 class PlateMap:
@@ -2770,7 +2780,7 @@ class PlateMap:
         .. code-block:: python
 
             plate_maps = mix.plate_maps()
-            maps_strs = '\n\n'.join(plate_map.to_table())
+            maps_strs = '\n\n'.join(plate_map.to_table() for plate_map in plate_maps)
             from IPython.display import display, Markdown
             display(Markdown(maps_strs))
 
@@ -2780,6 +2790,10 @@ class PlateMap:
         In particular, the parameter `tablefmt` has default value `'github'`,
         which creates a Markdown format. To create other formats such as HTML, change the value of
         `tablefmt`; see https://github.com/astanin/python-tabulate#readme for other possible formats.
+
+        If `tablefmt` is one in which newlines are significant (e.g., "pipe" or "rst"),
+        then any strings that end up in the final returned value have newlines replaced with spaces
+        to prevent them from disrupting the formatting.
 
         :param well_marker:
             By default the strand's name is put in the relevant plate entry. If `well_marker` is specified
@@ -2856,6 +2870,10 @@ class PlateMap:
                         well_marker_to_use = well_marker
                     elif callable(well_marker):
                         well_marker_to_use = well_marker(well_str)
+
+                    if tablefmt in _TABLEFMTS_NEWLINES_SIGNIFICANT:
+                        well_marker_to_use = well_marker_to_use.replace("\n", " ")
+
                     table[r][c] = well_marker_to_use
                 if not well_pos.is_last():
                     well_pos = well_pos.advance()
