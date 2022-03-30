@@ -33,7 +33,7 @@ def test_wellpos_movement():
     assert WellPos("A12").next_bycol() == WellPos("B12")
 
     with pytest.raises(
-        ValueError, match=r"Row I \(9\) out of bounds for plate size 96"
+            ValueError, match=r"Row I \(9\) out of bounds for plate size 96"
     ):
         WellPos("H12").next_byrow()
 
@@ -94,7 +94,6 @@ def test_all_wellref_96():
 
 
 def test_component():
-
     assert Component("test1") != Component("test2")
 
     assert Component("test3") == Component("test3")
@@ -122,7 +121,7 @@ def reference():
 
 
 def test_reference_saveload(
-    tmp_path_factory: pytest.TempPathFactory, reference: Reference
+        tmp_path_factory: pytest.TempPathFactory, reference: Reference
 ):
     sf = tmp_path_factory.mktemp("exp") / "test.csv"
 
@@ -166,7 +165,7 @@ def test_strand_with_reference(reference: Reference):
 
 
 def test_with_reference_get_first(
-    reference: Reference, caplog: pytest.LogCaptureFixture
+        reference: Reference, caplog: pytest.LogCaptureFixture
 ):
     s = Strand("strand3").with_reference(reference)
 
@@ -225,11 +224,11 @@ def test_a_mix(reference: Reference):
     mdt = m._repr_markdown_().splitlines()
 
     assert (
-        re.match(
-            r"Table: Mix: test, Conc: 400.00 nM, Total Vol: 50.00 µl, Test tube name: tm1",
-            mdt[0],
-        )
-        is not None
+            re.match(
+                r"Table: Mix: test, Conc: 400.00 nM, Total Vol: 50.00 µl, Test tube name: tm1",
+                mdt[0],
+            )
+            is not None
     )
 
     ml = m.mixlines(tablefmt='pipe')
@@ -404,3 +403,49 @@ def test_combine_plate_actions_false():
     assert pms[1].well_to_strand_name["B1"] == "s3"
     assert pms[2].well_to_strand_name["A2"] == "s2"
     assert pms[3].well_to_strand_name["B2"] == "s4"
+
+
+def test_buffer_reminder():
+    # this is sort of a "control" for the previous test; make sure we can reproduce old behavior
+    from alhambra.mixes import Strand, Mix, MultiFixedConcentration
+
+    s1 = Strand("s1", "100 uM", plate="plate1", well="A1")
+    s2 = Strand("s2", "100 uM", plate="plate1", well="A2")
+    s3 = Strand("s3", "100 uM", plate="plate2", well="B1")
+    s4 = Strand("s4", "100 uM", plate="plate2", well="B2")
+    mix = Mix(
+        actions=[
+            MultiFixedConcentration([s1, s3], fixed_concentration="10 uM"),
+            MultiFixedConcentration([s2, s4], fixed_concentration="10 uM"),
+        ],
+        name="test",
+        fixed_total_volume="40uL",
+        min_volume="0 uL",
+    )
+
+    pms = mix.instructions(title_level=3)
+    assert '### Buffer' in pms
+    assert '### Tubes' not in pms
+
+
+def test_tubes_and_buffer_reminder():
+    # this is sort of a "control" for the previous test; make sure we can reproduce old behavior
+    from alhambra.mixes import Strand, Mix, MultiFixedConcentration
+
+    s1 = Strand("s1", "100 uM", plate="plate1", well="A1")
+    s2 = Strand("s2", "100 uM", plate="plate1", well="A2")
+    s3 = Strand("s3", "100 uM", plate="plate2", well="B1")
+    s4 = Strand("s4", "100 uM", plate="plate2", well="B2")
+    s5 = Strand("s4", "100 uM", plate="tube")
+    mix = Mix(
+        actions=[
+            MultiFixedConcentration([s1, s2, s3, s4, s5], fixed_concentration="10 uM"),
+        ],
+        name="test",
+        fixed_total_volume="40uL",
+        min_volume="0 uL",
+    )
+
+    pms = mix.instructions(title_level=3)
+    assert '### Buffer' in pms
+    assert '### Tubes' in pms
