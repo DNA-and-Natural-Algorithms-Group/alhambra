@@ -2434,10 +2434,31 @@ class Mix(AbstractComponent):
         table_title = _format_title(
             raw_table_title, level=table_title_level, tablefmt=tablefmt
         )
+
+        # reminder about tubes and buffer for users who instinctively look only at plate maps
+        buffer_reminder_raw = "Buffer"
+        buffer_reminder = (
+            _format_title(buffer_reminder_raw, title_level, tablefmt=tablefmt)
+            + f'\nSee mix table above where Component is "{buffer_name}"'
+        )
+        buffer_and_tubes_reminder = buffer_reminder
+
+        mixlines = self.mixlines(tablefmt=tablefmt, buffer_name=buffer_name)
+        have_tubes = any(mixline.location(tablefmt) == "tube" for mixline in mixlines)
+        if have_tubes:
+            tube_reminder_raw = "Tubes"
+            tube_reminder = (
+                _format_title(tube_reminder_raw, title_level, tablefmt=tablefmt)
+                + f'\nSee mix table above where Location is "tube"'
+            )
+            buffer_and_tubes_reminder += "\n\n" + tube_reminder
+
         return (
             table_title
             + "\n\n"
             + table_str
+            + "\n\n"
+            + buffer_and_tubes_reminder
             + ("\n\n" + "\n\n".join(plate_map_strs) if len(plate_map_strs) > 0 else "")
         )
 
