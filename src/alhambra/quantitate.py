@@ -688,7 +688,12 @@ def display_hydrate_and_measure_conc_and_dilute_from_specs(
     table = tabulate(table_list, headers=headers, tablefmt="pipe", floatfmt=".2f")
     from alhambra.mixes import _format_title
 
-    raw_title = "Initial measured concentrations and subsequent dilution volumes"
+    target_conc_high = parse_conc(target_conc_high)
+    target_conc_low = parse_conc(target_conc_low)
+    raw_title = (
+        f"Measured concentrations after targeting {target_conc_high}, "
+        f"subsequent dilution volumes targeting {target_conc_low}"
+    )
     title = _format_title(raw_title, level=2, tablefmt="pipe")
     display(Markdown(title + "\n\n" + table))
 
@@ -725,7 +730,8 @@ def display_hydrate_from_specs(
     table = tabulate(table_list, headers=headers, tablefmt="pipe", floatfmt=".2f")
     from alhambra.mixes import _format_title
 
-    raw_title = "Initial hydration volumes"
+    target_conc = parse_conc(target_conc)
+    raw_title = f"Initial hydration volumes targeting {target_conc}"
     title = _format_title(raw_title, level=2, tablefmt="pipe")
     display(Markdown(title + "\n\n" + table))
 
