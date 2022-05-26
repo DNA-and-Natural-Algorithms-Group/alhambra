@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Sequence, Type, TypeVar, cast
 
+import attrs
 
 if TYPE_CHECKING:
     from alhambra.tilesets import XgrowGlueOpts
@@ -63,19 +64,18 @@ class SeedFactory:
 class DXOrigamiSeed(Seed):
     ...
 
+def _convert_adapts(adapters: Sequence[Sequence[str | Glue, str | Glue]]) -> list[tuple[Glue, Glue]]:
+    # todo: verify
+    return [(Glue(a[0]), Glue(a[1])) for a in adapters]
 
-class DXTallRect(DXOrigamiSeed):
+@attrs.define()
+class DiagonalSESeed(Seed):
     "Tall rectangle origami to DX-tile seed (Barish et al)"
     # FIXME: fixed-choice adapters for now
-    adapters: list[tuple[Glue, Glue]]
-
-    def __init__(
-        self, adapters, createseqs: bool = False, use_adapters: Sequence[str] = tuple()
-    ) -> None:
-        self.adapters = [(Glue(a["ends"][0]), Glue(a["ends"][1])) for a in adapters]
+    adapters: list[tuple[Glue, Glue]] = attrs.field(converter=_convert_adapts, on_setattr=attrs.setters.convert)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> DXTallRect:
+    def from_dict(cls, d: dict[str, Any]) -> DiagonalSESeed:
         return cls(**d)
 
     def to_xgrow(
@@ -105,7 +105,7 @@ class DXTallRect(DXOrigamiSeed):
                 ["seed", egn, sgn, "seed"],
                 f"adapter_{i}",
                 stoic=0,
-                color="green",
+                color="brown",
             )
             locs.append((x, y, cast(str, xa.name)))
             if x != 1:
@@ -122,6 +122,6 @@ class DXTallRect(DXOrigamiSeed):
 
 seed_factory = SeedFactory()
 
-seed_factory.register(DXTallRect, "longrect")
+seed_factory.register(DiagonalSESeed, "longrect")
 # seed_factory.register(DX_TallRect, "tallrect")
 # seed_factory.register(DX_TallRect)
