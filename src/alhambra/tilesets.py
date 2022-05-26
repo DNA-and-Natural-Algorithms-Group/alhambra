@@ -196,7 +196,7 @@ class TileSet(Serializable):
                     if g.complement.name not in allglues
                 )
                 xg_glues = [
-                    xgt.Glue(g.name, g.complement.name, g.abstractstrength)
+                    xgt.Glue(g.name, g.complement.name, g.abstractstrength if g.abstractstrength is not None else 1)
                     for g in allglues
                 ]
             case _:
