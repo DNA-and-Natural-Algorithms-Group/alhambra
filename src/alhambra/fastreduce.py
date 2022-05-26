@@ -44,11 +44,11 @@ class FGlueList:
             self.name.append(g.name + "/")
             self.complement.append(2 * i + 1)
             self.complement.append(2 * i)
-            self.structure.append(g.etype)
-            self.structure.append(g.etype)
+            self.structure.append(type(g))
+            self.structure.append(type(g))
             self.tonum.update({g.name: 2 * i, g.name + "/": 2 * i + 1})
-            self.strength.append(g.strength)
-            self.strength.append(g.strength)
+            self.strength.append(g.abstractstrength if g.abstractstrength is not None else 1)
+            self.strength.append(g.abstractstrength if g.abstractstrength is not None else 1)
             self.use.append(g.use)
             self.use.append((g.use // 2) + (g.use % 2) * 2)
         self.name = np.array(self.name)
@@ -288,15 +288,16 @@ def _ft_to_fta(ftiles):
 class _FastTileSet:
     def __init__(self, tilesystem):
         self.gluelist = FGlueList(
-            tilesystem.allends
-            + [
-                Glue({"name": "hp", "type": "hairpin", "strength": 0}),
-                Glue({"name": "fakedouble", "type": "fakedouble", "strength": 0}),
-            ]
+            tilesystem.allglues
+            # + [
+            #     Glue({"name": "hp", "type": "hairpin", "strength": 0}),
+            #     Glue({"name": "fakedouble", "type": "fakedouble", "strength": 0}),
+            # ]
         )
         self.tilelist = FTileList(
             tilesystem.tiles
-            + sum([x.named_rotations() for x in tilesystem.tiles], TileList()),
+            # + sum([x.named_rotations() for x in tilesystem.tiles], TileList()), # FIXME
+            ,
             self.gluelist,
         )
 
