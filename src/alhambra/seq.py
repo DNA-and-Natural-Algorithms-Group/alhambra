@@ -230,7 +230,7 @@ class Seq:
         return self.seq_str
 
     def __repr__(self) -> str:
-        return "Seq(" + repr(self.seq_str) + ")"
+        return repr(self.seq_str)
 
     def __len__(self) -> int:
         return self.dna_length
