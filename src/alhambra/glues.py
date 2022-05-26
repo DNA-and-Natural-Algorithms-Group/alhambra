@@ -25,6 +25,8 @@ from warnings import warn
 from .classes import UpdateListD
 from .seq import Seq
 
+import attrs
+
 T = TypeVar("T")
 
 GlueA = TypeVar("GlueA", bound="Glue")
@@ -59,10 +61,10 @@ class Use(int, Enum):
                 return Use.BOTH
         raise ValueError
 
-    def __or__(self, other: Use) -> Use:
+    def __or__(self, other: Any) -> Use:
         raise NotImplementedError
 
-    def __ror__(self, other: Use) -> Use:
+    def __ror__(self, other: Any) -> Use:
         raise NotImplementedError
 
 
@@ -75,33 +77,19 @@ def merge_items(a: Optional[T], b: Optional[T]) -> Optional[T]:
         assert a == b
         return a
 
+def _ensure_glue_name(n: str | None) -> str | None:
+    "Ensure the glue name uses *, not /, and is reasonable."
+    if n is not None:
+        if (len(n) >= 1) and n[-1] == '/':
+            n = n[:-1] + "*"
+    return n
 
-@dataclass(init=False)
+@attrs.define()
 class Glue:
-    name: Optional[str]
-    note: Optional[str]
-    use: Use
-    abstractstrength: Optional[int]
-    _fields: ClassVar[tuple[tuple[str, str], ...]] = (
-        ("name", "name"),
-        ("note", "note"),
-        ("use", "use"),
-        ("abstractstrength", "abstractstrength"),
-    )
-
-    def __init__(
-        self,
-        name: Optional[str] = None,
-        note: Optional[str] = None,
-        use: Use = Use.UNSET,
-        abstractstrength: Optional[int] = 1,
-    ):
-        if name and name[-1] == "/":
-            name = name[:-1] + "*"
-        self.name = name
-        self.note = note
-        self.use = use
-        self.abstractstrength = abstractstrength
+    name: Optional[str] = attrs.field(converter=_ensure_glue_name, on_setattr=attrs.setters.convert, default=None)
+    note: Optional[str] = attrs.field(default=None)
+    use: Use = attrs.field(default=Use.UNSET)
+    abstractstrength: Optional[int] = attrs.field(default=None)
 
     def _into_complement(self):
         if self.name is not None:
@@ -109,13 +97,6 @@ class Glue:
                 self.name = self.name[:-1]
             else:
                 self.name = self.name + "*"
-
-    def __repr__(self) -> str:
-        p = []
-        for f, d in type(self)._fields:
-            if (v := getattr(self, f)) != getattr(type(self), f, None):
-                p.append(f"{d}={repr(v)}")
-        return type(self).__name__ + "(" + ", ".join(p) + ")"
 
     def copy(self: T) -> T:
         return copy.copy(self)
@@ -215,12 +196,9 @@ class GlueFactory:
 glue_factory = GlueFactory()
 
 
-@dataclass(init=False)
+@attrs.define(init=False)
 class SSGlue(Glue):
-    _sequence: Seq
-    _fields: ClassVar[tuple[tuple[str, str], ...]] = Glue._fields + (
-        ("_sequence", "sequence"),
-    )
+    _sequence: Seq = attrs.field(default=Seq(""))
 
     def __init__(
         self,
@@ -230,7 +208,7 @@ class SSGlue(Glue):
         note: Optional[str] = None,
         use: Optional[Use] = None,
     ):
-        super().__init__(name, note, Use.UNSET)
+        super().__init__(name, note, use)
 
         if isinstance(length, int):
             lseq: Seq | None = Seq("N" * length)
@@ -259,7 +237,7 @@ class SSGlue(Glue):
         return self._sequence
 
     @sequence.setter
-    def sequence(self, seq: Seq | str | None):  # type: ignore
+    def sequence(self, seq: Seq | str | None) -> None:  # type: ignore
         if seq is None:
             self._sequence = Seq("N" * self.dna_length)
             return
@@ -300,12 +278,6 @@ class SSGlue(Glue):
         new.update(other)
         return new
 
-    def __repr__(self):
-        s = f"SSGlue({repr(self.name)}, {self.dna_length}"
-        if not self.sequence.is_null:
-            s += f", {repr(self.sequence.seq_str)}"
-        return s + ")"
-
     def to_dict(self) -> dict[str, Any]:
         d = super().to_dict()
         d["type"] = self.__class__.__name__
@@ -326,14 +298,10 @@ class SSGlue(Glue):
 
 glue_factory.register(SSGlue)
 
-
+@attrs.define(init=False)
 class DXGlue(Glue):
-    etype: Literal["TD", "DT"]
-    _fullseq: Seq
-    _fields: ClassVar[tuple[tuple[str, str], ...]] = Glue._fields + (
-        ("etype", "etype"),
-        ("_fullseq", "fullseq"),
-    )
+    etype: Literal["TD", "DT"] = attrs.field(default="TD")
+    fullseq: Seq = attrs.field(default=Seq(""))
 
     def _into_complement(self):
         if self.fullseq is not None:
@@ -376,20 +344,20 @@ class DXGlue(Glue):
                 trial_fseq = Seq(fullseq)
         if trial_fseq is None:
             raise ValueError("Must have a least some information.")
-        self._fullseq = trial_fseq
+        self.fullseq = trial_fseq
 
     @property
     def fseq(self) -> Optional[str]:
-        if self._fullseq is not None:
-            return self._fullseq.seq_str
+        if self.fullseq is not None:
+            return self.fullseq.seq_str
         else:
             return None
 
     @fseq.setter
     def fseq(self, value: str):
-        if self._fullseq is not None and len(value) != len(self._fullseq):
+        if self.fullseq is not None and len(value) != len(self.fullseq):
             warn("Changing end length")
-        self._fullseq = Seq(value)
+        self.fullseq = Seq(value)
 
     @property
     def seq(self) -> Optional[str]:
@@ -403,12 +371,12 @@ class DXGlue(Glue):
     @property
     def comp(self):
         """The complement end sequences of the End, as a string."""
-        if not self._fullseq:
+        if not self.fullseq:
             return None
         if self.etype == "TD":
-            return self._fullseq.revcomp.base_str[1:]
+            return self.fullseq.revcomp.base_str[1:]
         elif self.etype == "DT":
-            return self._fullseq.revcomp.base_str[:-1]
+            return self.fullseq.revcomp.base_str[:-1]
 
     def merge(self, other: Glue) -> DXGlue:
         out = self.copy()
@@ -423,8 +391,8 @@ class DXGlue(Glue):
                 if (nv := getattr(other, k, None)) is not None:
                     setattr(out, k, nv)
         if isinstance(other, DXGlue):
-            if out._fullseq:
-                out._fullseq = out._fullseq.merge(other._fullseq)
+            if out.fullseq:
+                out.fullseq = out.fullseq.merge(other.fullseq)
             if out.use and other.use:
                 out.use = out.use | other.use
         return out
