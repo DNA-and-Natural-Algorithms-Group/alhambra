@@ -395,6 +395,8 @@ class SingleTile(Tile):
     ) -> draw.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
+        elif self.color[0] == "#":
+            color = self.color
         else:
             color = "gray"
         box = draw.Rectangle(0, 0, 10, 10, fill=color, stroke="black")
@@ -455,6 +457,8 @@ class VDupleTile(Tile):
     ) -> draw.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
+        elif self.color[0] == "#":
+            color = self.color
         else:
             color = "gray"
         box = draw.Rectangle(0, 0, 10, 20, fill=color, stroke="black")
@@ -530,6 +534,8 @@ class HDupleTile(Tile):
     ) -> draw.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
+        elif self.color[0] == "#":
+            color = self.color
         else:
             color = "rgb(150,150,150)"
         box = draw.Rectangle(0, 0, 20, 10, fill=color, stroke="black")
