@@ -457,7 +457,7 @@ class _FastTileSet:
             if (tile.edges, False) in alreadythere:  # FIXME: False was label
                 tile.fake = True
                 continue
-            rs = [tile] + tile.rotations
+            rs = [tile] # + tile.rotations FIXME
             alreadythere.extend((list(t.edges), False) for t in rs)
         # FIXME
         # if "seed" in ts.keys():

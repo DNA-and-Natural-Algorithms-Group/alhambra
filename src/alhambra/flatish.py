@@ -29,7 +29,7 @@ from alhambra.seq import Seq
 from alhambra.tilesets import XgrowGlueOpts
 
 from .glues import Glue
-from .seeds import Seed, seed_factory
+from .seeds import Seed, seed_factory, DiagonalSESeed
 from .tiles import (
     BaseSSTile,
     BaseSSTSingle,
@@ -152,7 +152,7 @@ class FlatishVDupleTile10_E2(VDupleTile, BaseSSTile):
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
     ) -> scadnano.Strand:
-        s = design.strand(
+        s = design.draw_strand(
             helix + self._scadnano_5p_offset[0], offset + self._scadnano_5p_offset[1]
         )
         domiter = iter(self.domains)
@@ -205,7 +205,7 @@ class FlatishVDupleTile9_E2(VDupleTile, BaseSSTile):
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
     ) -> scadnano.Strand:
-        s = design.strand(
+        s = design.draw_strand(
             helix + self._scadnano_5p_offset[0], offset + self._scadnano_5p_offset[1]
         )
         domiter = iter(self.domains)
@@ -257,7 +257,7 @@ class FlatishHDupleTile9_E(HDupleTile, BaseSSTile):
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
     ) -> scadnano.Strand:
-        s = design.strand(
+        s = design.draw_strand(
             helix + self._scadnano_5p_offset[0], offset + self._scadnano_5p_offset[1]
         )
         domiter = iter(self.domains)
@@ -309,7 +309,7 @@ class FlatishHDupleTile10_E(HDupleTile, BaseSSTile):
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
     ) -> scadnano.Strand:
-        s = design.strand(
+        s = design.draw_strand(
             helix + self._scadnano_5p_offset[0], offset + self._scadnano_5p_offset[1]
         )
         domiter = iter(self.domains)
@@ -516,6 +516,45 @@ class FlatishVSeed9(Seed):
 
 
 seed_factory.register(FlatishVSeed9)
+
+class FlatishDiagonalSESeed10(DiagonalSESeed):
+    def to_scadnano(
+        self, design: scadnano.Design, helix: int, offset: int
+    ) -> list[scadnano.Strand]:
+        """
+        For this seed, the `helix` and `offset` refer to the position of the NE-most (ie, most Northerly) "fake" tile that the seed represents.  This corresponds to the tile position N of the NE-most tile that attaches to the seed.
+        """
+
+        # apse strands.  The first one here starts 22nt east of the starting offset.
+        apse = []
+        bpse = []
+
+        for i, gs in enumerate(self.adapters):
+            s = design.draw_strand(helix + 2*i, offset + 21 + 2*i)
+            _add_domain_from_glue(s, gs[0], -1)
+            s.move(-31)
+            s.cross(s.current_helix+1)
+            s.move(33)
+            _add_domain_from_glue(s, gs[1], 1)
+            apse.append(s)
+
+        alen = len(self.adapters)
+
+        for i in range(0, alen):
+            s = design.draw_strand(helix + 1 + 2*i, offset - 37 + 2*i)
+            s.move(16)
+            s.cross(s.current_helix - 1)
+            s.move(-16)
+            bpse.append(s)
+
+        scaffold = design.draw_strand(helix + 1 + 2*alen - 2, offset + 12 + 2*alen - 2)
+        for _ in range(alen):
+            scaffold.move(-49)
+            scaffold.cross(scaffold.current_helix - 1)
+            scaffold.move(47)
+            scaffold.cross(scaffold.current_helix - 1)
+
+        return apse + bpse + [scaffold]
 
 
 def flatgrid_hofromxy(

@@ -66,7 +66,7 @@ class DXOrigamiSeed(Seed):
 
 def _convert_adapts(adapters: Sequence[Sequence[str | Glue, str | Glue]]) -> list[tuple[Glue, Glue]]:
     # todo: verify
-    return [(Glue(a[0]), Glue(a[1])) for a in adapters]
+    return [(Glue(a[0]) if not isinstance(a[0], Glue) else a[0], Glue(a[1]) if not isinstance(a[1], Glue) else a[1]) for a in adapters]
 
 @attrs.define()
 class DiagonalSESeed(Seed):

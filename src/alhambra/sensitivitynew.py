@@ -90,7 +90,7 @@ def sensitivity_classes(tileset, count=False, _maxorder=2):
             if t1.structure._endtypes[i] in {"fakedouble", "hairpin"}:
                 continue
             for t2 in rotatedsingles:
-                if t2["ends"][i] != t1["ends"][i]:
+                if t2.edges[i] != t1.edges[i]:
                     continue
                 for j in range(0, 4):
                     if i == j:

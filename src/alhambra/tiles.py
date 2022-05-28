@@ -722,7 +722,7 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
     ) -> scadnano.Strand:
-        s = design.strand(helix, offset + 21)
+        s = design.draw_strand(helix, offset + 21)
 
         for e in self.domains[0:2]:
             s.move(-e.dna_length)
