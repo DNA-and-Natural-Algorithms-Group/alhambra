@@ -39,6 +39,7 @@ from .tiles import (
     Tile,
     VDupleTile,
     tile_factory,
+    _scadnano_color
 )
 
 if TYPE_CHECKING:
@@ -169,6 +170,9 @@ class FlatishVDupleTile10_E2(VDupleTile, BaseSSTile):
         if self.name is not None:
             s.with_name(self.name)
 
+        if self.color is not None:
+            s.with_color(_scadnano_color(self.color))
+
         s.with_sequence(self.sequence.base_str)
         return s.strand
 
@@ -222,6 +226,9 @@ class FlatishVDupleTile9_E2(VDupleTile, BaseSSTile):
         if self.name is not None:
             s.with_name(self.name)
 
+        if self.color is not None:
+            s.with_color(_scadnano_color(self.color))
+
         s.with_sequence(self.sequence.base_str)
         return s.strand
 
@@ -274,6 +281,9 @@ class FlatishHDupleTile9_E(HDupleTile, BaseSSTile):
         if self.name is not None:
             s.with_name(self.name)
 
+        if self.color is not None:
+            s.with_color(_scadnano_color(self.color))
+
         s.with_sequence(self.sequence.base_str)
         return s.strand
 
@@ -325,6 +335,9 @@ class FlatishHDupleTile10_E(HDupleTile, BaseSSTile):
 
         if self.name is not None:
             s.with_name(self.name)
+
+        if self.color is not None:
+            s.with_color(_scadnano_color(self.color))
 
         s.with_sequence(self.sequence.base_str)
         return s.strand

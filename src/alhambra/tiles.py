@@ -395,7 +395,7 @@ class SingleTile(Tile):
     ) -> draw.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
-        elif self.color[0] == "#":
+        elif (self.color is not None) and (self.color[0] == "#"):
             color = self.color
         else:
             color = "gray"
@@ -704,6 +704,15 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
                 guards.append(self.edges[ei].complement)
         return guards
 
+def _scadnano_color(color: Optional[str]) -> Optional[scadnano.Color]:
+    if color is None:
+        return None
+    elif color[0] == "#":
+        return scadnano.Color(hex_string=color)
+    else:
+        xc = xcolors[color]
+        ci = [int(x) for x in xc[4:-1].split(",")]
+        return scadnano.Color(*ci)
 
 class BaseSSTSingle(SingleTile, BaseSSTile):
     """Base class for a standard-orientation SST single tile."""
@@ -736,6 +745,9 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
 
         if self.name is not None:
             s.with_name(self.name)
+
+        if self.color is not None:
+            s.with_color(_scadnano_color(self.color))
 
         s.with_sequence(self.sequence.base_str)
         return s.strand
