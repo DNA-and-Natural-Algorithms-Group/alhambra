@@ -50,12 +50,18 @@ class LatticeSupportingScadnano(ABC):
             cast(TileSupportingScadnano, tileset.tiles[tilename]).to_scadnano(
                 des, helix, offset
             )
+
+        if scl.seed is not None:
+            scl.seed.to_scadnano(des, scl.seed_position[0], scl.seed_position[1])
+
         return des
 
 
 @dataclass
 class ScadnanoLattice(LatticeSupportingScadnano, Lattice):
     positions: dict[tuple[int, int], str] = field(default_factory=lambda: {})
+    seed: Seed | None = None
+    seed_position: tuple[int, int] = (0, 0)
 
     def __getitem__(self, index: tuple[int, int]) -> str | None:
         return self.positions[index]
@@ -107,7 +113,7 @@ class AbstractLattice(Lattice):
         self,
         v: AbstractLattice | np.ndarray,
         seed: Seed | None = None,
-        seed_offset: tuple[int, int] = (0, 0),
+        seed_offset: tuple[int, int] | None = None,
     ) -> None:
         if isinstance(v, AbstractLattice):
             self.grid = v.grid
@@ -115,6 +121,10 @@ class AbstractLattice(Lattice):
             self.seed_offset = v.seed_offset
         else:
             self.grid = np.array(v)
+        if seed is not None:
+            self.seed = seed
+        if seed_offset is not None:
+            self.seed_offset = seed_offset
 
     def asdict(self) -> dict[str, Any]:
         d: dict[str, Any] = {}

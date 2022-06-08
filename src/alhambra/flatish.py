@@ -28,7 +28,7 @@ from alhambra.grid import (
 from alhambra.seq import Seq
 from alhambra.tilesets import XgrowGlueOpts
 
-from .glues import Glue
+from .glues import Glue, GlueList
 from .seeds import Seed, seed_factory, DiagonalSESeed
 from .tiles import (
     BaseSSTile,
@@ -39,6 +39,7 @@ from .tiles import (
     Tile,
     VDupleTile,
     tile_factory,
+    TileList,
     _scadnano_color
 )
 
@@ -530,7 +531,57 @@ class FlatishVSeed9(Seed):
 
 seed_factory.register(FlatishVSeed9)
 
+
+
+class FlatishLattice(LatticeSupportingScadnano, AbstractLattice):
+    # FIXME: seed should be flatish
+    """A lattice of flatish tiles.  Position 0,0 is a 9nt-north tile."""
+    def to_scadnano_lattice(self) -> ScadnanoLattice:
+        sclat = ScadnanoLattice()
+        for ix, t in np.ndenumerate(self.grid):
+            if not t:
+                continue
+            scpos = flatgrid_hofromxy(ix[0], ix[1], self.grid.shape[1], 0)
+            sclat[scpos] = t
+
+        if self.seed is not None and hasattr(self.seed, 'to_scadnano') and hasattr(self.seed, 'ho_from_seed_offset'):
+            sclat.seed = self.seed
+            sclat.seed_position = self.seed.ho_from_seed_offset(self.seed_offset, self.grid.shape[1])
+        
+        return sclat
+
+
+lattice_factory.register(FlatishLattice)
+
+
 class FlatishDiagonalSESeed10(DiagonalSESeed):
+    _lattice = FlatishLattice
+
+    def _calculate_valid_offset(self, target: tuple[int, int]) -> tuple[int, int]:
+        """
+        Given a target seed offset, return an offset that will work with a FlatishLattice.
+        """
+
+        if ((target[0] + target[1] + len(self.adapters)) % 2) == 0:
+            return target
+        else:
+            return (target[0], target[1]+1)
+
+    def ho_from_seed_offset(self, seed_offset: tuple[int, int], gridysize):
+        seed_offset = self._calculate_valid_offset(seed_offset)
+
+        return flatgrid_hofromxy(seed_offset[0], seed_offset[1] + len(self.adapters) - 1, gridysize, 0)
+
+
+    def to_xgrow(self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0,0)) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
+
+        offset = self._calculate_valid_offset(offset)
+
+        return super().to_xgrow(glue_handling, offset)
+
+    def update_details(self, glues: GlueList[Glue], tiles: TileList[Tile] | None = None) -> None:
+        self.adapters = [(glues.merge_glue(g1), glues.merge_glue(g2)) for g1, g2 in self.adapters]
+
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
     ) -> list[scadnano.Strand]:
@@ -589,17 +640,3 @@ def flatgrid_hofromxy(
         + (11 + sx) * (x % 2)
         + (9 + sy) * (y % 2),
     )
-
-
-class FlatishLattice(LatticeSupportingScadnano, AbstractLattice):
-    def to_scadnano_lattice(self) -> ScadnanoLattice:
-        sclat = ScadnanoLattice()
-        for ix, t in np.ndenumerate(self.grid):
-            if not t:
-                continue
-            scpos = flatgrid_hofromxy(ix[0], ix[1], self.grid.shape[1], 0)
-            sclat[scpos] = t
-        return sclat
-
-
-lattice_factory.register(FlatishLattice)

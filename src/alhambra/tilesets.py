@@ -155,7 +155,12 @@ class TileSet(Serializable):
             case int(x) | str(x):
                 seed = self.seeds[cast(Union[int, str], x)]
 
-        a = AbstractLattice(newarray, cast(Optional[Seed], seed), seed_offset)
+        if seed is not None and hasattr(seed, '_lattice'):
+            lattice_type: Type[AbstractLattice] = seed._lattice
+        else:
+            lattice_type = AbstractLattice
+
+        a = lattice_type(newarray, cast(Optional[Seed], seed), seed_offset)
 
         if not _include_out:
             return a
@@ -303,6 +308,8 @@ class TileSet(Serializable):
 
         self.tiles.refreshnames()
         self.glues.refreshnames()
+        if hasattr(lattice, 'seed') and hasattr(lattice.seed, 'update_details'):
+            lattice.seed.update_details(self.allglues, self.tiles)
         if lattice:
             return lattice.to_scadnano(self)
         for tlattice in self.lattices:

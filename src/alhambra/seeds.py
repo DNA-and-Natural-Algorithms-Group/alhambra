@@ -82,10 +82,7 @@ class DiagonalSESeed(Seed):
         self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0, 0)
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
-
-        if offset != (0, 0):
-            raise NotImplementedError
-
+    
         xgtiles = []
         locs: list[tuple[int, int, str]] = []
         bonds = [xgt.Bond("seed", 10)]
@@ -94,8 +91,8 @@ class DiagonalSESeed(Seed):
             xgt.Tile([0, "seed", "seed", "seed"], "seed", stoic=0, color="white")
         )
 
-        y = len(self.adapters) + 1
-        x = 1
+        y = len(self.adapters) + offset[1] # + 1
+        x = 1 + offset[0]
         for i, (eg, sg) in enumerate(self.adapters):
             if glue_handling == "self-complementary":
                 egn, sgn = eg.basename(), sg.basename()
