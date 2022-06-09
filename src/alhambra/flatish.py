@@ -620,6 +620,73 @@ class FlatishDiagonalSESeed10(DiagonalSESeed):
 
         return apse + bpse + [scaffold]
 
+class FlatishDiagonalSESeed9(DiagonalSESeed):
+    _lattice = FlatishLattice
+
+    def _calculate_valid_offset(self, target: tuple[int, int]) -> tuple[int, int]:
+        """
+        Given a target seed offset, return an offset that will work with a FlatishLattice.
+        """
+
+        if ((target[0] + target[1] + len(self.adapters)) % 2) == 1:
+            return target
+        else:
+            return (target[0], target[1]+1)
+
+    def ho_from_seed_offset(self, seed_offset: tuple[int, int], gridysize):
+        seed_offset = self._calculate_valid_offset(seed_offset)
+
+        return flatgrid_hofromxy(seed_offset[0], seed_offset[1] + len(self.adapters) - 1, gridysize, 0)
+
+
+    def to_xgrow(self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0,0)) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
+
+        offset = self._calculate_valid_offset(offset)
+
+        return super().to_xgrow(glue_handling, offset)
+
+    def update_details(self, glues: GlueList[Glue], tiles: TileList[Tile] | None = None) -> None:
+        self.adapters = [(glues.merge_glue(g1), glues.merge_glue(g2)) for g1, g2 in self.adapters]
+
+    def to_scadnano(
+        self, design: scadnano.Design, helix: int, offset: int
+    ) -> list[scadnano.Strand]:
+        """
+        For this seed, the `helix` and `offset` refer to the position of the NE-most (ie, most Northerly) "fake" tile that the seed represents.  This corresponds to the tile position N of the NE-most tile that attaches to the seed.
+        """
+
+        # apse strands.  The first one here starts 22nt east of the starting offset.
+        apse = []
+        bpse = []
+
+        for i, gs in enumerate(self.adapters):
+            s = design.draw_strand(helix + 2*i, offset + 21 + 2*i)
+            _add_domain_from_glue(s, gs[0], -1)
+            s.move(-31)
+            s.cross(s.current_helix+1)
+            s.move(33)
+            _add_domain_from_glue(s, gs[1], 1)
+            apse.append(s)
+
+        alen = len(self.adapters)
+
+        for i in range(0, alen):
+            s = design.draw_strand(helix + 1 + 2*i, offset - 37 + 2*i)
+            s.move(16)
+            s.cross(s.current_helix - 1)
+            s.move(-16)
+            bpse.append(s)
+
+        scaffold = design.draw_strand(helix + 1 + 2*alen - 2, offset + 12 + 2*alen - 2)
+        for _ in range(alen):
+            scaffold.move(-49)
+            scaffold.cross(scaffold.current_helix - 1)
+            scaffold.move(47)
+            scaffold.cross(scaffold.current_helix - 1)
+
+        return apse + bpse + [scaffold]
+
+
 
 def flatgrid_hofromxy(
     x: int, y: int, start_helix: int, start_o: int, p: Literal[9, 10] = 9
