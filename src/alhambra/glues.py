@@ -93,7 +93,7 @@ class Glue:
 
     def _into_complement(self):
         if self.name is not None:
-            if self.name[-1] == "*":
+            if self.is_complement:
                 self.name = self.name[:-1]
             else:
                 self.name = self.name + "*"
@@ -114,10 +114,16 @@ class Glue:
     def basename(self) -> str:
         if self.name is None:
             raise ValueError
-        if self.name[-1] == "*":
+        if self.is_complement:
             return self.name[:-1]
         else:
             return self.name
+
+    @property
+    def is_complement(self: Glue) -> bool:
+        if self.name and (self.name[-1] == "*"):
+            return True
+        return False
 
     @property
     def complement(self: GlueA) -> GlueA:

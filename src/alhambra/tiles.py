@@ -196,7 +196,7 @@ class Tile:
         color: Optional[Color] = None,
         stoic: Optional[float] = None,
         note: Optional[str | dict[str, Any]] = None,
-        use: List[Use] | None = None,
+        use: Sequence[Use] | None = None,
         fake: bool = False,
     ) -> None:
         if edges is None:
@@ -625,8 +625,9 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
         color: Optional[Color] = None,
         stoic: Optional[float] = None,
         sequence: Optional[Seq] = None,
-        domains: Optional[List[SSGlue]] = None,
+        domains: Optional[Sequence[SSGlue]] = None,
         note: Optional[str] = None,
+        use: Optional[Sequence[Use]] = None
     ):
         Tile.__init__(self, edges=[], name=name, color=color, stoic=stoic, note=note)
         if edges is None and sequence is None and domains is None:
@@ -643,6 +644,9 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
                 raise ValueError
             for td, nd in zip(self.domains, domains):
                 td |= nd
+        if use is not None:
+            for e, u in zip(self.edges, use, strict=True):
+                e.use = u
 
     @property
     def sequence(self) -> Seq:
@@ -735,13 +739,11 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
 
         for e in self.domains[0:2]:
             s.move(-e.dna_length)
-            if e.name is not None:
-                s.with_domain_name(e.name)
+            s.with_domain_name(e.ident())
         s.cross(s.current_helix + 1)
         for e in self.domains[2:]:
             s.move(e.dna_length)
-            if e.name is not None:
-                s.with_domain_name(e.name)
+            s.with_domain_name(e.ident())
 
         if self.name is not None:
             s.with_name(self.name)
@@ -846,6 +848,12 @@ class TileList(Generic[SomeTile], UpdateListD[SomeTile]):
         gl: GlueList[Glue] = GlueList()
         for tile in self:
             gl |= tile.edges
+        return gl
+
+    def domains_from_tiles(self) -> GlueList:
+        gl: GlueList[Glue] = GlueList()
+        for tile in self:
+            gl |= tile.domains
         return gl
 
 

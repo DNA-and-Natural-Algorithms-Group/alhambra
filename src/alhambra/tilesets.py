@@ -365,6 +365,10 @@ class TileSet(Serializable):
     def allglues(self) -> GlueList:
         return self.tiles.glues_from_tiles() | self.glues
 
+    @property
+    def alldomains(self) -> GlueList:
+        return self.tiles.domains_from_tiles() | self.glues
+
     def lattice_tiles(
         self,
         lattice: AbstractLattice | int | str | np.ndarray,

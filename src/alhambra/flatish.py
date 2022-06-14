@@ -62,8 +62,7 @@ def _add_domain_from_glue(
     s: scadnano.StrandBuilder[Any, Any], g: SSGlue, d: Literal[1, -1]
 ) -> scadnano.StrandBuilder:
     s.move(g.dna_length * d)
-    if g.name is not None:
-        s.with_domain_name(g.name)
+    s.with_domain_name(g.ident())
     return s
 
 
@@ -71,12 +70,11 @@ def _add_loopout_from_glue(
     s: scadnano.StrandBuilder[Any, Any], g: SSGlue, d: Literal[1, -1]
 ) -> scadnano.StrandBuilder:
     s.loopout(s.current_helix + d, g.dna_length)
-    if g.name is not None:
-        s.with_domain_name(g.name)
+    s.with_domain_name(g.ident())
     return s
 
 
-_STANDARD_LOOP = SSGlue(sequence=8 * "T")
+_STANDARD_LOOP = SSGlue(name="flatish_loop8", sequence=8 * "T")
 
 
 T = TypeVar("T")

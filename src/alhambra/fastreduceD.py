@@ -146,8 +146,10 @@ class FGlueList:
             type.append(g.type)
             self.tonum.update({g.ident(): i})
             strength.append(g.abstractstrength if g.abstractstrength is not None else 1)
-            assert g.use is not None
-            use.append(g.use.value)
+            if g.use is None:
+                use.append(uB)
+            else:
+                use.append(g.use.value)
 
         for gn in name:
             complement.append(name.index(gn+"*" if gn[-1] != "*" else gn[:-1]))
@@ -208,7 +210,7 @@ class FTileList:
                 use = np.array([uU for _ in t.edges])
             else:
                 used = True
-                use = np.array([x.value for x in t.use])
+                use = np.array([x.value if x is not None else uB for x in t.use])
             # color = "label" in t.keys()
             self.tiles.append(
                 FTile(
