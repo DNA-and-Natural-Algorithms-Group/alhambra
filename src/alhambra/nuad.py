@@ -1,7 +1,5 @@
 from typing import TYPE_CHECKING, Callable, Dict, Iterable, Literal, Mapping, Optional, Tuple
 import itertools
-import nuad.constraints as nc
-import nuad.search as ns
 import logging
 
 from alhambra.glues import GlueList, SSGlue
@@ -16,9 +14,18 @@ log = logging.getLogger(__name__)
 def load_nuad_design(
     tileset: 'TileSet',
     design: nc.Design,
-    update_tiles: bool = True
+    update_tiles: bool = True,
+    inplace: bool = False
 ):
-    new_ts = tileset.copy()
+    try:
+        import nuad.constraints as nc
+    except ImportError:
+        raise ImportError("nuad must be installed for this function.")
+    
+    if not inplace:
+        new_ts = tileset.copy()
+    else:
+        new_ts = tileset
 
     for domain in design.domains:
         new_ts.glues.add(SSGlue(domain.name, sequence=domain.sequence())) # FIXME: determine domain type from pool
@@ -47,7 +54,11 @@ def tileset_to_nuad_design(
     groups:
         Methods for setting the group of each strand.
     """
-
+    try:
+        import nuad.constraints as nc
+    except ImportError:
+        raise ImportError("nuad must be installed for this function.")
+    
     # Determine group-setting function
     if groups == 'structure':
         get_group = lambda tile: tile.structure
@@ -113,7 +124,11 @@ def group_strand_pairs_by_groups_and_complementary_domains(
     """
     Group pairs of strands by their groups (sorted) and number of complementary domains.
     """
-
+    try:
+        import nuad.constraints as nc
+    except ImportError:
+        raise ImportError("nuad must be installed for this function.")
+    
     pairs: Dict[Tuple[str, str, int], list[Tuple[nc.Strand, nc.Strand]]] = {}
 
     if strands is None:

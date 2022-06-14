@@ -684,6 +684,10 @@ class TileSet(Serializable):
         dx_plot_side_strands,
     )  # type: ignore
 
+    from .nuad import tileset_to_nuad_design as to_nuad_design # type: ignore
+
+    from .nuad import load_nuad_design as load_nuad_design # type: ignore
+
     def apply_equiv(self, equiv):
         """
         Apply an equivalence array (from, eg, `TileSet.reduce_ends` or `TileSet.reduce_tiles`).
