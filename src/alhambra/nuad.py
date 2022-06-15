@@ -1,4 +1,13 @@
-from typing import TYPE_CHECKING, Callable, Dict, Iterable, Literal, Mapping, Optional, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    Iterable,
+    Literal,
+    Mapping,
+    Optional,
+    Tuple,
+)
 import itertools
 import logging
 
@@ -12,24 +21,27 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+
 def load_nuad_design(
-    tileset: 'TileSet',
-    design: 'nc.Design',
+    tileset: "TileSet",
+    design: "nc.Design",
     update_tiles: bool = True,
-    inplace: bool = False
-) -> 'TileSet':
+    inplace: bool = False,
+) -> "TileSet":
     try:
         import nuad.constraints as nc
     except ImportError:
         raise ImportError("nuad must be installed for this function.")
-    
+
     if not inplace:
         new_ts = tileset.copy()
     else:
         new_ts = tileset
 
     for domain in design.domains:
-        new_ts.glues.add(SSGlue(domain.name, sequence=domain.sequence())) # FIXME: determine domain type from pool
+        new_ts.glues.add(
+            SSGlue(domain.name, sequence=domain.sequence())
+        )  # FIXME: determine domain type from pool
 
     if update_tiles:
         for t in new_ts.tiles:
@@ -41,14 +53,17 @@ def load_nuad_design(
         tile: BaseSSTile = new_ts.tiles[strand.name]
         assert isinstance(tile, BaseSSTile)
 
-        assert str(tile.sequence) == strand.sequence(delimiter='-') # FIXME: should not need str here.
+        assert str(tile.sequence) == strand.sequence(
+            delimiter="-"
+        )  # FIXME: should not need str here.
 
     return new_ts
 
+
 def tileset_to_nuad_design(
-    tileset: 'TileSet',
-    groups: Literal['structure'] | Mapping | Callable[[Tile], str] = 'structure'
-) -> 'nc.Design':
+    tileset: "TileSet",
+    groups: Literal["structure"] | Mapping | Callable[[Tile], str] = "structure",
+) -> "nc.Design":
     """
     From an Alhambra tileset, generate a Nuad Design with all of its domains.
 
@@ -59,9 +74,9 @@ def tileset_to_nuad_design(
         import nuad.constraints as nc
     except ImportError:
         raise ImportError("nuad must be installed for this function.")
-    
+
     # Determine group-setting function
-    if groups == 'structure':
+    if groups == "structure":
         get_group = lambda tile: tile.structure
     elif isinstance(groups, Mapping):
         get_group = lambda tile: groups[tile]
@@ -72,7 +87,13 @@ def tileset_to_nuad_design(
     strands = []
     for tile in tileset.tiles:
         strand_group = get_group(tile)
-        strands.append(nc.Strand([domain.ident() for domain in tile.domains], name=tile.name, group=strand_group))
+        strands.append(
+            nc.Strand(
+                [domain.ident() for domain in tile.domains],
+                name=tile.name,
+                group=strand_group,
+            )
+        )
 
     # Nuad needs only non-complementary (ie, non-starred) domains.  Alhambra may contain
     # complementary domains that don't have a non-complementary counterpart.  So we'll need
@@ -91,7 +112,7 @@ def tileset_to_nuad_design(
         else:
             non_complementary_domains.add(domain)
 
-    pools: dict[tuple[str, int],nc.DomainPool] = {}
+    pools: dict[tuple[str, int], nc.DomainPool] = {}
 
     des = nc.Design(strands=strands)
 
@@ -104,10 +125,12 @@ def tileset_to_nuad_design(
         else:
             assert domain.sequence.is_null
             try:
-                pool = pools[("SSGlue", domain.dna_length)] # FIXME: determine type
+                pool = pools[("SSGlue", domain.dna_length)]  # FIXME: determine type
             except KeyError:
-                pool = nc.DomainPool("SSGlue", domain.dna_length) # FIXME: determine type
-                pools[("SSGlue", domain.dna_length)] = pool # FIXME: determine type
+                pool = nc.DomainPool(
+                    "SSGlue", domain.dna_length
+                )  # FIXME: determine type
+                pools[("SSGlue", domain.dna_length)] = pool  # FIXME: determine type
 
             ncdomain.pool = pool
             ncdomains.append(ncdomain)
@@ -117,11 +140,11 @@ def tileset_to_nuad_design(
     des.store_domain_pools()
 
     return des
-        
+
 
 def group_strand_pairs_by_groups_and_complementary_domains(
-    design: 'nc.Design', strands: 'Optional[Iterable[nc.Strand]]' = None
-) -> 'Dict[Tuple[str, str, int], list[Tuple[nc.Strand, nc.Strand]]]':
+    design: "nc.Design", strands: "Optional[Iterable[nc.Strand]]" = None
+) -> "Dict[Tuple[str, str, int], list[Tuple[nc.Strand, nc.Strand]]]":
     """
     Group pairs of strands by their groups (sorted) and number of complementary domains.
     """
@@ -129,12 +152,12 @@ def group_strand_pairs_by_groups_and_complementary_domains(
         import nuad.constraints as nc
     except ImportError:
         raise ImportError("nuad must be installed for this function.")
-    
+
     pairs: Dict[Tuple[str, str, int], list[Tuple[nc.Strand, nc.Strand]]] = {}
 
     if strands is None:
         strands = design.strands
-    
+
     for strand1, strand2 in itertools.combinations_with_replacement(strands, 2):
         domains1_unstarred = strand1.unstarred_domains_set()
         domains2_unstarred = strand2.unstarred_domains_set()

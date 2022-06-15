@@ -77,16 +77,20 @@ def merge_items(a: Optional[T], b: Optional[T]) -> Optional[T]:
         assert a == b
         return a
 
+
 def _ensure_glue_name(n: str | None) -> str | None:
     "Ensure the glue name uses *, not /, and is reasonable."
     if n is not None:
-        if (len(n) >= 1) and n[-1] == '/':
+        if (len(n) >= 1) and n[-1] == "/":
             n = n[:-1] + "*"
     return n
 
+
 @attrs.define()
 class Glue:
-    name: Optional[str] = attrs.field(converter=_ensure_glue_name, on_setattr=attrs.setters.convert, default=None)
+    name: Optional[str] = attrs.field(
+        converter=_ensure_glue_name, on_setattr=attrs.setters.convert, default=None
+    )
     note: Optional[str] = attrs.field(default=None)
     use: Use = attrs.field(default=Use.UNSET)
     abstractstrength: Optional[int] = attrs.field(default=None)
@@ -303,6 +307,7 @@ class SSGlue(Glue):
 
 
 glue_factory.register(SSGlue)
+
 
 @attrs.define(init=False)
 class DXGlue(Glue):

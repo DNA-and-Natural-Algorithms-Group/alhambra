@@ -64,15 +64,27 @@ class SeedFactory:
 class DXOrigamiSeed(Seed):
     ...
 
-def _convert_adapts(adapters: Sequence[Sequence[str | Glue, str | Glue]]) -> list[tuple[Glue, Glue]]:
+
+def _convert_adapts(
+    adapters: Sequence[Sequence[str | Glue, str | Glue]]
+) -> list[tuple[Glue, Glue]]:
     # todo: verify
-    return [(Glue(a[0]) if not isinstance(a[0], Glue) else a[0], Glue(a[1]) if not isinstance(a[1], Glue) else a[1]) for a in adapters]
+    return [
+        (
+            Glue(a[0]) if not isinstance(a[0], Glue) else a[0],
+            Glue(a[1]) if not isinstance(a[1], Glue) else a[1],
+        )
+        for a in adapters
+    ]
+
 
 @attrs.define()
 class DiagonalSESeed(Seed):
     "Tall rectangle origami to DX-tile seed (Barish et al)"
     # FIXME: fixed-choice adapters for now
-    adapters: list[tuple[Glue, Glue]] = attrs.field(converter=_convert_adapts, on_setattr=attrs.setters.convert)
+    adapters: list[tuple[Glue, Glue]] = attrs.field(
+        converter=_convert_adapts, on_setattr=attrs.setters.convert
+    )
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> DiagonalSESeed:
@@ -82,7 +94,7 @@ class DiagonalSESeed(Seed):
         self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0, 0)
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
-    
+
         xgtiles = []
         locs: list[tuple[int, int, str]] = []
         bonds = [xgt.Bond("seed", 10)]
@@ -91,7 +103,7 @@ class DiagonalSESeed(Seed):
             xgt.Tile([0, "seed", "seed", "seed"], "seed", stoic=0, color="white")
         )
 
-        y = len(self.adapters) + offset[1] # + 1
+        y = len(self.adapters) + offset[1]  # + 1
         x = 1 + offset[0]
         for i, (eg, sg) in enumerate(self.adapters):
             if glue_handling == "self-complementary":

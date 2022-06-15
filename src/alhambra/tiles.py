@@ -627,7 +627,7 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
         sequence: Optional[Seq] = None,
         domains: Optional[Sequence[SSGlue]] = None,
         note: Optional[str] = None,
-        use: Optional[Sequence[Use]] = None
+        use: Optional[Sequence[Use]] = None,
     ):
         Tile.__init__(self, edges=[], name=name, color=color, stoic=stoic, note=note)
         if edges is None and sequence is None and domains is None:
@@ -708,6 +708,7 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
                 guards.append(self.edges[ei].complement)
         return guards
 
+
 def _scadnano_color(color: Optional[str]) -> Optional[scadnano.Color]:
     if color is None:
         return None
@@ -717,6 +718,7 @@ def _scadnano_color(color: Optional[str]) -> Optional[scadnano.Color]:
         xc = xcolors[color]
         ci = [int(x) for x in xc[4:-1].split(",")]
         return scadnano.Color(*ci)
+
 
 class BaseSSTSingle(SingleTile, BaseSSTile):
     """Base class for a standard-orientation SST single tile."""

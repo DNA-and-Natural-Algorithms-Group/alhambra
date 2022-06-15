@@ -40,7 +40,7 @@ from .tiles import (
     VDupleTile,
     tile_factory,
     TileList,
-    _scadnano_color
+    _scadnano_color,
 )
 
 if TYPE_CHECKING:
@@ -530,10 +530,10 @@ class FlatishVSeed9(Seed):
 seed_factory.register(FlatishVSeed9)
 
 
-
 class FlatishLattice(LatticeSupportingScadnano, AbstractLattice):
     # FIXME: seed should be flatish
     """A lattice of flatish tiles.  Position 0,0 is a 9nt-north tile."""
+
     def to_scadnano_lattice(self) -> ScadnanoLattice:
         sclat = ScadnanoLattice()
         for ix, t in np.ndenumerate(self.grid):
@@ -542,10 +542,16 @@ class FlatishLattice(LatticeSupportingScadnano, AbstractLattice):
             scpos = flatgrid_hofromxy(ix[0], ix[1], self.grid.shape[1], 0)
             sclat[scpos] = t
 
-        if self.seed is not None and hasattr(self.seed, 'to_scadnano') and hasattr(self.seed, 'ho_from_seed_offset'):
+        if (
+            self.seed is not None
+            and hasattr(self.seed, "to_scadnano")
+            and hasattr(self.seed, "ho_from_seed_offset")
+        ):
             sclat.seed = self.seed
-            sclat.seed_position = self.seed.ho_from_seed_offset(self.seed_offset, self.grid.shape[1])
-        
+            sclat.seed_position = self.seed.ho_from_seed_offset(
+                self.seed_offset, self.grid.shape[1]
+            )
+
         return sclat
 
 
@@ -563,22 +569,29 @@ class FlatishDiagonalSESeed10(DiagonalSESeed):
         if ((target[0] + target[1] + len(self.adapters)) % 2) == 0:
             return target
         else:
-            return (target[0], target[1]+1)
+            return (target[0], target[1] + 1)
 
     def ho_from_seed_offset(self, seed_offset: tuple[int, int], gridysize):
         seed_offset = self._calculate_valid_offset(seed_offset)
 
-        return flatgrid_hofromxy(seed_offset[0], seed_offset[1] + len(self.adapters) - 1, gridysize, 0)
+        return flatgrid_hofromxy(
+            seed_offset[0], seed_offset[1] + len(self.adapters) - 1, gridysize, 0
+        )
 
-
-    def to_xgrow(self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0,0)) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
+    def to_xgrow(
+        self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0, 0)
+    ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
 
         offset = self._calculate_valid_offset(offset)
 
         return super().to_xgrow(glue_handling, offset)
 
-    def update_details(self, glues: GlueList[Glue], tiles: TileList[Tile] | None = None) -> None:
-        self.adapters = [(glues.merge_glue(g1), glues.merge_glue(g2)) for g1, g2 in self.adapters]
+    def update_details(
+        self, glues: GlueList[Glue], tiles: TileList[Tile] | None = None
+    ) -> None:
+        self.adapters = [
+            (glues.merge_glue(g1), glues.merge_glue(g2)) for g1, g2 in self.adapters
+        ]
 
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
@@ -592,10 +605,10 @@ class FlatishDiagonalSESeed10(DiagonalSESeed):
         bpse = []
 
         for i, gs in enumerate(self.adapters):
-            s = design.draw_strand(helix + 2*i, offset + 21 + 2*i)
+            s = design.draw_strand(helix + 2 * i, offset + 21 + 2 * i)
             _add_domain_from_glue(s, gs[0], -1)
             s.move(-31)
-            s.cross(s.current_helix+1)
+            s.cross(s.current_helix + 1)
             s.move(33)
             _add_domain_from_glue(s, gs[1], 1)
             apse.append(s)
@@ -603,13 +616,15 @@ class FlatishDiagonalSESeed10(DiagonalSESeed):
         alen = len(self.adapters)
 
         for i in range(0, alen):
-            s = design.draw_strand(helix + 1 + 2*i, offset - 37 + 2*i)
+            s = design.draw_strand(helix + 1 + 2 * i, offset - 37 + 2 * i)
             s.move(16)
             s.cross(s.current_helix - 1)
             s.move(-16)
             bpse.append(s)
 
-        scaffold = design.draw_strand(helix + 1 + 2*alen - 2, offset + 12 + 2*alen - 2)
+        scaffold = design.draw_strand(
+            helix + 1 + 2 * alen - 2, offset + 12 + 2 * alen - 2
+        )
         for _ in range(alen):
             scaffold.move(-49)
             scaffold.cross(scaffold.current_helix - 1)
@@ -617,6 +632,7 @@ class FlatishDiagonalSESeed10(DiagonalSESeed):
             scaffold.cross(scaffold.current_helix - 1)
 
         return apse + bpse + [scaffold]
+
 
 class FlatishDiagonalSESeed9(DiagonalSESeed):
     _lattice = FlatishLattice
@@ -629,22 +645,29 @@ class FlatishDiagonalSESeed9(DiagonalSESeed):
         if ((target[0] + target[1] + len(self.adapters)) % 2) == 1:
             return target
         else:
-            return (target[0], target[1]+1)
+            return (target[0], target[1] + 1)
 
     def ho_from_seed_offset(self, seed_offset: tuple[int, int], gridysize):
         seed_offset = self._calculate_valid_offset(seed_offset)
 
-        return flatgrid_hofromxy(seed_offset[0], seed_offset[1] + len(self.adapters) - 1, gridysize, 0)
+        return flatgrid_hofromxy(
+            seed_offset[0], seed_offset[1] + len(self.adapters) - 1, gridysize, 0
+        )
 
-
-    def to_xgrow(self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0,0)) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
+    def to_xgrow(
+        self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0, 0)
+    ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
 
         offset = self._calculate_valid_offset(offset)
 
         return super().to_xgrow(glue_handling, offset)
 
-    def update_details(self, glues: GlueList[Glue], tiles: TileList[Tile] | None = None) -> None:
-        self.adapters = [(glues.merge_glue(g1), glues.merge_glue(g2)) for g1, g2 in self.adapters]
+    def update_details(
+        self, glues: GlueList[Glue], tiles: TileList[Tile] | None = None
+    ) -> None:
+        self.adapters = [
+            (glues.merge_glue(g1), glues.merge_glue(g2)) for g1, g2 in self.adapters
+        ]
 
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
@@ -658,10 +681,10 @@ class FlatishDiagonalSESeed9(DiagonalSESeed):
         bpse = []
 
         for i, gs in enumerate(self.adapters):
-            s = design.draw_strand(helix + 2*i, offset + 21 + 2*i)
+            s = design.draw_strand(helix + 2 * i, offset + 21 + 2 * i)
             _add_domain_from_glue(s, gs[0], -1)
             s.move(-31)
-            s.cross(s.current_helix+1)
+            s.cross(s.current_helix + 1)
             s.move(33)
             _add_domain_from_glue(s, gs[1], 1)
             apse.append(s)
@@ -669,13 +692,15 @@ class FlatishDiagonalSESeed9(DiagonalSESeed):
         alen = len(self.adapters)
 
         for i in range(0, alen):
-            s = design.draw_strand(helix + 1 + 2*i, offset - 37 + 2*i)
+            s = design.draw_strand(helix + 1 + 2 * i, offset - 37 + 2 * i)
             s.move(16)
             s.cross(s.current_helix - 1)
             s.move(-16)
             bpse.append(s)
 
-        scaffold = design.draw_strand(helix + 1 + 2*alen - 2, offset + 12 + 2*alen - 2)
+        scaffold = design.draw_strand(
+            helix + 1 + 2 * alen - 2, offset + 12 + 2 * alen - 2
+        )
         for _ in range(alen):
             scaffold.move(-49)
             scaffold.cross(scaffold.current_helix - 1)
@@ -683,7 +708,6 @@ class FlatishDiagonalSESeed9(DiagonalSESeed):
             scaffold.cross(scaffold.current_helix - 1)
 
         return apse + bpse + [scaffold]
-
 
 
 def flatgrid_hofromxy(

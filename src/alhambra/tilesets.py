@@ -155,7 +155,7 @@ class TileSet(Serializable):
             case int(x) | str(x):
                 seed = self.seeds[cast(Union[int, str], x)]
 
-        if seed is not None and hasattr(seed, '_lattice'):
+        if seed is not None and hasattr(seed, "_lattice"):
             lattice_type: Type[AbstractLattice] = seed._lattice
         else:
             lattice_type = AbstractLattice
@@ -201,7 +201,11 @@ class TileSet(Serializable):
                     if g.complement.name not in allglues
                 )
                 xg_glues = [
-                    xgt.Glue(g.name, g.complement.name, g.abstractstrength if g.abstractstrength is not None else 1)
+                    xgt.Glue(
+                        g.name,
+                        g.complement.name,
+                        g.abstractstrength if g.abstractstrength is not None else 1,
+                    )
                     for g in allglues
                 ]
             case _:
@@ -308,7 +312,7 @@ class TileSet(Serializable):
 
         self.tiles.refreshnames()
         self.glues.refreshnames()
-        if hasattr(lattice, 'seed') and hasattr(lattice.seed, 'update_details'):
+        if hasattr(lattice, "seed") and hasattr(lattice.seed, "update_details"):
             lattice.seed.update_details(self.allglues, self.tiles)
         if lattice:
             return lattice.to_scadnano(self)
@@ -684,9 +688,9 @@ class TileSet(Serializable):
         dx_plot_side_strands,
     )  # type: ignore
 
-    from .nuad import tileset_to_nuad_design as to_nuad_design # type: ignore
+    from .nuad import tileset_to_nuad_design as to_nuad_design  # type: ignore
 
-    from .nuad import load_nuad_design as load_nuad_design # type: ignore
+    from .nuad import load_nuad_design as load_nuad_design  # type: ignore
 
     def apply_equiv(self, equiv):
         """

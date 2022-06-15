@@ -47,8 +47,12 @@ class FGlueList:
             self.structure.append(type(g))
             self.structure.append(type(g))
             self.tonum.update({g.name: 2 * i, g.name + "/": 2 * i + 1})
-            self.strength.append(g.abstractstrength if g.abstractstrength is not None else 1)
-            self.strength.append(g.abstractstrength if g.abstractstrength is not None else 1)
+            self.strength.append(
+                g.abstractstrength if g.abstractstrength is not None else 1
+            )
+            self.strength.append(
+                g.abstractstrength if g.abstractstrength is not None else 1
+            )
             self.use.append(g.use)
             self.use.append((g.use // 2) + (g.use % 2) * 2)
         self.name = np.array(self.name)

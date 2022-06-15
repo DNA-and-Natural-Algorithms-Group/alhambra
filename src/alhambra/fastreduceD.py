@@ -152,7 +152,7 @@ class FGlueList:
                 use.append(g.use.value)
 
         for gn in name:
-            complement.append(name.index(gn+"*" if gn[-1] != "*" else gn[:-1]))
+            complement.append(name.index(gn + "*" if gn[-1] != "*" else gn[:-1]))
 
         self.name = np.array(name)
         self.strength = np.array(strength)
@@ -459,7 +459,7 @@ class _FastTileSet:
             if (tile.edges, False) in alreadythere:  # FIXME: False was label
                 tile.fake = True
                 continue
-            rs = [tile] # + tile.rotations FIXME
+            rs = [tile]  # + tile.rotations FIXME
             alreadythere.extend((list(t.edges), False) for t in rs)
         # FIXME
         # if "seed" in ts.keys():
@@ -568,7 +568,7 @@ def findmovetiles(fts, tilei, direction, allin, allout):
                 | (fts.tilelist.stiles.use[:, other[direction]] == uB)
             )
         )[0]
-        return {(tmatch, allin, allout, other[direction]) for tmatch in tilematches}      
+        return {(tmatch, allin, allout, other[direction]) for tmatch in tilematches}
 
 
 def _2go_moveandfill(
@@ -606,7 +606,7 @@ def _2go_moveandfill(
         moves = findmovetiles(fts, t, edge, allin, allout)
         # assert moves is not None  # FIXME
         if moves is None:
-            continue # FIXME
+            continue  # FIXME
         for newt, newallin, newallout, newpdir in moves:
             d = _2go_moveandfill(
                 fts, newt, i - 1, newallin, newallout, newpdir, x + dx, y + dy, d
