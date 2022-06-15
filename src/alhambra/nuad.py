@@ -8,15 +8,16 @@ from alhambra.tiles import Tile, BaseSSTSingle
 
 if TYPE_CHECKING:
     from alhambra.tilesets import TileSet
+    import nuad.constraints as nc
 
 log = logging.getLogger(__name__)
 
 def load_nuad_design(
     tileset: 'TileSet',
-    design: nc.Design,
+    design: 'nc.Design',
     update_tiles: bool = True,
     inplace: bool = False
-):
+) -> 'TileSet':
     try:
         import nuad.constraints as nc
     except ImportError:
@@ -47,7 +48,7 @@ def load_nuad_design(
 def tileset_to_nuad_design(
     tileset: 'TileSet',
     groups: Literal['structure'] | Mapping | Callable[[Tile], str] = 'structure'
-) -> nc.Design:
+) -> 'nc.Design':
     """
     From an Alhambra tileset, generate a Nuad Design with all of its domains.
 
@@ -119,8 +120,8 @@ def tileset_to_nuad_design(
         
 
 def group_strand_pairs_by_groups_and_complementary_domains(
-    design: nc.Design, strands: Optional[Iterable[nc.Strand]] = None
-) -> Dict[Tuple[str, str, int], list[Tuple[nc.Strand, nc.Strand]]]:
+    design: 'nc.Design', strands: 'Optional[Iterable[nc.Strand]]' = None
+) -> 'Dict[Tuple[str, str, int], list[Tuple[nc.Strand, nc.Strand]]]':
     """
     Group pairs of strands by their groups (sorted) and number of complementary domains.
     """
