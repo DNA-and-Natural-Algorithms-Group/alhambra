@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from curses.ascii import US
 import uuid
 from abc import ABC, ABCMeta, abstractmethod
 from dataclasses import dataclass
@@ -187,7 +188,8 @@ class Tile:
     stoic: Optional[float]
     note: Optional[str | dict[str, Any]]
     fake: bool
-    __slots__ = ("name", "_edges", "color", "stoic", "note", "fake")
+    uses: List[List[Use]] # FIXME: should use list of tuples
+    __slots__ = ("name", "_edges", "color", "stoic", "note", "fake", "uses")
 
     def __init__(
         self,
@@ -198,12 +200,17 @@ class Tile:
         note: Optional[str | dict[str, Any]] = None,
         use: Sequence[Use] | None = None,
         fake: bool = False,
+        uses: Sequence[Sequence[Use]] | None = None
     ) -> None:
         if edges is None:
             raise ValueError
         self._edges = [(g if isinstance(g, Glue) else Glue(g)) for g in edges]
         if use is not None:
             self.use = use
+        if uses is not None:
+            self.uses = list(list(u) for u in uses)
+        else:
+            self.uses = []
         self.name = name
         self.color = color
         self.stoic = stoic
@@ -216,10 +223,15 @@ class Tile:
 
     @property
     def use(self) -> Sequence[Use]:
-        return [g.use for g in self._edges]
+        if self.uses:
+            # FIXME: combine uses here
+            return self.uses[0]
+        else:
+            return [g.use for g in self._edges]
 
     @use.setter
     def use(self, uses: Iterable[Use]) -> None:
+        # Fixme: make this actually set tile uses as well
         for glue, use in zip(self._edges, uses):
             glue.use = use
 
@@ -282,7 +294,7 @@ class Tile:
     def to_dict(self, refglues: set[str] = set()) -> dict[str, Any]:
         b = {
             k: v
-            for k in ["name", "edges", "color", "stoic", "note"]
+            for k in ["name", "edges", "color", "stoic", "note", "uses"]
             if (v := getattr(self, k)) is not None
         }
         if self.edges is not None:
@@ -312,6 +324,9 @@ class Tile:
                 d["type"] += "_" + d["extra"]
             else:
                 raise ValueError
+
+        if "uses" in d:
+            d["uses"] = [tuple(Use(x) if not isinstance(x, Use) else x for x in y) for y in d["uses"]]
 
         return tile_factory.from_dict(d)
 
@@ -609,6 +624,9 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
     def domains(self) -> List[SSGlue]:
         ...
 
+    def _input_neighborhood_domains(self) -> List[List[str]]:
+        raise NotImplementedError
+
     @property
     @abstractmethod
     def edge_directions(self) -> list[D]:
@@ -628,6 +646,7 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
         domains: Optional[Sequence[SSGlue]] = None,
         note: Optional[str] = None,
         use: Optional[Sequence[Use]] = None,
+        uses: Optional[Sequence[Sequence[Use]]] = None
     ):
         Tile.__init__(self, edges=[], name=name, color=color, stoic=stoic, note=note)
         if edges is None and sequence is None and domains is None:
@@ -647,6 +666,10 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
         if use is not None:
             for e, u in zip(self.edges, use, strict=True):
                 e.use = u
+        if uses is not None:
+            self.uses = list(list(u) for u in uses)
+        else:
+            self.uses = []
 
     @property
     def sequence(self) -> Seq:
@@ -733,6 +756,25 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
     @property
     def _base_edges(self) -> List[SSGlue]:
         return [self._base_domains[i] for i in [1, 0, 3, 2]]
+
+    def _input_neighborhood_domains(self) -> List[List[str]]:
+        if not self.uses:
+            return []
+        
+        strands = []
+
+        for use in self.uses:
+            if use == [Use.INPUT, Use.OUTPUT, Use.OUTPUT, Use.INPUT]:    # NW
+                strands.append((("W", "N"), (self.edges["W"].complement.ident(), "algo_fake_spacer" , self.edges["N"].complement.ident())))
+            elif use == [Use.INPUT, Use.INPUT, Use.OUTPUT, Use.OUTPUT]:  # NE
+                strands.append((("N", "E"), (self.edges["N"].complement.ident(), "algo_fake_spacer" , self.edges["E"].complement.ident())))
+            elif use == [Use.OUTPUT, Use.OUTPUT, Use.INPUT, Use.INPUT]:  # SW
+                strands.append((("S", "W"), (self.edges["S"].complement.ident(), "algo_fake_spacer" , self.edges["W"].complement.ident())))
+            elif use == [Use.OUTPUT, Use.INPUT, Use.INPUT, Use.OUTPUT]:  # SE
+                strands.append((("E", "S"), (self.edges["E"].complement.ident(), "algo_fake_spacer" , self.edges["S"].complement.ident())))
+        
+        return strands
+
 
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int

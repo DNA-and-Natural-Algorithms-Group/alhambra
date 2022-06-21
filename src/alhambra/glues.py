@@ -50,15 +50,18 @@ class Use(int, Enum):
     def merge(self: Use, other: Use) -> Use:
         if self == other:
             return self
-        match (self, other):
-            case (Use.UNSET, x) | (x, Use.UNSET):  # type: ignore
-                return x
-            case (Use.UNUSED, x) | (x, Use.UNUSED) if 2 <= x.value <= 4:  # type: ignore
-                return x
-            case (Use.INPUT, Use.OUTPUT) | (Use.OUTPUT, Use.INPUT):  # type: ignore
-                return Use.BOTH
-            case (Use.BOTH, x) | (x, Use.BOTH) if 2 <= x.value <= 4:  # type: ignore
-                return Use.BOTH
+        if self == Use.UNSET:
+            return other
+        elif other == Use.UNSET:
+            return self
+        elif self == Use.UNUSED:
+            return other
+        elif other == Use.UNUSED:
+            return self
+        elif (self == Use.INPUT and other == Use.OUTPUT) or (self == Use.OUTPUT and other == Use.INPUT):
+            return Use.BOTH
+        elif (self == Use.BOTH and 2 <= other.value <= 4) or (2 <= self.value <= 4 and self == USE.BOTH):
+            return Use.BOTH
         raise ValueError
 
     def __or__(self, other: Any) -> Use:

@@ -146,14 +146,13 @@ class TileSet(Serializable):
             if tile_name in self.tiles.data.keys():
                 newarray[ix] = tile_name
 
-        match seed:
-            case None:
-                if len(self.seeds) > 0:
-                    seed = next(iter(self.seeds.values()))
-            case False:
-                seed = None
-            case int(x) | str(x):
-                seed = self.seeds[cast(Union[int, str], x)]
+        if seed is None:
+            if len(self.seeds) > 0:
+                seed = next(iter(self.seeds.values()))
+        elif seed is False:
+            seed = None
+        elif isinstance(seed, (int, str)):
+            seed = self.seeds[cast(Union[int, str], x)]
 
         if seed is not None and hasattr(seed, "_lattice"):
             lattice_type: Type[AbstractLattice] = seed._lattice
@@ -184,32 +183,31 @@ class TileSet(Serializable):
 
         # FIXME
         # bonds = [g.to_xgrow(self_complementary_glues) for g in self.glues]
-        match glues:
-            case "self-complementary":
-                bonds = [
-                    xgt.Bond(g.name, 0)
-                    for g in allglues
-                    if g.name
-                    and ("null" in g.name or "inert" in g.name or "hairpin" in g.name)
-                ]
-                xg_glues = []
-            case "perfect":
-                bonds = [xgt.Bond(g.name, 0) for g in allglues]
-                bonds.extend(
-                    xgt.Bond(g.complement.name, 0)
-                    for g in allglues
-                    if g.complement.name not in allglues
+        if glues == "self-complementary":
+            bonds = [
+                xgt.Bond(g.name, 0)
+                for g in allglues
+                if g.name
+                and ("null" in g.name or "inert" in g.name or "hairpin" in g.name)
+            ]
+            xg_glues = []
+        elif glues == "perfect":
+            bonds = [xgt.Bond(g.name, 0) for g in allglues]
+            bonds.extend(
+                xgt.Bond(g.complement.name, 0)
+                for g in allglues
+                if g.complement.name not in allglues
+            )
+            xg_glues = [
+                xgt.Glue(
+                    g.name,
+                    g.complement.name,
+                    g.abstractstrength if g.abstractstrength is not None else 1,
                 )
-                xg_glues = [
-                    xgt.Glue(
-                        g.name,
-                        g.complement.name,
-                        g.abstractstrength if g.abstractstrength is not None else 1,
-                    )
-                    for g in allglues
-                ]
-            case _:
-                raise ValueError("Unknown xgrow glue option", glues)
+                for g in allglues
+            ]
+        else:
+            raise ValueError("Unknown xgrow glue option", glues)
 
         if seed is None:
             if self.seeds:
