@@ -62,7 +62,9 @@ def load_nuad_design(
 
 def tileset_to_nuad_design(
     tileset: "TileSet",
-    groups: Literal["structure"] | Mapping | Callable[[Tile], str] = "structure",
+    groups: Literal["structure"]
+    | Mapping[str, str]
+    | Callable[[Tile], str] = "structure",
 ) -> "nc.Design":
     """
     From an Alhambra tileset, generate a Nuad Design with all of its domains.
