@@ -60,7 +60,7 @@ class Use(int, Enum):
             return self
         elif (self == Use.INPUT and other == Use.OUTPUT) or (self == Use.OUTPUT and other == Use.INPUT):
             return Use.BOTH
-        elif (self == Use.BOTH and 2 <= other.value <= 4) or (2 <= self.value <= 4 and self == USE.BOTH):
+        elif (self == Use.BOTH and 2 <= other.value <= 4) or (2 <= self.value <= 4 and self == Use.BOTH):
             return Use.BOTH
         raise ValueError
 
