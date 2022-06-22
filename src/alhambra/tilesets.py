@@ -14,11 +14,11 @@ from typing import (
     Mapping,
     Optional,
     Type,
-    TypeAlias,
     TypeVar,
     Union,
     cast,
 )
+from typing_extensions import TypeAlias
 
 import drawSvg_svgy as draw
 import numpy as np
