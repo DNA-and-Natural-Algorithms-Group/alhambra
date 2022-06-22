@@ -178,6 +178,7 @@ class FlatishVDupleTile10_E2(VDupleTile, BaseSSTile):
     def _input_neighborhood_domains(self) -> list[list[str]]:
         return []
 
+
 class FlatishVDupleTile9_E2(VDupleTile, BaseSSTile):
     _base_domains: ClassVar[list[SSGlue]] = [
         SSGlue(length=11),
@@ -236,6 +237,7 @@ class FlatishVDupleTile9_E2(VDupleTile, BaseSSTile):
     def _input_neighborhood_domains(self) -> list[list[str]]:
         return []
 
+
 class FlatishHDupleTile9_E(HDupleTile, BaseSSTile):
     _base_domains: list[SSGlue] = [
         SSGlue(length=11),
@@ -293,6 +295,7 @@ class FlatishHDupleTile9_E(HDupleTile, BaseSSTile):
     def _input_neighborhood_domains(self) -> list[list[str]]:
         return []
 
+
 class FlatishHDupleTile10_E(HDupleTile, BaseSSTile):
     _base_domains: ClassVar[list[SSGlue]] = [
         SSGlue(length=12),
@@ -349,6 +352,7 @@ class FlatishHDupleTile10_E(HDupleTile, BaseSSTile):
 
     def _input_neighborhood_domains(self) -> list[list[str]]:
         return []
+
 
 for ttype in [
     FlatishHDupleTile10_E,

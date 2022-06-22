@@ -188,7 +188,7 @@ class Tile:
     stoic: Optional[float]
     note: Optional[str | dict[str, Any]]
     fake: bool
-    uses: List[List[Use]] # FIXME: should use list of tuples
+    uses: List[List[Use]]  # FIXME: should use list of tuples
     __slots__ = ("name", "_edges", "color", "stoic", "note", "fake", "uses")
 
     def __init__(
@@ -200,7 +200,7 @@ class Tile:
         note: Optional[str | dict[str, Any]] = None,
         use: Sequence[Use] | None = None,
         fake: bool = False,
-        uses: Sequence[Sequence[Use]] | None = None
+        uses: Sequence[Sequence[Use]] | None = None,
     ) -> None:
         if edges is None:
             raise ValueError
@@ -326,7 +326,10 @@ class Tile:
                 raise ValueError
 
         if "uses" in d:
-            d["uses"] = [tuple(Use(x) if not isinstance(x, Use) else x for x in y) for y in d["uses"]]
+            d["uses"] = [
+                tuple(Use(x) if not isinstance(x, Use) else x for x in y)
+                for y in d["uses"]
+            ]
 
         return tile_factory.from_dict(d)
 
@@ -646,7 +649,7 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
         domains: Optional[Sequence[SSGlue]] = None,
         note: Optional[str] = None,
         use: Optional[Sequence[Use]] = None,
-        uses: Optional[Sequence[Sequence[Use]]] = None
+        uses: Optional[Sequence[Sequence[Use]]] = None,
     ):
         Tile.__init__(self, edges=[], name=name, color=color, stoic=stoic, note=note)
         if edges is None and sequence is None and domains is None:
@@ -760,21 +763,56 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
     def _input_neighborhood_domains(self) -> List[List[str]]:
         if not self.uses:
             return []
-        
+
         strands = []
 
         for use in self.uses:
-            if use == [Use.INPUT, Use.OUTPUT, Use.OUTPUT, Use.INPUT]:    # NW
-                strands.append((("W", "N"), (self.edges["W"].complement.ident(), "algo_fake_spacer" , self.edges["N"].complement.ident())))
+            if use == [Use.INPUT, Use.OUTPUT, Use.OUTPUT, Use.INPUT]:  # NW
+                strands.append(
+                    (
+                        ("W", "N"),
+                        (
+                            self.edges["W"].complement.ident(),
+                            "algo_fake_spacer",
+                            self.edges["N"].complement.ident(),
+                        ),
+                    )
+                )
             elif use == [Use.INPUT, Use.INPUT, Use.OUTPUT, Use.OUTPUT]:  # NE
-                strands.append((("N", "E"), (self.edges["N"].complement.ident(), "algo_fake_spacer" , self.edges["E"].complement.ident())))
+                strands.append(
+                    (
+                        ("N", "E"),
+                        (
+                            self.edges["N"].complement.ident(),
+                            "algo_fake_spacer",
+                            self.edges["E"].complement.ident(),
+                        ),
+                    )
+                )
             elif use == [Use.OUTPUT, Use.OUTPUT, Use.INPUT, Use.INPUT]:  # SW
-                strands.append((("S", "W"), (self.edges["S"].complement.ident(), "algo_fake_spacer" , self.edges["W"].complement.ident())))
+                strands.append(
+                    (
+                        ("S", "W"),
+                        (
+                            self.edges["S"].complement.ident(),
+                            "algo_fake_spacer",
+                            self.edges["W"].complement.ident(),
+                        ),
+                    )
+                )
             elif use == [Use.OUTPUT, Use.INPUT, Use.INPUT, Use.OUTPUT]:  # SE
-                strands.append((("E", "S"), (self.edges["E"].complement.ident(), "algo_fake_spacer" , self.edges["S"].complement.ident())))
-        
-        return strands
+                strands.append(
+                    (
+                        ("E", "S"),
+                        (
+                            self.edges["E"].complement.ident(),
+                            "algo_fake_spacer",
+                            self.edges["S"].complement.ident(),
+                        ),
+                    )
+                )
 
+        return strands
 
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
