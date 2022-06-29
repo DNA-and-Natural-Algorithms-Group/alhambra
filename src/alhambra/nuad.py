@@ -8,6 +8,7 @@ from typing import (
     Mapping,
     Optional,
     Tuple,
+    cast,
 )
 import itertools
 import logging
@@ -51,15 +52,131 @@ def load_nuad_design(
     for strand in design.strands:
         # FIXME: handle multi-strand tiles, etc
         # FIXME: handle non-update case
-        tile: BaseSSTile = new_ts.tiles[strand.name]
-        assert isinstance(tile, BaseSSTile)
+        if strand.name in new_ts.tiles:
+            tile: BaseSSTile = new_ts.tiles[strand.name]
+            assert isinstance(tile, BaseSSTile)
 
-        assert str(tile.sequence) == strand.sequence(
-            delimiter="-"
-        )  # FIXME: should not need str here.
+            assert str(tile.sequence) == strand.sequence(
+                delimiter="-"
+            )  # FIXME: should not need str here.
 
     return new_ts
 
+def update_nuad_design(
+    tileset: "TileSet",
+    old_design: "nc.Design",
+    groups: Literal["structure"]
+    | Mapping[str, str]
+    | Callable[[Tile], str] = "structure"
+) -> "nc.Design":
+    """
+    From an Alhambra tileset and an existing Nuad Design. IN-PLACE
+    """
+    try:
+        import nuad.constraints as nc
+    except ImportError:
+        raise ImportError("nuad must be installed for this function.")
+    
+    # Determine group-setting function
+    if groups == "structure":
+        get_group = lambda tile: tile.structure
+    elif isinstance(groups, Mapping):
+        get_group = lambda tile: cast(Mapping, groups)[tile]
+    else:
+        get_group = groups
+
+    def filter_strand(s: "nc.Strand"):
+        if s.name not in tileset.tiles.asdict():
+            log.info(f"Removing tile {s.name} from existing design.")
+            return False
+        return True
+
+    old_design.compute_derived_fields()
+
+    old_design.strands = [s for s in old_design.strands if filter_strand(s)]
+
+    strands_by_name = {s.name: s for s in old_design.strands}
+
+    pools = {(pool.name, pool.length): pool for pool in old_design.domain_pools()}
+    new_ncdomains: dict[str, "nc.Domain"] = dict()
+
+    for tile in tileset.tiles:
+        if tile.ident() in strands_by_name:
+            continue
+        log.info(f"Adding new tile {tile.ident()} to existing design.")
+    
+        strand_group = get_group(tile)
+        td: list[SSGlue] = tile.domains
+
+        ncdomains = []
+        for domain in td:
+            try:
+                ncdomains.append(old_design.domains_by_name[domain.basename()])
+            except KeyError:
+                try:
+                    ncdomains.append(new_ncdomains[domain.basename()])
+                except KeyError:
+                    log.info(f"Adding domain {domain.basename()}.")
+                    ncdomain = nc.Domain(domain.basename())
+
+                    if domain.sequence.is_definite:
+                        ncdomain.set_fixed_sequence(domain.sequence.base_str)
+                    else:
+                        assert domain.sequence.is_null
+                        try:
+                            pool = pools[(f"SSGlue{domain.dna_length}", domain.dna_length)]  # FIXME: determine type
+                        except KeyError:
+                            pool = nc.DomainPool(
+                                f"SSGlue{domain.dna_length}", domain.dna_length
+                            )  # FIXME: determine type
+                            pools[(f"SSGlue{domain.dna_length}", domain.dna_length)] = pool  # FIXME: determine type
+                    ncdomain.pool = pool
+                    new_ncdomains[ncdomain.name] = ncdomain
+                    ncdomains.append(ncdomain)  
+
+        old_design.strands.append(
+            nc.Strand(
+                domains=ncdomains,
+                starred_domain_indices=[i for i, d in enumerate(td) if d.is_complement],
+                name=tile.name,
+                group=strand_group,
+            )
+        )  
+    
+    # Nuad needs only non-complementary (ie, non-starred) domains.  Alhambra may contain
+    # complementary domains that don't have a non-complementary counterpart.  So we'll need
+    # to compile these.  FIXME: move out to other function?
+    non_complementary_domains: GlueList[SSGlue] = GlueList()
+
+    for domain in tileset.alldomains:
+        # We only want domains that actually have sequences, and can be designed.
+        # FIXME: should have more general sequence-containing class
+        if not isinstance(domain, SSGlue):
+            log.warning(f"Not adding domain {domain.name} to Nuad design: {domain}")
+            continue
+
+        if domain.is_complement:
+            non_complementary_domains.add(domain.complement)
+        else:
+            non_complementary_domains.add(domain)
+    
+    old_design.compute_derived_fields()
+
+    for ncdomain in old_design.domains:
+        if not ncdomain.has_pool():
+            log.warn(f"Domain {ncdomain.name} has no pool.")
+        else:
+            domain = non_complementary_domains[ncdomain.name]
+            if ncdomain.pool.length != domain.dna_length:
+                try:
+                    ncdomain._pool = pools[(f"SSGlue{domain.dna_length}", domain.dna_length)] 
+                except KeyError:
+                    ncdomain._pool = nc.DomainPool(
+                        f"SSGlue{domain.dna_length}", domain.dna_length
+                    )  # FIXME: determine type
+                    pools[(f"SSGlue{domain.dna_length}", domain.dna_length)] = ncdomain._pool  # FIXME: determine type
+
+    return old_design
 
 def tileset_to_nuad_design(
     tileset: "TileSet",
@@ -82,7 +199,7 @@ def tileset_to_nuad_design(
     if groups == "structure":
         get_group = lambda tile: tile.structure
     elif isinstance(groups, Mapping):
-        get_group = lambda tile: groups[tile]
+        get_group = lambda tile: cast(Mapping, groups)[tile]
     else:
         get_group = groups
 
