@@ -245,12 +245,12 @@ def tileset_to_nuad_design(
         else:
             assert domain.sequence.is_null
             try:
-                pool = pools[("SSGlue", domain.dna_length)]  # FIXME: determine type
+                pool = pools[(f"SSGlue{domain.dna_length}", domain.dna_length)]  # FIXME: determine type
             except KeyError:
                 pool = nc.DomainPool(
                     "SSGlue", domain.dna_length
                 )  # FIXME: determine type
-                pools[("SSGlue", domain.dna_length)] = pool  # FIXME: determine type
+                pools[(f"SSGlue{domain.dna_length}", domain.dna_length)] = pool  # FIXME: determine type
 
             ncdomain.pool = pool
             ncdomains.append(ncdomain)

@@ -802,12 +802,12 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
                 )
             elif use == [Use.OUTPUT, Use.INPUT, Use.INPUT, Use.OUTPUT]:  # SE
                 strands.append(
-                    (
-                        ("E", "S"),
+                    (  # FIXME: needed to avoid pseudoknot
+                        ("S", "E"),
                         (
-                            self.edges["E"].complement.ident(),
-                            "algo_fake_spacer",
                             self.edges["S"].complement.ident(),
+                            "algo_fake_spacer",
+                            self.edges["E"].complement.ident(),
                         ),
                     )
                 )
