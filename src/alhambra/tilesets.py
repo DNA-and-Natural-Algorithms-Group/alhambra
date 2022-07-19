@@ -152,7 +152,7 @@ class TileSet(Serializable):
         elif seed is False:
             seed = None
         elif isinstance(seed, (int, str)):
-            seed = self.seeds[cast(Union[int, str], x)]
+            seed = self.seeds[cast(Union[int, str], seed)]
 
         if seed is not None and hasattr(seed, "_lattice"):
             lattice_type: Type[AbstractLattice] = seed._lattice

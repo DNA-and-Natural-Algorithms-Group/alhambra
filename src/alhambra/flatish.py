@@ -63,6 +63,8 @@ def _add_domain_from_glue(
 ) -> scadnano.StrandBuilder:
     s.move(g.dna_length * d)
     s.with_domain_name(g.ident())
+    if g.sequence.is_definite:
+        s.with_domain_sequence(g.sequence.base_str)
     return s
 
 
@@ -695,7 +697,7 @@ class FlatishDiagonalSESeed9(DiagonalSESeed):
         for i, gs in enumerate(self.adapters):
             s = design.draw_strand(helix + 2 * i, offset + 21 + 2 * i)
             _add_domain_from_glue(s, gs[0], -1)
-            s.move(-31)
+            s.move(-31).with_name(f"a_{i}")
             s.cross(s.current_helix + 1)
             s.move(33)
             _add_domain_from_glue(s, gs[1], 1)
@@ -704,17 +706,17 @@ class FlatishDiagonalSESeed9(DiagonalSESeed):
         alen = len(self.adapters)
 
         for i in range(0, alen):
-            s = design.draw_strand(helix + 1 + 2 * i, offset - 37 + 2 * i)
-            s.move(16)
+            s = design.draw_strand(helix + 1 + 2 * i, offset - 38 + 2 * i)
+            s.move(16).with_name(f"b_{i}")
             s.cross(s.current_helix - 1)
             s.move(-16)
             bpse.append(s)
 
         scaffold = design.draw_strand(
-            helix + 1 + 2 * alen - 2, offset + 12 + 2 * alen - 2
+            helix + 1 + 2 * alen - 2, offset + 12 + 2 * alen - 3
         )
         for _ in range(alen):
-            scaffold.move(-49)
+            scaffold.move(-49).with_name("scaffold")
             scaffold.cross(scaffold.current_helix - 1)
             scaffold.move(47)
             scaffold.cross(scaffold.current_helix - 1)
