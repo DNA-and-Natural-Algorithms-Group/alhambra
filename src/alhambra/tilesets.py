@@ -688,7 +688,7 @@ class TileSet(Serializable):
 
     from .nuad import tileset_to_nuad_design as to_nuad_design  # type: ignore
 
-    from .nuad import update_nuad_design as update_nuad_design # type: ignore
+    from .nuad import update_nuad_design as update_nuad_design  # type: ignore
 
     from .nuad import load_nuad_design as load_nuad_design  # type: ignore
 

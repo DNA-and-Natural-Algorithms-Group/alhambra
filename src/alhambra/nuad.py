@@ -62,12 +62,13 @@ def load_nuad_design(
 
     return new_ts
 
+
 def update_nuad_design(
     tileset: "TileSet",
     old_design: "nc.Design",
     groups: Literal["structure"]
     | Mapping[str, str]
-    | Callable[[Tile], str] = "structure"
+    | Callable[[Tile], str] = "structure",
 ) -> "nc.Design":
     """
     From an Alhambra tileset and an existing Nuad Design. IN-PLACE
@@ -76,7 +77,7 @@ def update_nuad_design(
         import nuad.constraints as nc
     except ImportError:
         raise ImportError("nuad must be installed for this function.")
-    
+
     # Determine group-setting function
     if groups == "structure":
         get_group = lambda tile: tile.structure
@@ -104,7 +105,7 @@ def update_nuad_design(
         if tile.ident() in strands_by_name:
             continue
         log.info(f"Adding new tile {tile.ident()} to existing design.")
-    
+
         strand_group = get_group(tile)
         td: list[SSGlue] = tile.domains
 
@@ -124,15 +125,19 @@ def update_nuad_design(
                     else:
                         assert domain.sequence.is_null
                         try:
-                            pool = pools[(f"SSGlue{domain.dna_length}", domain.dna_length)]  # FIXME: determine type
+                            pool = pools[
+                                (f"SSGlue{domain.dna_length}", domain.dna_length)
+                            ]  # FIXME: determine type
                         except KeyError:
                             pool = nc.DomainPool(
                                 f"SSGlue{domain.dna_length}", domain.dna_length
                             )  # FIXME: determine type
-                            pools[(f"SSGlue{domain.dna_length}", domain.dna_length)] = pool  # FIXME: determine type
+                            pools[
+                                (f"SSGlue{domain.dna_length}", domain.dna_length)
+                            ] = pool  # FIXME: determine type
                     ncdomain.pool = pool
                     new_ncdomains[ncdomain.name] = ncdomain
-                    ncdomains.append(ncdomain)  
+                    ncdomains.append(ncdomain)
 
         old_design.strands.append(
             nc.Strand(
@@ -141,8 +146,8 @@ def update_nuad_design(
                 name=tile.name,
                 group=strand_group,
             )
-        )  
-    
+        )
+
     # Nuad needs only non-complementary (ie, non-starred) domains.  Alhambra may contain
     # complementary domains that don't have a non-complementary counterpart.  So we'll need
     # to compile these.  FIXME: move out to other function?
@@ -159,7 +164,7 @@ def update_nuad_design(
             non_complementary_domains.add(domain.complement)
         else:
             non_complementary_domains.add(domain)
-    
+
     old_design.compute_derived_fields()
 
     for ncdomain in old_design.domains:
@@ -169,14 +174,19 @@ def update_nuad_design(
             domain = non_complementary_domains[ncdomain.name]
             if ncdomain.pool.length != domain.dna_length:
                 try:
-                    ncdomain._pool = pools[(f"SSGlue{domain.dna_length}", domain.dna_length)] 
+                    ncdomain._pool = pools[
+                        (f"SSGlue{domain.dna_length}", domain.dna_length)
+                    ]
                 except KeyError:
                     ncdomain._pool = nc.DomainPool(
                         f"SSGlue{domain.dna_length}", domain.dna_length
                     )  # FIXME: determine type
-                    pools[(f"SSGlue{domain.dna_length}", domain.dna_length)] = ncdomain._pool  # FIXME: determine type
+                    pools[
+                        (f"SSGlue{domain.dna_length}", domain.dna_length)
+                    ] = ncdomain._pool  # FIXME: determine type
 
     return old_design
+
 
 def tileset_to_nuad_design(
     tileset: "TileSet",
@@ -245,12 +255,16 @@ def tileset_to_nuad_design(
         else:
             assert domain.sequence.is_null
             try:
-                pool = pools[(f"SSGlue{domain.dna_length}", domain.dna_length)]  # FIXME: determine type
+                pool = pools[
+                    (f"SSGlue{domain.dna_length}", domain.dna_length)
+                ]  # FIXME: determine type
             except KeyError:
                 pool = nc.DomainPool(
                     "SSGlue", domain.dna_length
                 )  # FIXME: determine type
-                pools[(f"SSGlue{domain.dna_length}", domain.dna_length)] = pool  # FIXME: determine type
+                pools[
+                    (f"SSGlue{domain.dna_length}", domain.dna_length)
+                ] = pool  # FIXME: determine type
 
             ncdomain.pool = pool
             ncdomains.append(ncdomain)
