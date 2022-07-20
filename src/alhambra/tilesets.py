@@ -72,6 +72,8 @@ T = TypeVar("T")
 
 XgrowGlueOpts: TypeAlias = Literal["self-complementary", "perfect"]
 
+from alhambra_mixes.mixes import Mix, Q_, nM, ureg, _parse_conc_required, _ratio, log
+
 
 @dataclass(init=False)
 class TileSet(Serializable):
@@ -102,6 +104,67 @@ class TileSet(Serializable):
             self.params = params
         else:
             self.params = dict()
+
+    @classmethod
+    def from_mix(
+        cls: Type[TileSet],
+        mix: Mix,
+        tilesets_or_lists: TileSet | TileList | Iterable[TileSet | TileList],
+        *,
+        seed: bool | Seed = False,
+        base_conc: ureg.Quantity | str = Q_(100.0, nM),
+    ) -> TileSet:
+        """
+        Given some :any:`TileSet`\ s, or lists of :any:`Tile`\ s from which to
+        take tiles, generate an TileSet from the mix.
+        """
+
+        from .tiles import BaseSSTile
+
+        base_conc = _parse_conc_required(base_conc)
+
+        newts = cls()
+
+        if isinstance(tilesets_or_lists, (TileList, TileSet)):
+            tilesets_or_lists = [tilesets_or_lists]
+
+        for name, row in mix.all_components().iterrows():
+            new_tile = None
+            for tl_or_ts in tilesets_or_lists:
+                try:
+                    if isinstance(tl_or_ts, TileSet):
+                        tile = tl_or_ts.tiles[name]
+                    else:
+                        tile = tl_or_ts[name]
+                    new_tile = tile.copy()
+                    if isinstance(new_tile, BaseSSTile) and (
+                        (seq := getattr(row["component"], "sequence", None)) is not None
+                    ):
+                        new_tile.sequence |= seq
+                    new_tile.stoic = float(
+                        _ratio(Q_(row["concentration_nM"], nM), base_conc)
+                    )
+                    newts.tiles.add(new_tile)
+                    break
+                except KeyError:
+                    pass
+            if new_tile is None:
+                log.warn(f"Component {name} not found in tile lists.")
+
+        match seed:
+            case True:
+                firstts = next(iter(tilesets_or_lists))
+                assert isinstance(firstts, TileSet)
+                newts.seeds["default"] = firstts.seeds["default"]
+            case False:
+                pass
+            case Seed() as x:
+                newts.seeds["default"] = x
+
+        if len(newts.tiles) == 0:
+            raise ValueError("No mix components match tiles.")
+
+        return newts
 
     ### XGROW METHODS
 
