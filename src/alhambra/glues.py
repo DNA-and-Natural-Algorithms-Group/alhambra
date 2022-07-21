@@ -225,7 +225,7 @@ class SSGlue(Glue):
         note: Optional[str] = None,
         use: Optional[Use] = None,
     ):
-        super().__init__(name, note, use)
+        super(SSGlue, self).__init__(name, note, use)
 
         if isinstance(length, int):
             lseq: Seq | None = Seq("N" * length)
@@ -337,7 +337,7 @@ class DXGlue(Glue):
         abstractstrength=None,
         note=None,
     ):
-        super().__init__(name, note, use, abstractstrength)
+        super(DXGlue, self).__init__(name, note, use, abstractstrength)
         self.etype = etype
         trial_fseq: Optional[Seq] = None
         if length:

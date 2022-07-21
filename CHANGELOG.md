@@ -1,3 +1,7 @@
+## a13
+
+- Python 3.11 compatibility.
+
 ## a12
 
 - Mix-to-tileset code moved to TileSet.
