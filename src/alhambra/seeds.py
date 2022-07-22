@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from alhambra.tilesets import XgrowGlueOpts
     import xgrow.tileset as xgt
 
-from .glues import DXGlue, Glue
+from .glues import DXGlue, Glue, glue_factory
 
 T = TypeVar("T")
 
@@ -86,8 +86,18 @@ class DiagonalSESeed(Seed):
         converter=_convert_adapts, on_setattr=attrs.setters.convert
     )
 
+    def to_dict(self) -> dict:
+        d: dict[str, Any] = {}
+        d["type"] = self.__class__.__name__
+        d["adapters"] = [(g1.to_dict(), g2.to_dict()) for g1, g2 in self.adapters]
+        return d
+
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> DiagonalSESeed:
+        d["adapters"] = [
+            (glue_factory.from_dict(g1), glue_factory.from_dict(g2))
+            for g1, g2 in d["adapters"]
+        ]
         return cls(**d)
 
     def to_xgrow(
@@ -124,9 +134,6 @@ class DiagonalSESeed(Seed):
             xgtiles.append(xa)
 
         return xgtiles, bonds, xgt.InitState(locs)
-
-    def to_dict(self) -> dict:
-        return super().to_dict()
 
 
 seed_factory = SeedFactory()

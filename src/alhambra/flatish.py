@@ -573,7 +573,7 @@ lattice_factory.register(FlatishLattice)
 
 
 class FlatishDiagonalSESeed10(DiagonalSESeed):
-    _lattice = FlatishLattice
+    _lattice: ClassVar[Type[LatticeSupportingScadnano]] = FlatishLattice
 
     def _calculate_valid_offset(self, target: tuple[int, int]) -> tuple[int, int]:
         """
@@ -743,3 +743,7 @@ def flatgrid_hofromxy(
         + (11 + sx) * (x % 2)
         + (9 + sy) * (y % 2),
     )
+
+
+seed_factory.register(FlatishDiagonalSESeed10)
+seed_factory.register(FlatishDiagonalSESeed9)
