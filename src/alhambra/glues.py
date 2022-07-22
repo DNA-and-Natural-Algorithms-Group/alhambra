@@ -225,6 +225,8 @@ class SSGlue(Glue):
         note: Optional[str] = None,
         use: Optional[Use] = None,
     ):
+        if use is None:
+            use = Use.UNSET
         super(SSGlue, self).__init__(name, note, use)
 
         if isinstance(length, int):

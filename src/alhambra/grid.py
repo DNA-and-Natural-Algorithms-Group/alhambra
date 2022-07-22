@@ -9,7 +9,7 @@ import numpy as np
 import scadnano
 
 from alhambra.glues import Glue, SSGlue
-from alhambra.seeds import Seed
+from alhambra.seeds import Seed, SeedSupportingScadnano
 from alhambra.seq import Seq
 from alhambra.tiles import D, SupportsGuards, Tile, TileSupportingScadnano
 
@@ -26,75 +26,17 @@ class Lattice(ABC):
     def __setitem__(self, index, v):
         ...
 
+    @property
+    @abstractmethod
+    def seed(self) -> Seed | None:
+        ...
+
     def asdict(self) -> dict[str, Any]:
         raise NotImplementedError
 
     @classmethod
     def fromdict(cls, d: dict[str, Any]) -> Lattice:
         raise NotADirectoryError
-
-
-class LatticeSupportingScadnano(ABC):
-    @abstractmethod
-    def to_scadnano_lattice(self) -> ScadnanoLattice:
-        ...
-
-    def to_scadnano(self, tileset: "TileSet") -> "scadnano.Design":
-        tileset.tiles.refreshnames()
-        tileset.glues.refreshnames()
-        scl = self.to_scadnano_lattice()
-        max_helix = max(helix for helix, offset in scl.positions) + 4
-        des = scadnano.Design(helices=[scadnano.Helix() for _ in range(0, max_helix)])
-
-        for (helix, offset), tilename in scl.positions.items():
-            cast(TileSupportingScadnano, tileset.tiles[tilename]).to_scadnano(
-                des, helix, offset
-            )
-
-        if scl.seed is not None:
-            scl.seed.to_scadnano(des, scl.seed_position[0], scl.seed_position[1])
-
-        return des
-
-
-@dataclass
-class ScadnanoLattice(LatticeSupportingScadnano, Lattice):
-    positions: dict[tuple[int, int], str] = field(default_factory=lambda: {})
-    seed: Seed | None = None
-    seed_position: tuple[int, int] = (0, 0)
-
-    def __getitem__(self, index: tuple[int, int]) -> str | None:
-        return self.positions[index]
-
-    def __setitem__(self, index: tuple[int, int], v: str):
-        self.positions[cast(tuple[int, int], index)] = cast(str, v)
-
-    def findtile(self, tile: str | Tile) -> list[tuple[int, int]]:
-        if isinstance(tile, Tile):
-            tile = tile.ident()
-        return [k for k, v in self.positions.items() if v == tile]
-
-    def to_scadnano_lattice(self) -> ScadnanoLattice:
-        return self
-
-    def asdict(self) -> dict[str, Any]:
-        raise NotImplementedError
-
-    @classmethod
-    def fromdict(cls, d: dict[str, Any]):
-        raise NotADirectoryError
-
-
-AL = TypeVar("AL", bound="AbstractLattice")
-
-
-def _skip_polyT_and_inertname(glue: Glue) -> bool:
-    if "inert" in glue.ident():
-        return True
-    elif isinstance(glue, SSGlue):
-        if frozenset(glue.sequence.base_str) == frozenset("T"):
-            return True
-    return False
 
 
 @dataclass(init=False)
@@ -143,6 +85,96 @@ class AbstractLattice(Lattice):
     @classmethod
     def empty(cls, shape):
         return cls(np.full(shape, "", dtype=object))
+
+
+class LatticeSupportingScadnano(Lattice):
+    @abstractmethod
+    def to_scadnano_lattice(self) -> ScadnanoLattice:
+        ...
+
+    seed: SeedSupportingScadnano | None = None
+
+    def to_scadnano(self, tileset: "TileSet") -> "scadnano.Design":
+        tileset.tiles.refreshnames()
+        tileset.glues.refreshnames()
+        scl = self.to_scadnano_lattice()
+        max_helix = max(helix for helix, offset in scl.positions) + 4
+        des = scadnano.Design(helices=[scadnano.Helix() for _ in range(0, max_helix)])
+
+        for (helix, offset), tilename in scl.positions.items():
+            cast(TileSupportingScadnano, tileset.tiles[tilename]).to_scadnano(
+                des, helix, offset
+            )
+
+        if scl.seed is not None:
+            scl.seed.to_scadnano(des, scl.seed_position[0], scl.seed_position[1])
+
+        return des
+
+
+class AbstractLatticeSupportingScadnano(AbstractLattice):
+    @abstractmethod
+    def to_scadnano_lattice(self) -> ScadnanoLattice:
+        ...
+
+    seed: SeedSupportingScadnano | None = None
+
+    def to_scadnano(self, tileset: "TileSet") -> "scadnano.Design":
+        tileset.tiles.refreshnames()
+        tileset.glues.refreshnames()
+        scl = self.to_scadnano_lattice()
+        max_helix = max(helix for helix, offset in scl.positions) + 4
+        des = scadnano.Design(helices=[scadnano.Helix() for _ in range(0, max_helix)])
+
+        for (helix, offset), tilename in scl.positions.items():
+            cast(TileSupportingScadnano, tileset.tiles[tilename]).to_scadnano(
+                des, helix, offset
+            )
+
+        if scl.seed is not None:
+            scl.seed.to_scadnano(des, scl.seed_position[0], scl.seed_position[1])
+
+        return des
+
+
+@dataclass
+class ScadnanoLattice(LatticeSupportingScadnano):
+    positions: dict[tuple[int, int], str] = field(default_factory=lambda: {})
+    seed: SeedSupportingScadnano | None = None
+    seed_position: tuple[int, int] = (0, 0)
+
+    def __getitem__(self, index: tuple[int, int]) -> str | None:
+        return self.positions[index]
+
+    def __setitem__(self, index: tuple[int, int], v: str):
+        self.positions[cast(tuple[int, int], index)] = cast(str, v)
+
+    def findtile(self, tile: str | Tile) -> list[tuple[int, int]]:
+        if isinstance(tile, Tile):
+            tile = tile.ident()
+        return [k for k, v in self.positions.items() if v == tile]
+
+    def to_scadnano_lattice(self) -> ScadnanoLattice:
+        return self
+
+    def asdict(self) -> dict[str, Any]:
+        raise NotImplementedError
+
+    @classmethod
+    def fromdict(cls, d: dict[str, Any]):
+        raise NotADirectoryError
+
+
+AL = TypeVar("AL", bound="AbstractLattice")
+
+
+def _skip_polyT_and_inertname(glue: Glue) -> bool:
+    if "inert" in glue.ident():
+        return True
+    elif isinstance(glue, SSGlue):
+        if frozenset(glue.sequence.base_str) == frozenset("T"):
+            return True
+    return False
 
 
 class LatticeFactory:

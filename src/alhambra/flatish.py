@@ -15,6 +15,7 @@ from typing import (
     Union,
     cast,
 )
+import attrs
 
 import numpy as np
 import scadnano
@@ -22,6 +23,7 @@ import scadnano
 from alhambra.grid import (
     AbstractLattice,
     LatticeSupportingScadnano,
+    AbstractLatticeSupportingScadnano,
     ScadnanoLattice,
     lattice_factory,
 )
@@ -29,7 +31,7 @@ from alhambra.seq import Seq
 from alhambra.tilesets import XgrowGlueOpts
 
 from .glues import Glue, GlueList
-from .seeds import Seed, seed_factory, DiagonalSESeed
+from .seeds import Seed, _convert_adapts, seed_factory, DiagonalSESeed
 from .tiles import (
     BaseSSTile,
     BaseSSTSingle,
@@ -177,7 +179,9 @@ class FlatishVDupleTile10_E2(VDupleTile, BaseSSTile):
         s.with_sequence(self.sequence.base_str)
         return s.strand
 
-    def _input_neighborhood_domains(self) -> list[list[str]]:
+    def _input_neighborhood_domains(
+        self,
+    ) -> Sequence[tuple[Sequence[str], Sequence[str]]]:
         return []
 
 
@@ -236,7 +240,9 @@ class FlatishVDupleTile9_E2(VDupleTile, BaseSSTile):
         s.with_sequence(self.sequence.base_str)
         return s.strand
 
-    def _input_neighborhood_domains(self) -> list[list[str]]:
+    def _input_neighborhood_domains(
+        self,
+    ) -> Sequence[tuple[Sequence[str], Sequence[str]]]:
         return []
 
 
@@ -294,7 +300,9 @@ class FlatishHDupleTile9_E(HDupleTile, BaseSSTile):
         s.with_sequence(self.sequence.base_str)
         return s.strand
 
-    def _input_neighborhood_domains(self) -> list[list[str]]:
+    def _input_neighborhood_domains(
+        self,
+    ) -> Sequence[tuple[Sequence[str], Sequence[str]]]:
         return []
 
 
@@ -352,7 +360,9 @@ class FlatishHDupleTile10_E(HDupleTile, BaseSSTile):
         s.with_sequence(self.sequence.base_str)
         return s.strand
 
-    def _input_neighborhood_domains(self) -> list[list[str]]:
+    def _input_neighborhood_domains(
+        self,
+    ) -> Sequence[tuple[Sequence[str], Sequence[str]]]:
         return []
 
 
@@ -544,7 +554,7 @@ class FlatishVSeed9(Seed):
 seed_factory.register(FlatishVSeed9)
 
 
-class FlatishLattice(LatticeSupportingScadnano, AbstractLattice):
+class FlatishLattice(AbstractLatticeSupportingScadnano):
     # FIXME: seed should be flatish
     """A lattice of flatish tiles.  Position 0,0 is a 9nt-north tile."""
 
@@ -573,7 +583,10 @@ lattice_factory.register(FlatishLattice)
 
 
 class FlatishDiagonalSESeed10(DiagonalSESeed):
-    _lattice: ClassVar[Type[LatticeSupportingScadnano]] = FlatishLattice
+    adapters: Sequence[tuple[SSGlue, SSGlue]] = attrs.field(
+        converter=_convert_adapts, on_setattr=attrs.setters.convert
+    )
+    _lattice: ClassVar[Type[AbstractLatticeSupportingScadnano]] = FlatishLattice
 
     def _calculate_valid_offset(self, target: tuple[int, int]) -> tuple[int, int]:
         """
@@ -585,7 +598,9 @@ class FlatishDiagonalSESeed10(DiagonalSESeed):
         else:
             return (target[0], target[1] + 1)
 
-    def ho_from_seed_offset(self, seed_offset: tuple[int, int], gridysize):
+    def ho_from_seed_offset(
+        self, seed_offset: tuple[int, int], gridysize: int
+    ) -> tuple[int, int]:
         seed_offset = self._calculate_valid_offset(seed_offset)
 
         return flatgrid_hofromxy(
@@ -604,7 +619,7 @@ class FlatishDiagonalSESeed10(DiagonalSESeed):
         self, glues: GlueList[Glue], tiles: TileList[Tile] | None = None
     ) -> None:
         self.adapters = [
-            (glues.merge_glue(g1), glues.merge_glue(g2)) for g1, g2 in self.adapters
+            (glues.merge_glue(g1), glues.merge_glue(g2)) for g1, g2 in self.adapters  # type: ignore
         ]
 
     def to_scadnano(
@@ -649,6 +664,9 @@ class FlatishDiagonalSESeed10(DiagonalSESeed):
 
 
 class FlatishDiagonalSESeed9(DiagonalSESeed):
+    adapters: Sequence[tuple[SSGlue, SSGlue]] = attrs.field(
+        converter=_convert_adapts, on_setattr=attrs.setters.convert
+    )
     _lattice = FlatishLattice
 
     def _calculate_valid_offset(self, target: tuple[int, int]) -> tuple[int, int]:
@@ -680,7 +698,7 @@ class FlatishDiagonalSESeed9(DiagonalSESeed):
         self, glues: GlueList[Glue], tiles: TileList[Tile] | None = None
     ) -> None:
         self.adapters = [
-            (glues.merge_glue(g1), glues.merge_glue(g2)) for g1, g2 in self.adapters
+            (glues.merge_glue(g1), glues.merge_glue(g2)) for g1, g2 in self.adapters  # type: ignore
         ]
 
     def to_scadnano(

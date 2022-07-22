@@ -89,7 +89,7 @@ class UpdateListD(Generic[T_NMI]):
             if isinstance(k, slice):
                 if isinstance(k.start, SupportsIndex):
                     if int(k.start) < 0:
-                        k.start = len(self.data) - int(k.start)
+                        k = slice(len(self.data) - int(k.start), k.stop, k.step)
                     mi = dropwhile(lambda x: x[0] < cast(slice, k).start, mi)
                 elif k.start is not None:
                     mi = dropwhile(lambda x: x[1].ident() != cast(slice, k).start, mi)

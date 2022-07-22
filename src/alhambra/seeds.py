@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any, Sequence, Type, TypeVar, cast
 
 import attrs
 
+import scadnano
+
 if TYPE_CHECKING:
     from alhambra.tilesets import XgrowGlueOpts
     import xgrow.tileset as xgt
@@ -44,6 +46,20 @@ class Seed(ABC):
         raise NotImplementedError
 
 
+class SeedSupportingScadnano(Seed):
+    @abstractmethod
+    def ho_from_seed_offset(
+        self, seed_offset: tuple[int, int], gridysize: int
+    ) -> tuple[int, int]:
+        ...
+
+    @abstractmethod
+    def to_scadnano(
+        self, design: scadnano.Design, helix: int, offset: int
+    ) -> list[scadnano.Strand]:
+        ...
+
+
 class SeedFactory:
     types: dict[str, Type[Seed]]
 
@@ -66,7 +82,7 @@ class DXOrigamiSeed(Seed):
 
 
 def _convert_adapts(
-    adapters: Sequence[Sequence[str | Glue, str | Glue]]
+    adapters: Sequence[tuple[str | Glue, str | Glue]]
 ) -> list[tuple[Glue, Glue]]:
     # todo: verify
     return [
@@ -82,7 +98,7 @@ def _convert_adapts(
 class DiagonalSESeed(Seed):
     "Tall rectangle origami to DX-tile seed (Barish et al)"
     # FIXME: fixed-choice adapters for now
-    adapters: list[tuple[Glue, Glue]] = attrs.field(
+    adapters: Sequence[tuple[Glue, Glue]] = attrs.field(
         converter=_convert_adapts, on_setattr=attrs.setters.convert
     )
 

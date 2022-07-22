@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import copy
+from io import TextIOWrapper
 import logging
+from os import PathLike
 import warnings
 from dataclasses import dataclass, field
 from typing import (
@@ -18,7 +20,7 @@ from typing import (
     Union,
     cast,
 )
-from typing_extensions import TypeAlias
+from typing_extensions import Self, TypeAlias
 
 import drawSvg_svgy as draw
 import numpy as np
@@ -151,15 +153,17 @@ class TileSet(Serializable):
             if new_tile is None:
                 log.warn(f"Component {name} not found in tile lists.")
 
-        match seed:
-            case True:
-                firstts = next(iter(tilesets_or_lists))
-                assert isinstance(firstts, TileSet)
-                newts.seeds["default"] = firstts.seeds["default"]
-            case False:
-                pass
-            case Seed() as x:
-                newts.seeds["default"] = x
+        firstts = next(iter(tilesets_or_lists))
+        assert isinstance(firstts, TileSet)
+
+        if seed is True:
+            newts.seeds["default"] = firstts.seeds["default"]
+        elif seed is False:
+            pass
+        elif isinstance(seed, Seed):
+            newts.seeds["default"] = seed
+        elif isinstance(seed, str):
+            newts.seeds["default"] = firstts.seeds[seed]
 
         if len(newts.tiles) == 0:
             raise ValueError("No mix components match tiles.")
@@ -218,7 +222,7 @@ class TileSet(Serializable):
             seed = self.seeds[cast(Union[int, str], seed)]
 
         if seed is not None and hasattr(seed, "_lattice"):
-            lattice_type: Type[AbstractLattice] = seed._lattice
+            lattice_type: Type[AbstractLattice] = seed._lattice  # type: ignore
         else:
             lattice_type = AbstractLattice
 
@@ -367,15 +371,17 @@ class TileSet(Serializable):
         ts.lattices = {0: cast(Lattice, ScadnanoLattice(positions))}
         return ts
 
-    def to_scadnano(self, lattice: LatticeSupportingScadnano = None) -> scadnano.Design:
+    def to_scadnano(
+        self, lattice: LatticeSupportingScadnano | None = None
+    ) -> scadnano.Design:
         """Export TileSet (with lattice) as Scadnano Design."""
         import scadnano
 
         self.tiles.refreshnames()
         self.glues.refreshnames()
-        if hasattr(lattice, "seed") and hasattr(lattice.seed, "update_details"):
-            lattice.seed.update_details(self.allglues, self.tiles)
-        if lattice:
+        if lattice is not None:
+            if hasattr(lattice, "seed") and hasattr(lattice.seed, "update_details"):
+                lattice.seed.update_details(self.allglues, self.tiles)  # type: ignore
             return lattice.to_scadnano(self)
         for tlattice in self.lattices:
             if isinstance(tlattice, LatticeSupportingScadnano):
@@ -813,3 +819,23 @@ class TileSet(Serializable):
     def copy(self):
         """Return a full (deep) copy of the TileSet"""
         return copy.deepcopy(self)
+
+    @classmethod
+    def from_file(
+        cls, path_or_stream: TextIOWrapper | str | PathLike[str]
+    ) -> "TileSet":
+
+        if isinstance(path_or_stream, (str, PathLike)):
+            stream = open(path_or_stream)
+        else:
+            stream = path_or_stream
+
+        return cls.from_json(stream)
+
+    def to_file(self, path_or_stream: str | PathLike[str] | TextIOWrapper):
+        if isinstance(path_or_stream, (str, PathLike)):
+            stream = open(path_or_stream, "w")
+        else:
+            stream = path_or_stream
+
+        return self.to_json(stream)

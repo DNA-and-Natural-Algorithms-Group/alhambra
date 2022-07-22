@@ -475,7 +475,7 @@ class VDupleTile(Tile):
     ) -> draw.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
-        elif self.color[0] == "#":
+        elif (self.color is not None) and self.color[0] == "#":
             color = self.color
         else:
             color = "gray"
@@ -552,7 +552,7 @@ class HDupleTile(Tile):
     ) -> draw.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
-        elif self.color[0] == "#":
+        elif (self.color is not None) and (self.color[0] == "#"):
             color = self.color
         else:
             color = "rgb(150,150,150)"
@@ -627,7 +627,9 @@ class BaseSSTile(SupportsGuards, TileSupportingScadnano):
     def domains(self) -> List[SSGlue]:
         ...
 
-    def _input_neighborhood_domains(self) -> List[List[str]]:
+    def _input_neighborhood_domains(
+        self,
+    ) -> Sequence[Tuple[Sequence[str], Sequence[str]]]:
         raise NotImplementedError
 
     @property
@@ -760,7 +762,9 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
     def _base_edges(self) -> List[SSGlue]:
         return [self._base_domains[i] for i in [1, 0, 3, 2]]
 
-    def _input_neighborhood_domains(self) -> List[List[str]]:
+    def _input_neighborhood_domains(
+        self,
+    ) -> Sequence[Tuple[Sequence[str], Sequence[str]]]:
         if not self.uses:
             return []
 
