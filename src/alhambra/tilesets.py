@@ -22,9 +22,9 @@ from typing import (
 )
 from typing_extensions import Self, TypeAlias
 
-import drawSvg_svgy as draw
 import numpy as np
 
+from . import drawing
 
 from numpy import isin
 
@@ -543,12 +543,13 @@ class TileSet(Serializable):
         if isinstance(guards, str) or isinstance(guards, int):
             guards = self.guards[guards]
 
-        d = draw.Drawing(200, 200)
+        d = drawing.Drawing(600, 600)
 
         svgtiles = {}
 
         for tile in self.tiles:
             svgtiles[tile.name] = tile.abstract_diagram(**options)
+            d.defs.append(svgtiles[tile.name])
 
         minxi = 10000
         minyi = 10000
@@ -562,7 +563,7 @@ class TileSet(Serializable):
             minyi = min(minyi, yi)
             maxxi = max(maxxi, xi)
             maxyi = max(maxyi, yi)
-            d.append(draw.Use(svgtiles[tn], xi * 10, yi * 10))
+            d.elements.append(drawing.Use(svgtiles[tn], xi * 10, yi * 10))
 
         if seed is True:
             try:
@@ -572,33 +573,33 @@ class TileSet(Serializable):
         elif isinstance(seed, str):
             seed = self.seeds[seed]
 
-        if len(guards) > 0:
-            for (yi, xi), tn in np.ndenumerate(lattice.grid):
-                if tn == "":
-                    continue
-                t = self.tiles[tn]
-                for g, pos in zip(t.edges, t.edge_locations):  # FIXME: deal with duples
-                    if g.complement.ident() in guards:
-                        d.append(
-                            draw.Line(
-                                xi * 10 + _gl[pos][0],
-                                yi * 10 + _gl[pos][1],
-                                xi * 10 + _gl[pos][2],
-                                yi * 10 + _gl[pos][3],
-                                stroke="black",
-                                stroke_width=2.5,
-                            )
-                        )
-                        d.append(
-                            draw.Line(
-                                xi * 10 + _gl[pos][0],
-                                yi * 10 + _gl[pos][1],
-                                xi * 10 + _gl[pos][2],
-                                yi * 10 + _gl[pos][3],
-                                stroke="red",
-                                stroke_width=1.0,
-                            )
-                        )
+        # if len(guards) > 0:
+        #     for (yi, xi), tn in np.ndenumerate(lattice.grid):
+        #         if tn == "":
+        #             continue
+        #         t = self.tiles[tn]
+        #         for g, pos in zip(t.edges, t.edge_locations):  # FIXME: deal with duples
+        #             if g.complement.ident() in guards:
+        #                 d.elements.append(
+        #                     drawing.Line(
+        #                         xi * 10 + _gl[pos][0],
+        #                         yi * 10 + _gl[pos][1],
+        #                         xi * 10 + _gl[pos][2],
+        #                         yi * 10 + _gl[pos][3],
+        #                         stroke="black",
+        #                         stroke_width=2.5,
+        #                     )
+        #                 )
+        #                 d.elements.append(
+        #                     drawing.Line(
+        #                         xi * 10 + _gl[pos][0],
+        #                         yi * 10 + _gl[pos][1],
+        #                         xi * 10 + _gl[pos][2],
+        #                         yi * 10 + _gl[pos][3],
+        #                         stroke="red",
+        #                         stroke_width=1.0,
+        #                     )
+        #                 )
 
         d.viewBox = (
             minxi * 10,
@@ -607,10 +608,10 @@ class TileSet(Serializable):
             (2 + maxyi - minyi) * 10,
         )
 
-        d.pixelScale = 3
+        # d.pixelScale = 3
 
         if filename:
-            d.saveSvg(filename)
+            d.save_svg(filename)
         else:
             return d
 
