@@ -138,6 +138,8 @@ class Drawing(DrawingElement):
 
         d.write(filename)
 
+    saveSvg = save_svg  # for backwards compatibility
+
     def to_et(self) -> ET.ElementTree:
         return ET.ElementTree(self.to_xml())
 
