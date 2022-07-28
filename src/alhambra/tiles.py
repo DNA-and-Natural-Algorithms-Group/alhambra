@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-from curses.ascii import US
 import uuid
 from abc import ABC, ABCMeta, abstractmethod
 from dataclasses import dataclass
@@ -17,11 +16,8 @@ from typing import (
     List,
     Literal,
     MutableMapping,
-    MutableSequence,
     Optional,
-    Protocol,
     Sequence,
-    SupportsIndex,
     Tuple,
     Type,
     TypeVar,
@@ -31,14 +27,13 @@ from typing import (
     TYPE_CHECKING,
 )
 
-import drawSvg_svgy as draw
 from xgrow.xcolors import xcolors
+
+from . import drawing
 
 if TYPE_CHECKING:
     from alhambra.tilesets import XgrowGlueOpts, TileSet
     import xgrow.tileset as xgt
-
-import attrs
 
 from .glues import Use
 
@@ -354,7 +349,7 @@ class Tile:
         tileset: TileSet | None = None,
         draw_names: bool = True,
         draw_glues: bool = True,
-    ) -> draw.Group:
+    ) -> drawing.Group:
         raise NotImplementedError
 
 
@@ -410,36 +405,39 @@ class SingleTile(Tile):
         tileset: TileSet | None = None,
         draw_names: bool = True,
         draw_glues: bool = True,
-    ) -> draw.Group:
+    ) -> drawing.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
         elif (self.color is not None) and (self.color[0] == "#"):
             color = self.color
         else:
             color = "gray"
-        box = draw.Rectangle(0, 0, 10, 10, fill=color, stroke="black")
 
-        elems: list[draw.DrawingBasicElement] = [box]
+        g = drawing.Group(id=uuid.uuid4().hex)
+
+        g.elements.append(drawing.Rectangle(0, 0, 10, 10, fill=color, stroke="black"))
 
         if draw_glues:
             gluetext_locs = [(5, 1, 0), (9, 5, 90), (5, 9, 0), (1, 5, -90)]
             for loc, glue in zip(gluetext_locs, self.edges):
-                elems.append(
-                    draw.Text(
+                g.elements.append(
+                    drawing.Text(
                         glue.ident(),
                         0.8,
                         loc[0],
                         loc[1],
-                        center=True,
+                        text_anchor="middle",
                         transform=f"rotate({loc[2]},{loc[0]},{loc[1]})",
                     )
                 )
 
         if self.name is not None and draw_names:
-            nametext = draw.Text(self.name, 1.2, 5, 5, center=True, valign="center")
-            elems.append(nametext)
+            nametext = drawing.Text(
+                self.name, 1.2, 5, 5, text_anchor="middle", valign="center"
+            )
+            g.elements.append(nametext)
 
-        return draw.Group(elems, id=uuid.uuid4().hex)
+        return g
 
 
 class VDupleTile(Tile):
@@ -472,16 +470,17 @@ class VDupleTile(Tile):
         tileset: TileSet | None = None,
         draw_names: bool = True,
         draw_glues: bool = True,
-    ) -> draw.Group:
+    ) -> drawing.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
         elif (self.color is not None) and self.color[0] == "#":
             color = self.color
         else:
             color = "gray"
-        box = draw.Rectangle(0, 0, 10, 20, fill=color, stroke="black")
 
-        elems: list[draw.DrawingBasicElement] = [box]
+        g = drawing.Group(id=uuid.uuid4().hex)
+
+        g.append(drawing.Rectangle(0, 0, 10, 20, fill=color, stroke="black"))
 
         if draw_glues:
             gluetext_locs = [
@@ -493,30 +492,30 @@ class VDupleTile(Tile):
                 (1, 5, -90),
             ]
             for loc, glue in zip(gluetext_locs, self.edges):
-                elems.append(
-                    draw.Text(
+                g.append(
+                    drawing.Text(
                         glue.ident(),
                         0.8,
                         loc[0],
                         loc[1],
-                        center=True,
+                        text_anchor="middle",
                         transform=f"rotate({loc[2]},{loc[0]},{loc[1]})",
                     )
                 )
 
         if self.name is not None and draw_names:
-            nametext = draw.Text(
+            nametext = drawing.Text(
                 self.name,
                 1.2,
                 5,
                 10,
                 transform="rotate(-90, 5, 10)",
-                center=True,
+                text_anchor="middle",
                 valign="center",
             )
-            elems.append(nametext)
+            g.append(nametext)
 
-        return draw.Group(elems, id=uuid.uuid4().hex)
+        return g
 
 
 class HDupleTile(Tile):
@@ -549,16 +548,17 @@ class HDupleTile(Tile):
         tileset: TileSet | None = None,
         draw_names: bool = True,
         draw_glues: bool = True,
-    ) -> draw.Group:
+    ) -> drawing.Group:
         if (self.color is not None) and (self.color in xcolors):
             color = xcolors[self.color]
         elif (self.color is not None) and (self.color[0] == "#"):
             color = self.color
         else:
             color = "rgb(150,150,150)"
-        box = draw.Rectangle(0, 0, 20, 10, fill=color, stroke="black")
 
-        elems: list[draw.DrawingBasicElement] = [box]
+        g = drawing.Group(id=uuid.uuid4().hex)
+
+        g.append(drawing.Rectangle(0, 0, 20, 10, fill=color, stroke="black"))
 
         if draw_glues:
             gluetext_locs = [
@@ -570,29 +570,29 @@ class HDupleTile(Tile):
                 (1, 5, -90),
             ]
             for loc, glue in zip(gluetext_locs, self.edges):
-                elems.append(
-                    draw.Text(
+                g.append(
+                    drawing.Text(
                         glue.ident(),
                         0.8,
                         loc[0],
                         loc[1],
-                        center=True,
+                        text_anchor="middle",
                         transform=f"rotate({loc[2]},{loc[0]},{loc[1]})",
                     )
                 )
 
         if self.name is not None and draw_names:
-            nametext = draw.Text(
+            nametext = drawing.Text(
                 self.name,
                 1.2,
                 10,
                 5,
-                center=True,
+                text_anchor="middle",
                 valign="center",
             )
-            elems.append(nametext)
+            g.append(nametext)
 
-        return draw.Group(elems, id=uuid.uuid4().hex)
+        return g
 
 
 class SupportsGuards:
