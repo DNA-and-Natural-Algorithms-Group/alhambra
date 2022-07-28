@@ -1,3 +1,4 @@
+# type: ignore
 # New sensitivity code.
 # from .tilestructures import tile_daoe_single
 from collections import Counter

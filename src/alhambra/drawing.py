@@ -1,6 +1,7 @@
 import base64
 import re
-from typing import Any, Optional, SupportsIndex, TypeAlias, Union
+from typing import Any, Optional, Union
+from typing_extensions import TypeAlias
 import xml.etree.ElementTree as ET
 import attrs
 from attrs import Factory

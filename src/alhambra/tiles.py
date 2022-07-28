@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-from curses.ascii import US
 import uuid
 from abc import ABC, ABCMeta, abstractmethod
 from dataclasses import dataclass
@@ -18,9 +17,7 @@ from typing import (
     Literal,
     MutableMapping,
     Optional,
-    Protocol,
     Sequence,
-    SupportsIndex,
     Tuple,
     Type,
     TypeVar,
@@ -37,8 +34,6 @@ from . import drawing
 if TYPE_CHECKING:
     from alhambra.tilesets import XgrowGlueOpts, TileSet
     import xgrow.tileset as xgt
-
-import attrs
 
 from .glues import Use
 

@@ -3,7 +3,7 @@ import re
 
 import numpy as np
 
-from .sensitivitynew import _fakesingles
+from .sensitivitynew import _fakesingles  # type: ignore
 from .tiles import TileList
 from .util import GlueMergeSpec, comp
 
