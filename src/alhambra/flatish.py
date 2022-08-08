@@ -393,7 +393,7 @@ class FlatishHSeed9(Seed):
     def to_dict(self, glues_as_refs: bool = False) -> dict:
         d: dict[str, Any] = {}
         d["adapter_tiles"] = [
-            [str(g), t.to_dict()] for g, t in self.adapter_tiles  # FIXME
+            [str(g.name), t.to_dict()] for g, t in self.adapter_tiles  # FIXME
         ]
         d["type"] = self.__class__.__name__
         return d
