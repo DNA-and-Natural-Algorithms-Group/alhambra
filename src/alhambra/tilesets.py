@@ -74,7 +74,9 @@ T = TypeVar("T")
 
 XgrowGlueOpts: TypeAlias = Literal["self-complementary", "perfect"]
 
-from alhambra_mixes.mixes import Mix, Q_, nM, ureg, _parse_conc_required, _ratio, log
+from alhambra_mixes import Mix, Q_, nM, ureg
+from alhambra_mixes.units import _parse_conc_required, _ratio
+from alhambra_mixes.logging import log as log_mix
 
 
 @dataclass(init=False)
@@ -151,7 +153,7 @@ class TileSet(Serializable):
                 except KeyError:
                     pass
             if new_tile is None:
-                log.warn(f"Component {name} not found in tile lists.")
+                log_mix.warn(f"Component {name} not found in tile lists.")
 
         firstts = next(iter(tilesets_or_lists))
         assert isinstance(firstts, TileSet)
@@ -179,6 +181,7 @@ class TileSet(Serializable):
         glues: XgrowGlueOpts = "perfect",
         seed: str | int | Seed | None | Literal[False] = None,
         seed_offset: tuple[int, int] = (0, 0),
+        xgrow_seed: tuple[int, int, int | str] | None = None,
         **kwargs: Any,
     ) -> Any:  # FIXME
         """Run the tilesystem in Xgrow."""
@@ -187,6 +190,9 @@ class TileSet(Serializable):
         from xgrow.parseoutput import XgrowOutput
 
         xgrow_tileset = self.to_xgrow(seed=seed, seed_offset=seed_offset, glues=glues)
+
+        if xgrow_seed is not None:
+            kwargs["seed"] = xgrow_seed
 
         if not to_lattice:
             return (xgrow.run(xgrow_tileset, **kwargs),)

@@ -841,6 +841,52 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
         return s.strand
 
 
+class SST10_5S(BaseSSTSingle):
+    "Single SST, with domains (5'→3') of 11, 10, 10, and 11 nt. North edge is 10nt. 5' is S, 3' is E."
+    _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [11, 10, 10, 11]]
+    _scadnano_offsets = ((-1, -11), (-1, 10), (1, 10), (1, -11))
+    _scadnano_5p_offset = (1, 21)
+
+    @property
+    def domains(self) -> List[SSGlue]:
+        e = self.edges
+        return [e[i] for i in [2, 3, 0, 1]]  # type: ignore
+
+    @property
+    def _base_edges(self) -> List[SSGlue]:
+        return [self._base_domains[i] for i in [2, 3, 0, 1]]
+
+
+class SST11_5S(BaseSSTSingle):
+    "Single SST, with domains (5'→3') of 10, 11, 11, and 10 nt. North edge is 11nt. 5' is S, 3' is E."
+    _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [10, 11, 11, 10]]
+    _scadnano_offsets = ((-1, -10), (-1, 11), (1, 11), (1, -10))
+    _scadnano_5p_offset = (1, 21)
+
+    @property
+    def domains(self) -> List[SSGlue]:
+        e = self.edges
+        return [e[i] for i in [2, 3, 0, 1]]  # type: ignore
+
+    @property
+    def _base_edges(self) -> List[SSGlue]:
+        return [self._base_domains[i] for i in [2, 3, 0, 1]]
+
+
+class SST10(BaseSSTSingle):
+    "Single SST, with domains (5'→3') of 11, 10, 10, and 11 nt. North edge is 10nt. 5' is E, 3' is S."
+    _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [11, 10, 10, 11]]
+    _scadnano_offsets = ((-1, -11), (-1, 10), (1, 10), (1, -11))
+    _scadnano_5p_offset = (1, 21)
+
+
+class SST11(BaseSSTSingle):
+    "Single SST, with domains (5'→3') of 10, 11, 11, and 10 nt. North edge is 11nt. 5' is E, 3' is S."
+    _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [10, 11, 11, 10]]
+    _scadnano_offsets = ((-1, -10), (-1, 11), (1, 11), (1, -10))
+    _scadnano_5p_offset = (1, 21)
+
+
 class TileFactory:
     types: dict[str, Type[Tile]]
 
@@ -922,9 +968,11 @@ class TileFactory:
 
 
 tile_factory = TileFactory()
-for ttype in [Tile]:
+for ttype in [Tile, SST10, SST10_5S, SST11, SST11_5S]:
     tile_factory.register(ttype)
 
+tile_factory.register(SST10, "SST10_5E")
+tile_factory.register(SST11, "SST11_5E")
 
 SomeTile = TypeVar("SomeTile", bound=Tile)
 

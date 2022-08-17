@@ -177,6 +177,43 @@ def _skip_polyT_and_inertname(glue: Glue) -> bool:
     return False
 
 
+def sst_10_11_hofromxy(
+    x: int, y: int, start_helix: int, start_o: int, p: Literal[10, 11] = 10
+) -> tuple[int, int]:
+    if p == 10:
+        pn = 0
+    elif p == 11:
+        pn = 1
+    else:
+        raise ValueError
+    return (start_helix - y + x, start_o + 21 * (x + y) // 2 + (10 + pn) * (x + y) % 2)
+
+
+class SSTLattice(AbstractLatticeSupportingScadnano):
+    # FIXME: seed should be flatish
+    """A lattice of flatish tiles.  Position 0,0 is a 10nt-north tile."""
+
+    def to_scadnano_lattice(self) -> ScadnanoLattice:
+        sclat = ScadnanoLattice()
+        for ix, t in np.ndenumerate(self.grid):
+            if not t:
+                continue
+            scpos = sst_10_11_hofromxy(ix[0], ix[1], self.grid.shape[1], 0)
+            sclat[scpos] = t
+
+        if (
+            self.seed is not None
+            and hasattr(self.seed, "to_scadnano")
+            and hasattr(self.seed, "ho_from_seed_offset")
+        ):
+            sclat.seed = self.seed
+            sclat.seed_position = self.seed.ho_from_seed_offset(
+                self.seed_offset, self.grid.shape[1]
+            )
+
+        return sclat
+
+
 class LatticeFactory:
     types: dict[str, Type[Lattice]]
 
@@ -198,3 +235,4 @@ lattice_factory = LatticeFactory()
 
 lattice_factory.register(AbstractLattice)
 lattice_factory.register(ScadnanoLattice)
+lattice_factory.register(SSTLattice)

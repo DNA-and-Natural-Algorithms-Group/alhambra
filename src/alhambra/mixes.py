@@ -1,7 +1,7 @@
 # For backwards compatibility
 import importlib
 
-mdl = importlib.import_module("alhambra_mixes.mixes")
+mdl = importlib.import_module("alhambra_mixes")
 globals().update({k: getattr(mdl, k) for k in mdl.__dict__})
 
 __all__ = (
