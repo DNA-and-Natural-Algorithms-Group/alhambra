@@ -555,6 +555,179 @@ class FlatishVSeed9(Seed):
 seed_factory.register(FlatishVSeed9)
 
 
+@attrs.define()
+class FlatishNECornerSeed(Seed):
+    hadapts: Sequence[tuple[Glue | str, FlatishSingleTile9]]
+    corner: Sequence[FlatishSingleTile9]
+    vadapts: Sequence[tuple[FlatishSingleTile9, Glue | str]]
+
+    def to_dict(self, glues_as_refs: bool = False) -> dict:
+        d: dict[str, Any] = {}
+        d["hadapts"] = [[str(g), t.to_dict()] for g, t in self.hadapts]  # FIXME
+        d["corner"] = [t.to_dict() for t in self.corner]
+        d["vadapts"] = [[t.to_dict(), str(g)] for t, g in self.vadapts]  # FIXME
+        d["type"] = self.__class__.__name__
+        return d
+
+    @classmethod
+    def from_dict(cls, d: dict) -> FlatishNECornerSeed:
+        return cls(
+            [
+                (Glue(g), cast(FlatishSingleTile9, Tile.from_dict(t)))
+                for g, t in d["hadapts"]
+            ],
+            [cast(FlatishSingleTile9, Tile.from_dict(t)) for t in d["corner"]],
+            [
+                (cast(FlatishSingleTile9, Tile.from_dict(t)), Glue(g))
+                for t, g in d["vadapts"]
+            ],
+        )
+
+    def to_xgrow(
+        self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0, 0)
+    ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
+        import xgrow.tileset as xgt
+
+        xgtiles = []
+        locs: list[tuple[int, int, str]] = []
+        bonds = [xgt.Bond("seed", 10)]
+
+        xgtiles.append(
+            xgt.Tile(["seed", "seed", "seed", "seed"], "seed", stoic=0, color="white")
+        )
+
+        # Horizontal adapters
+        x = 2 + offset[0]
+        ybase = 1 + offset[1]
+        for y_offset in range(0, 2 * len(self.hadapts)):
+            if y_offset % 2:
+                locs.append((x, ybase + y_offset, "seed"))
+            else:
+                adapt = y_offset // 2
+                aname = f"adapterNW_{adapt}"
+                aglue = self.hadapts[adapt][0]
+                if isinstance(aglue, Glue):
+                    if glue_handling == "self-complementary":
+                        aglue = aglue.basename()
+                    else:
+                        aglue = aglue.ident()
+                atile = xgt.Tile(
+                    [0, "seed", aglue, "seed"], aname, stoic=0, color="green"
+                )
+                xgtiles.append(atile)
+                locs.append((x, ybase + y_offset, aname))
+
+        x = 3 + offset[0]
+        ybase = 2 + offset[1]
+        for adapt, (_, tile) in enumerate(self.hadapts):
+            if tile.name:
+                aname = "adapterSE_" + tile.name
+            else:
+                aname = f"adapterSE_{adapt}"
+            if glue_handling == "self-complementary":
+                edges = ["seed"] + [e.basename() for e in tile._edges[1:]]
+            else:
+                edges = ["seed"] + [e.ident() for e in tile._edges[1:]]
+
+            # On the last tile, the E/1 glue is also seed
+            if adapt == len(self.hadapts) - 1:
+                edges[1] = "seed"
+
+            xgtiles.append(
+                xgt.Tile(
+                    cast(list[Union[str, int]], edges),
+                    name=aname,
+                    stoic=0,
+                    color="green",
+                )
+            )
+            locs.append((x, ybase + 2 * adapt, aname))
+
+        # Corner.  Our start x,y is +1,+1 from the last adapter tile
+        xbase = locs[-1][0] + 1
+        ybase = locs[-1][1] + 1
+
+        for cn, tile in enumerate(self.corner):
+            if tile.name:
+                aname = "adaptC_SW_" + tile.name
+            else:
+                aname = f"adaptC_SW_{cn}"
+            if glue_handling == "self-complementary":
+                edges = [e.basename() for e in tile._edges]
+            else:
+                edges = [e.ident() for e in tile._edges]
+            edges[0] = "seed"
+            edges[1] = "seed"
+            xgtiles.append(
+                xgt.Tile(
+                    cast(list[Union[str, int]], edges),
+                    name=aname,
+                    stoic=0,
+                    color="green",
+                )
+            )
+            locs.append((xbase + cn - 1, ybase + cn, "seed"))
+            locs.append((xbase + cn, ybase + cn, aname))
+
+        # Vertical adapters.  Start tile is at +1, +1 from last corner adapter
+        xbase = locs[-1][0] + 1
+        ybase = locs[-1][1] + 1
+
+        for adapt_n, (tile, aglue) in enumerate(self.vadapts):
+            # NW mimics tile
+            if tile.name:
+                aname = "adapterNW_" + tile.name
+            else:
+                aname = f"adapterNW_V_{adapt_n}"
+
+            if glue_handling == "self-complementary":
+                edges = [e.basename() for e in tile._edges]
+            else:
+                edges = [e.ident() for e in tile._edges]
+
+            edges[1] = "seed"
+
+            # On the first tile, the N/0 glue is also seed
+            if adapt_n == 0:
+                edges[0] = "seed"
+
+                # We also add a seed tile at x-1
+                locs.append((xbase - 1, ybase, "seed"))
+
+            xgtiles.append(
+                xgt.Tile(
+                    cast(list[Union[str, int]], edges),
+                    name=aname,
+                    stoic=0,
+                    color="green",
+                )
+            )
+            locs.append((xbase + 2 * adapt_n, ybase, aname))
+
+            locs.append((xbase + 2 * adapt_n, ybase + 1, "seed"))
+
+            if isinstance(aglue, Glue):
+                if glue_handling == "self-complementary":
+                    aglue = aglue.basename()
+                else:
+                    aglue = aglue.ident()
+
+            xgtiles.append(
+                xgt.Tile(
+                    ["seed", 0, "seed", aglue],
+                    name=f"adapterSE_V_{adapt_n}",
+                    stoic=0,
+                    color="green",
+                )
+            )
+            locs.append((xbase + 2 * adapt_n + 1, ybase + 1, f"adapterSE_V_{adapt_n}"))
+
+        return xgtiles, bonds, xgt.InitState(locs)
+
+
+seed_factory.register(FlatishNECornerSeed)
+
+
 class FlatishLattice(AbstractLatticeSupportingScadnano):
     # FIXME: seed should be flatish
     """A lattice of flatish tiles.  Position 0,0 is a 9nt-north tile."""
