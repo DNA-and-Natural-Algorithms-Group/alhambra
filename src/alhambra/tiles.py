@@ -837,7 +837,9 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
         if self.color is not None:
             s.with_color(_scadnano_color(self.color))
 
-        s.with_sequence(self.sequence.base_str)
+        # We generally don't want to assign complements here because (a) we will be assigning
+        # sequences for every tile, and (b) in some cases, we will have intentional mismatches.
+        s.with_sequence(self.sequence.base_str, assign_complement=False)
         return s.strand
 
 
