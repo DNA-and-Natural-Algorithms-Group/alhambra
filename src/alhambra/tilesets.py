@@ -239,6 +239,36 @@ class TileSet(Serializable):
         else:
             return a, out
 
+    def to_rgrow(
+        self,
+        glues: XgrowGlueOpts = "perfect",
+        seed: str | int | Seed | None | Literal[False] = None,
+        seed_offset: tuple[int, int] = (0, 0),
+    ):
+        import rgrow as rg
+        import xgrow.tileset as xgt
+
+        d = self.to_rgrow_dict(glues=glues, seed=seed, seed_offset=seed_offset)
+
+        return rg.TileSet.from_dict(d)
+
+    def to_rgrow_dict(
+        self,
+        glues: XgrowGlueOpts = "perfect",
+        seed: str | int | Seed | None | Literal[False] = None,
+        seed_offset: tuple[int, int] = (0, 0),
+    ):
+        import rgrow as rg
+        import xgrow.tileset as xgt
+
+        d = self.to_xgrow(glues=glues, seed=seed, seed_offset=seed_offset).to_dict()
+
+        d["options"] = d.pop("xgrowargs")
+        if "initstate" in d:
+            d["options"]["seed"] = d.pop("initstate")
+
+        return d
+
     def to_xgrow(
         self,
         glues: XgrowGlueOpts = "perfect",
