@@ -1,4 +1,5 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
 
 import copy
 from io import TextIOWrapper
@@ -39,7 +40,7 @@ from alhambra.grid import (
 )
 
 # from . import fastreduceD as fastreduce
-from .glues import Glue, GlueList
+from .glues import Glue, GlueList, SSGlue
 from .seeds import Seed, seed_factory
 from .tiles import (
     D,
@@ -56,6 +57,7 @@ if TYPE_CHECKING:
     import scadnano
     import xgrow.parseoutput
     import xgrow.tileset as xgt
+    import stickydesign as sd
 
 _gl = {
     EdgeLoc(D.N, (0, 0)): (0, 0, 10, 0),
@@ -72,7 +74,237 @@ _gl = {
 
 T = TypeVar("T")
 
-XgrowGlueOpts: TypeAlias = Literal["self-complementary", "perfect"]
+
+class XgrowGlueOpts(ABC):
+    def get_xgrow_gse(self, tileset: "TileSet") -> float | None:
+        return None
+
+    @abstractmethod
+    def calculate_gses(
+        self, tileset: "TileSet"
+    ) -> tuple[list[xgt.Bond], list[xgt.Glue]]:
+        ...
+
+    def glue_name_map(self, tileset: "TileSet") -> Callable[[str], str]:
+        return lambda x: x
+
+    @classmethod
+    def from_str(cls, glueopts: str) -> XgrowGlueOpts:
+        if glueopts == "self-complementary":
+            return GrowSelfComplementaryGlues()
+        elif glueopts == "perfect":
+            return GrowPerfectGlues()
+        elif glueopts == "orthogonal":
+            return GrowOrthogonalGlues()
+        elif glueopts == "full":
+            return GrowFullGlues()
+        else:
+            raise ValueError(f"Unknown glueopts: {glueopts}")
+
+
+class GrowSelfComplementaryGlues(XgrowGlueOpts):
+    def get_xgrow_gse(self, tileset: "TileSet") -> float | None:
+        return None
+
+    def glue_name_map(self, tileset: "TileSet") -> Callable[[str], str]:
+        return lambda x: x[:-1] if x.endswith("*") else x
+
+    def calculate_gses(
+        self, tileset: "TileSet"
+    ) -> tuple[list[xgt.Bond], list[xgt.Glue]]:
+        allglues = tileset.allglues
+        bonds = [
+            xgt.Bond(g.name, 0)
+            for g in allglues
+            if g.name and ("null" in g.name or "inert" in g.name or "hairpin" in g.name)
+        ]
+        return bonds, []
+
+
+SD_ENERGETICS_CLASSES: dict[str, "sd.EnergeticsBasic"] = {}
+HAS_SD_ACCEL: bool = False
+
+
+def _generate_stickydesign_energetic_classes() -> None:
+    global SD_ENERGETICS_CLASSES
+    global HAS_SD_ACCEL
+
+    if SD_ENERGETICS_CLASSES:
+        return
+    import stickydesign as sd
+
+    SD_ENERGETICS_CLASSES = {"SSGlue": sd.EnergeticsBasic, "DXGlue": sd.EnergeticsDAOE}
+    HAS_SD_ACCEL = sd.energetics_basic.ACCEL
+
+
+class GrowPerfectGlues(XgrowGlueOpts):
+    def get_xgrow_gse(self, tileset: "TileSet") -> float | None:
+        return None
+
+    def calculate_gses(
+        self, tileset: "TileSet"
+    ) -> tuple[list[xgt.Bond], list[xgt.Glue]]:
+        import xgrow.tileset as xgt
+
+        allglues = tileset.allglues
+        bonds = [xgt.Bond(g.name, 0) for g in allglues]
+        bonds.extend(
+            xgt.Bond(g.complement.name, 0)
+            for g in allglues
+            if g.complement.name not in allglues
+        )
+        xg_glues = [
+            xgt.Glue(
+                g.name,
+                g.complement.name,
+                g.abstractstrength if g.abstractstrength is not None else 1,
+            )
+            for g in allglues
+        ]
+        return bonds, xg_glues
+
+
+@dataclass
+class GrowOrthogonalGlues(XgrowGlueOpts):
+    temperature: float | None = None
+    alpha: float | None = None
+
+    def get_xgrow_gse(self, tileset: "TileSet") -> float | None:
+        return 1.0
+
+    def calculate_gses(
+        self, tileset: "TileSet"
+    ) -> tuple[list[xgt.Bond], list[xgt.Glue]]:
+        import xgrow.tileset as xgt
+        import stickydesign as sd
+
+        alpha = tileset.params["alpha"] if self.alpha is None else self.alpha
+        temperature = (
+            tileset.params["temperature"]
+            if self.temperature is None
+            else self.temperature
+        )
+
+        allglues = tileset.allglues
+
+        _generate_stickydesign_energetic_classes()
+
+        R = 1.9872041e-3  # kcal/mol/K
+        T_in_K = temperature + 273.15
+        RT = R * T_in_K
+
+        xgbonds = [xgt.Bond(g.name, 0) for g in allglues]
+        xgbonds.extend(
+            xgt.Bond(g.complement.name, 0)
+            for g in allglues
+            if g.complement.name not in allglues
+        )
+
+        sd_energetics = {
+            k: v(temperature=temperature) for k, v in SD_ENERGETICS_CLASSES.items()
+        }
+
+        sg = {}
+        for g in allglues:
+            k = (g.__class__.__name__, g.etype, g.dna_length)
+            sg[k] = sg.get(k, [])
+            sg[k].append(g)
+
+        sge = {
+            k: (
+                [x.name for x in v],
+                sd.endarray([x.sequence.base_str.lower() for x in v], k[1]),
+            )
+            for k, v in sg.items()
+        }
+
+        bonds = {}
+        for k, v in sge.items():
+            m = sd_energetics[k[0]].matching_uniform(v[1]) / RT + alpha
+            bonds |= {n: x for n, x in zip(v[0], m) if not n.endswith("*")}
+
+        return xgbonds, [xgt.Glue(n, n + "*", v) for n, v in bonds.items()]
+
+
+@dataclass
+class GrowFullGlues(XgrowGlueOpts):
+    temperature: float | None = None
+    threshold: float = 0.0
+    alpha: float | None = None
+
+    def get_xgrow_gse(self, tileset: "TileSet") -> float | None:
+        return 1.0
+
+    def calculate_gses(
+        self, tileset: "TileSet"
+    ) -> tuple[list[xgt.Bond], list[xgt.Glue]]:
+        import xgrow.tileset as xgt
+        import stickydesign as sd
+
+        alpha = tileset.params["alpha"] if self.alpha is None else self.alpha
+        temperature = (
+            tileset.params["temperature"]
+            if self.temperature is None
+            else self.temperature
+        )
+
+        allglues = tileset.allglues
+
+        _generate_stickydesign_energetic_classes()
+        if not HAS_SD_ACCEL:
+            warnings.warn(
+                "StickyDesign acceleration not available: full glue calculations may be very slow."
+            )
+
+        R = 1.9872041e-3  # kcal/mol/K
+        T_in_K = temperature + 273.15
+        RT = R * T_in_K
+
+        bonds = [xgt.Bond(g.name, 0) for g in allglues]
+        bonds.extend(
+            xgt.Bond(g.complement.name, 0)
+            for g in allglues
+            if g.complement.name not in allglues
+        )
+
+        sd_energetics = {
+            k: v(temperature=temperature) for k, v in SD_ENERGETICS_CLASSES.items()
+        }
+
+        sg = {}
+        for g in allglues:
+            k = (g.__class__.__name__, g.etype, g.dna_length)
+            sg[k] = sg.get(k, [])
+            sg[k].append(g)
+
+        sge = {
+            k: (
+                [x.name for x in v],
+                sd.endarray([x.sequence.base_str.lower() for x in v], k[1]),
+            )
+            for k, v in sg.items()
+        }
+
+        gluelinks = {}
+        for k, v in sge.items():
+            glm = (
+                sd_energetics[k[0]]
+                .uniform(
+                    np.repeat(v[1], v[1].shape[0], 0), np.tile(v[1], (v[1].shape[0], 1))
+                )
+                .reshape((v[1].shape[0], v[1].shape[0]))
+                / RT
+                + alpha
+            )
+
+            for i in range(0, len(v[0])):
+                for j in range(0, len(v[0])):
+                    gluelinks[(v[0][i], v[0][j])] = glm[i, j]
+
+        return bonds, [
+            xgt.Glue(n[0], n[1], v) for n, v in gluelinks.items() if v > self.threshold
+        ]
+
 
 from alhambra_mixes import Mix, Q_, nM, ureg
 from alhambra_mixes.units import _parse_conc_required, _ratio
@@ -269,48 +501,28 @@ class TileSet(Serializable):
 
         return d
 
+    def gen_gluelinks(self, glues: XgrowGlueOpts | str = "perfect"):
+        if isinstance(glues, str):
+            glues = XgrowGlueOpts.from_str(glues)
+
     def to_xgrow(
         self,
-        glues: XgrowGlueOpts = "perfect",
+        glues: XgrowGlueOpts | str = "perfect",
         seed: str | int | Seed | None | Literal[False] = None,
         seed_offset: tuple[int, int] = (0, 0),
     ) -> xgt.TileSet:
         "Convert Alhambra TileSet to an XGrow TileSet"
         import xgrow.tileset as xgt
 
+        glues = XgrowGlueOpts.from_str(glues) if isinstance(glues, str) else glues
+
+        gluenamemap = glues.glue_name_map(self)
+
         self.tiles.refreshnames()
         self.glues.refreshnames()
-        tiles = [t.to_xgrow(glues) for t in self.tiles]
+        tiles = [t.to_xgrow(gluenamemap) for t in self.tiles]
 
-        allglues = self.allglues
-
-        # FIXME
-        # bonds = [g.to_xgrow(self_complementary_glues) for g in self.glues]
-        if glues == "self-complementary":
-            bonds = [
-                xgt.Bond(g.name, 0)
-                for g in allglues
-                if g.name
-                and ("null" in g.name or "inert" in g.name or "hairpin" in g.name)
-            ]
-            xg_glues = []
-        elif glues == "perfect":
-            bonds = [xgt.Bond(g.name, 0) for g in allglues]
-            bonds.extend(
-                xgt.Bond(g.complement.name, 0)
-                for g in allglues
-                if g.complement.name not in allglues
-            )
-            xg_glues = [
-                xgt.Glue(
-                    g.name,
-                    g.complement.name,
-                    g.abstractstrength if g.abstractstrength is not None else 1,
-                )
-                for g in allglues
-            ]
-        else:
-            raise ValueError("Unknown xgrow glue option", glues)
+        bonds, xg_glues = glues.calculate_gses(self)
 
         if seed is None:
             if self.seeds:
@@ -325,12 +537,16 @@ class TileSet(Serializable):
             initstate = None
         else:
             seed_tiles, seed_bonds, initstate = cast(Seed, seed).to_xgrow(
-                glues, offset=seed_offset
+                gluenamemap, offset=seed_offset
             )
 
         xgrow_tileset = xgt.TileSet(
             seed_tiles + tiles, seed_bonds + bonds, initstate=initstate, glues=xg_glues
         )
+
+        ggse = glues.get_xgrow_gse(self)
+        if ggse is not None:
+            xgrow_tileset.xgrowargs.Gse = ggse
 
         return xgrow_tileset
 

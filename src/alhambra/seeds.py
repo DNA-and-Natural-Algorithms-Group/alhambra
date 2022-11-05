@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Sequence, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Sequence, Type, TypeVar, cast
 
 import attrs
 
@@ -27,7 +27,9 @@ class Seed(ABC):
 
     @abstractmethod
     def to_xgrow(
-        self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0, 0)
+        self,
+        gluenamemap: Callable[[str], str] = lambda x: x,
+        offset: tuple[int, int] = (0, 0),
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         """Create xgrow implementation of the seed.
 
@@ -117,7 +119,9 @@ class DiagonalSESeed(Seed):
         return cls(**d)
 
     def to_xgrow(
-        self, glue_handling: XgrowGlueOpts = "perfect", offset: tuple[int, int] = (0, 0)
+        self,
+        gluenamemap: Callable[[str], str] = lambda x: x,
+        offset: tuple[int, int] = (0, 0),
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
 
@@ -132,10 +136,7 @@ class DiagonalSESeed(Seed):
         y = len(self.adapters) + offset[1]  # + 1
         x = 1 + offset[0]
         for i, (eg, sg) in enumerate(self.adapters):
-            if glue_handling == "self-complementary":
-                egn, sgn = eg.basename(), sg.basename()
-            else:
-                egn, sgn = eg.ident(), sg.ident()
+            egn, sgn = gluenamemap(eg.ident()), gluenamemap(sg.ident())
             xa = xgt.Tile(
                 ["seed", egn, sgn, "seed"],
                 f"adapter_{i}",

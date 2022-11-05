@@ -1,3 +1,10 @@
+## a15 (not released)
+
+- Support for stickydesign-calculated sequence-dependent glues for xgrow/rgrow export (fixes regression from 1.0)
+- More SST motifs.
+- More flatish motifs.
+- Early support for rgrow export.
+
 ## a14
 
 - Internal SVG drawing routines, removing drawSvg_svgy and lxml dependencies.

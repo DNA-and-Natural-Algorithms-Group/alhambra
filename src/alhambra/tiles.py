@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import (
     Any,
+    Callable,
     ClassVar,
     Collection,
     Generator,
@@ -328,15 +329,10 @@ class Tile:
 
         return tile_factory.from_dict(d)
 
-    def to_xgrow(self, glue_handling: XgrowGlueOpts = "perfect") -> xgt.Tile:
+    def to_xgrow(self, gluenamemap: Callable[[str], str] = lambda x: x) -> xgt.Tile:
         import xgrow.tileset as xgt
 
-        if self._edges and glue_handling == "self-complementary":
-            edges = [g.basename() for g in self._edges]
-        elif self._edges:
-            edges = [g.ident() for g in self._edges]
-        else:
-            raise ValueError
+        edges = [gluenamemap(g.ident()) for g in self._edges]
         return xgt.Tile(
             cast(list[Union[str, int]], edges),
             name=self.xgname,
@@ -441,8 +437,8 @@ class SingleTile(Tile):
 
 
 class VDupleTile(Tile):
-    def to_xgrow(self, self_complementary_glues: XgrowGlueOpts = "perfect") -> xgt.Tile:
-        d = super().to_xgrow(self_complementary_glues)
+    def to_xgrow(self, gluenamemap: Callable[[str], str] = lambda x: x) -> xgt.Tile:
+        d = super().to_xgrow(gluenamemap)
         d.shape = "V"
         return d
 
@@ -519,8 +515,8 @@ class VDupleTile(Tile):
 
 
 class HDupleTile(Tile):
-    def to_xgrow(self, glue_handling: XgrowGlueOpts = "perfect") -> xgt.Tile:
-        d = super().to_xgrow(glue_handling)
+    def to_xgrow(self, gluenamemap: Callable[[str], str] = lambda x: x) -> xgt.Tile:
+        d = super().to_xgrow(gluenamemap)
         d.shape = "H"
         return d
 

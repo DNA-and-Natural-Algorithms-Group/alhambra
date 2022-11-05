@@ -101,6 +101,11 @@ class Glue:
     note: Optional[str] = attrs.field(default=None)
     use: Use = attrs.field(default=Use.UNSET)
     abstractstrength: Optional[int] = attrs.field(default=None)
+    """The stickydesign type of the glue."""
+
+    @property
+    def etype(self) -> str:
+        raise NotImplementedError
 
     def _into_complement(self):
         if self.name is not None:
@@ -215,6 +220,7 @@ glue_factory = GlueFactory()
 
 @attrs.define(init=False)
 class SSGlue(Glue):
+    etype: str = "S"
     _sequence: Seq = attrs.field(default=Seq(""))
 
     def __init__(
@@ -246,6 +252,8 @@ class SSGlue(Glue):
             self._sequence = lseq
         else:
             raise ValueError("Must have at least length or sequence.")
+
+        self.etype = "S"  # FIXME: there should be a better way to do this
 
     @property
     def dna_length(self) -> int:
