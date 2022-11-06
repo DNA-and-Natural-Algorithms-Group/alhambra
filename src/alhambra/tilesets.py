@@ -421,7 +421,9 @@ class TileSet(Serializable):
         import xgrow.parseoutput
         from xgrow.parseoutput import XgrowOutput
 
-        xgrow_tileset = self.to_xgrow(seed=seed, seed_offset=seed_offset, glues=glues)
+        xgrow_tileset = self.to_xgrow(
+            seed=seed, seed_offset=seed_offset, glue_handling=glues
+        )
 
         if xgrow_seed is not None:
             kwargs["seed"] = xgrow_seed
@@ -473,56 +475,78 @@ class TileSet(Serializable):
 
     def to_rgrow(
         self,
-        glues: XgrowGlueOpts = "perfect",
+        glue_handling: XgrowGlueOpts | str | None = None,
         seed: str | int | Seed | None | Literal[False] = None,
         seed_offset: tuple[int, int] = (0, 0),
+        **kwargs,
     ):
         import rgrow as rg
         import xgrow.tileset as xgt
 
-        d = self.to_rgrow_dict(glues=glues, seed=seed, seed_offset=seed_offset)
+        d = self.to_rgrow_dict(
+            glue_handling=glue_handling, seed=seed, seed_offset=seed_offset, **kwargs
+        )
 
         return rg.TileSet.from_dict(d)
 
     def to_rgrow_dict(
         self,
-        glues: XgrowGlueOpts = "perfect",
+        glue_handling: XgrowGlueOpts | str | None = None,
         seed: str | int | Seed | None | Literal[False] = None,
         seed_offset: tuple[int, int] = (0, 0),
+        **kwargs,
     ):
         import rgrow as rg
         import xgrow.tileset as xgt
 
-        d = self.to_xgrow(glues=glues, seed=seed, seed_offset=seed_offset).to_dict()
+        d = self.to_xgrow(
+            glue_handling=glue_handling, seed=seed, seed_offset=seed_offset
+        ).to_dict()
 
         d["options"] = d.pop("xgrowargs")
         if "initstate" in d:
             d["options"]["seed"] = d.pop("initstate")
 
-        return d
+        if "k" in d["options"]:
+            del d["options"]["k"]  # k value for xgrow is modified; FIXME
 
-    def gen_gluelinks(self, glues: XgrowGlueOpts | str = "perfect"):
-        if isinstance(glues, str):
-            glues = XgrowGlueOpts.from_str(glues)
+        for k in ["concentration", "alpha", "temperature"]:
+            if k in self.params:
+                d["options"][k] = self.params[k]
+
+        for k, v in kwargs.items():
+            if v is not None:
+                d["options"][k] = v
+            else:
+                d["options"].pop(k, None)
+
+        return d
 
     def to_xgrow(
         self,
-        glues: XgrowGlueOpts | str = "perfect",
+        glue_handling: XgrowGlueOpts | str | None = None,
         seed: str | int | Seed | None | Literal[False] = None,
         seed_offset: tuple[int, int] = (0, 0),
     ) -> xgt.TileSet:
         "Convert Alhambra TileSet to an XGrow TileSet"
         import xgrow.tileset as xgt
 
-        glues = XgrowGlueOpts.from_str(glues) if isinstance(glues, str) else glues
+        if glue_handling is None:
+            glue_handling = self.params.get("glue-handling", "perfect")
 
-        gluenamemap = glues.glue_name_map(self)
+        glue_handling = (
+            XgrowGlueOpts.from_str(glue_handling)
+            if isinstance(glue_handling, str)
+            else glue_handling
+        )
+
+        gluenamemap = glue_handling.glue_name_map(self)
 
         self.tiles.refreshnames()
         self.glues.refreshnames()
         tiles = [t.to_xgrow(gluenamemap) for t in self.tiles]
 
-        bonds, xg_glues = glues.calculate_gses(self)
+        bonds, xg_glues = glue_handling.calculate_gses(self)
 
         if seed is None:
             if self.seeds:
@@ -544,9 +568,15 @@ class TileSet(Serializable):
             seed_tiles + tiles, seed_bonds + bonds, initstate=initstate, glues=xg_glues
         )
 
-        ggse = glues.get_xgrow_gse(self)
+        ggse = glue_handling.get_xgrow_gse(self)
         if ggse is not None:
             xgrow_tileset.xgrowargs.Gse = ggse
+
+        gconc = self.params.get("concentration", None)
+        galpha = self.params.get("alpha", None)
+        if gconc is not None and galpha is not None:
+            xgrow_tileset.xgrowargs.Gmc = galpha - np.log(gconc * 1e-9)
+            xgrow_tileset.xgrowargs.k = 1e6 * np.exp(galpha)
 
         return xgrow_tileset
 

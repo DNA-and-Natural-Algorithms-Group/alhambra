@@ -187,6 +187,19 @@ class Tile:
     uses: List[List[Use]]  # FIXME: should use list of tuples
     __slots__ = ("name", "_edges", "color", "stoic", "note", "fake", "uses")
 
+    def get_concentration(self, base_concentration: float) -> float:
+        if self.stoic is None:
+            return base_concentration
+        else:
+            return base_concentration * self.stoic
+
+    def get_stoic(self, base_concentration: float) -> float:
+        """Returns the stoichiometric ratio of this tile to the base concentration."""
+        if self.stoic is not None:
+            return self.stoic
+        else:
+            return 1.0
+
     def __init__(
         self,
         edges: Optional[Iterable[Glue | str]] = None,
