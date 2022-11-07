@@ -913,11 +913,13 @@ class BaseSSTSingleWithExtensions(BaseSSTSingle):
         sequence: Optional[Seq] = None,
         domains: Optional[list[Domain]] = None,
         note: Optional[str] = None,
+        use: Optional[Sequence[Use]] = None,
+        uses: Optional[Sequence[Sequence[Use]]] = None,
         mod5: Seq | str | int | None = None,
         mod3: Seq | str | int | None = None,
     ):
         # Don't deal with the sequence just yet.
-        super().__init__(edges, name, color, stoic, None, domains, note)
+        super().__init__(edges, name, color, stoic, None, domains, note, use, uses)
 
         # Now add the mod5 and mod3 domains, if they exist:
         if isinstance(mod5, (str, Seq)):
