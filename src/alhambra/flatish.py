@@ -34,6 +34,7 @@ from alhambra.tilesets import XgrowGlueOpts
 from .glues import Glue, GlueList
 from .seeds import Seed, _convert_adapts, seed_factory, DiagonalSESeed
 from .tiles import (
+    BaseSSTSingleWithExtensions,
     BaseSSTile,
     BaseSSTSingle,
     Color,
@@ -103,34 +104,13 @@ class FlatishSingleTile10(BaseSSTSingle):
     _scadnano_5p_offset = (0, 21)
 
 
-# @dataclass
-# class FlatishSingleTile9WithMods(FlatishSingleTile9):
-#     "Flatish single tile, with domains (5'→3') of 12, 9, 11, and 10 nt.  North edge is 9nt."
-#     mod5_len: int = 0
-#     mod3_len: int = 0
-
-#     @property
-#     def domains(self) -> list[SSGlue]:
-#         ...
-
-#     def __init__(
-#         self,
-#         edges: Optional[list[Union[str, Glue]]] = None,
-#         name: Optional[str] = None,
-#         color: Optional[Color] = None,
-#         stoic: Optional[float] = None,
-#         sequence: Optional[Seq] = None,
-#         domains: Optional[list[SSGlue]] = None,
-#         note: Optional[str] = None,
-#         mod5: Seq | str | int | None = None,
-#         mod3: Seq | str | int | None = None,
-#     ):
-#         # Don't deal with the sequence just yet.
-#         super().__init__(self, edges, name, color, stoic, None, domains, note)
+class FlatishSingleTile9WithExtensions(FlatishSingleTile9, BaseSSTSingleWithExtensions):
+    ...
 
 
-class FlatishSingleTile10WithMods(FlatishSingleTile10):
-    "Flatish single tile, with domains (5'→3') of 11, 10, 12, and 9 nt. North edge is 10nt."
+class FlatishSingleTile10WithExtensions(
+    FlatishSingleTile10, BaseSSTSingleWithExtensions
+):
     ...
 
 
@@ -374,6 +354,8 @@ for ttype in [
     FlatishVDupleTile9_E2,
     FlatishSingleTile10,
     FlatishSingleTile9,
+    FlatishSingleTile10WithExtensions,
+    FlatishSingleTile9WithExtensions,
 ]:
     tile_factory.register(ttype)
 

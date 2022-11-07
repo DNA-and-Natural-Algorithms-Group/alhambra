@@ -852,6 +852,96 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
         return s.strand
 
 
+Domain = SSGlue
+
+
+class BaseSSTSingleWithExtensions(BaseSSTSingle):
+    mod5: Domain | None = None
+    mod3: Domain | None = None
+
+    @property
+    def domains(self) -> List[SSGlue]:
+        d = super().domains
+        if self.mod5 is not None:
+            d.insert(0, self.mod5)
+        if self.mod3 is not None:
+            d.append(self.mod3)
+        return d
+
+    @property
+    def _sequence_length(self) -> int:
+        noext = sum(x.dna_length for x in self._base_domains)
+        if self.mod5 is not None:
+            noext += self.mod5.dna_length
+        if self.mod3 is not None:
+            noext += self.mod3.dna_length
+        return noext
+
+    @property
+    def sequence(self) -> Seq:
+        return Seq("-".join(str(glue.sequence) for glue in self.domains))
+
+    @sequence.setter
+    def sequence(self, seq: Seq) -> None:
+        seq = Seq(seq)
+        if seq.dna_length != self._sequence_length:
+            raise ValueError
+
+        pos = 0
+        base_str = seq.base_str
+
+        _base_domains = self._base_domains.copy()
+        if self.mod5 is not None:
+            _base_domains.insert(0, self.mod5)
+        if self.mod3 is not None:
+            _base_domains.append(self.mod3)
+
+        # fixme: should we check whitespace?
+        for base_domain, domain in zip(_base_domains, self.domains):
+            base_domain.sequence | base_str[pos : pos + base_domain.dna_length]  # noqa
+            domain.sequence = Seq(
+                seq.base_str[pos : pos + base_domain.dna_length]
+            )  # noqa
+            pos += base_domain.dna_length
+
+    def __init__(
+        self,
+        edges: Optional[list[Union[str, Glue]]] = None,
+        name: Optional[str] = None,
+        color: Optional[Color] = None,
+        stoic: Optional[float] = None,
+        sequence: Optional[Seq] = None,
+        domains: Optional[list[Domain]] = None,
+        note: Optional[str] = None,
+        mod5: Seq | str | int | None = None,
+        mod3: Seq | str | int | None = None,
+    ):
+        # Don't deal with the sequence just yet.
+        super().__init__(edges, name, color, stoic, None, domains, note)
+
+        # Now add the mod5 and mod3 domains, if they exist:
+        if isinstance(mod5, (str, Seq)):
+            self.mod5 = Domain(sequence=mod5)
+        elif isinstance(mod5, int):
+            self.mod5 = Domain(length=mod5)
+        elif mod5 is None:
+            self.mod5 = None
+        else:
+            raise TypeError(f"mod5 must be str, Seq, int, or None, not {type(mod5)}")
+
+        if isinstance(mod3, (str, Seq)):
+            self.mod3 = Domain(sequence=mod3)
+        elif isinstance(mod3, int):
+            self.mod3 = Domain(length=mod3)
+        elif mod3 is None:
+            self.mod3 = None
+        else:
+            raise TypeError(f"mod3 must be str, Seq, int, or None, not {type(mod3)}")
+
+        if sequence is not None:
+            self.sequence = sequence
+
+
 class SST10_5S(BaseSSTSingle):
     "Single SST, with domains (5'→3') of 11, 10, 10, and 11 nt. North edge is 10nt. 5' is S, 3' is E."
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [11, 10, 10, 11]]

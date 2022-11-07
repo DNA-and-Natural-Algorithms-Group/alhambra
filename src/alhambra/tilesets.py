@@ -1069,7 +1069,8 @@ class TileSet(Serializable):
         TileSet
             A tileset with the equivalence array, and thus the reduction, applied.
         """
-        return fastreduce._FastTileSet(self).applyequiv(self, equiv)
+        raise NotImplementedError
+        # return fastreduce._FastTileSet(self).applyequiv(self, equiv)
 
     def check_consistent(self):
         """Check the TileSet consistency.
