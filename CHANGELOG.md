@@ -1,9 +1,10 @@
 ## a15 (not released)
 
-- Support for stickydesign-calculated sequence-dependent glues for xgrow/rgrow export (fixes regression from 1.0)
+- Support for stickydesign-calculated sequence-dependent glues for xgrow/rgrow export (fixes regression from 1.0).
 - More SST motifs.
 - More flatish motifs.
 - Early support for rgrow export.
+- Improved error messages.
 
 ## a14
 

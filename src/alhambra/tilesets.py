@@ -25,6 +25,8 @@ from typing_extensions import Self, TypeAlias
 
 import numpy as np
 
+from alhambra.seq import MergeConflictError
+
 from . import drawing
 
 from numpy import isin
@@ -376,7 +378,16 @@ class TileSet(Serializable):
                     if isinstance(new_tile, BaseSSTile) and (
                         (seq := getattr(row["component"], "sequence", None)) is not None
                     ):
-                        new_tile.sequence |= seq
+                        try:
+                            new_tile.sequence |= seq
+                        except MergeConflictError as e:
+                            # FIXME: we should keep track of all of these and have
+                            # an error at the end.
+                            raise ValueError(
+                                f"Component {name} has sequence that does not match "
+                                f"tileset tile {tile.name}. First has {seq}, second has {tile.sequence}."
+                            ) from None
+
                     new_tile.stoic = float(
                         _ratio(Q_(row["concentration_nM"], nM), base_conc)
                     )
