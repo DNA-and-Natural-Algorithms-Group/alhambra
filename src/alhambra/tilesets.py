@@ -421,7 +421,7 @@ class TileSet(Serializable):
         self: TileSet,
         to_lattice: bool = True,
         _include_out: bool = False,
-        glues: XgrowGlueOpts = "perfect",
+        glues: XgrowGlueOpts | str | None = None,
         seed: str | int | Seed | None | Literal[False] = None,
         seed_offset: tuple[int, int] = (0, 0),
         xgrow_seed: tuple[int, int, int | str] | None = None,
@@ -521,7 +521,17 @@ class TileSet(Serializable):
         if "k" in d["options"]:
             del d["options"]["k"]  # k value for xgrow is modified; FIXME
 
-        for k in ["concentration", "alpha", "temperature"]:
+        for k in [
+            "concentration",
+            "alpha",
+            "temperature",
+            "model",
+            "chunk_handling",
+            "chunk_size",
+            "canvas-type",
+            "fission",
+            "threshold",
+        ]:
             if k in self.params:
                 d["options"][k] = self.params[k]
 

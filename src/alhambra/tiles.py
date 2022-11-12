@@ -855,9 +855,17 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
 Domain = SSGlue
 
 
+@dataclass(init=False)
 class BaseSSTSingleWithExtensions(BaseSSTSingle):
     mod5: Domain | None = None
     mod3: Domain | None = None
+
+    def to_dict(self, refglues: set[str] = set()) -> dict[str, Any]:
+        d = super().to_dict(refglues=refglues)
+        d["type"] = self.__class__.__name__
+        d["mod5"] = self.mod5.to_dict() if self.mod5 else None
+        d["mod3"] = self.mod3.to_dict() if self.mod3 else None
+        return d
 
     @property
     def domains(self) -> List[SSGlue]:
@@ -915,8 +923,8 @@ class BaseSSTSingleWithExtensions(BaseSSTSingle):
         note: Optional[str] = None,
         use: Optional[Sequence[Use]] = None,
         uses: Optional[Sequence[Sequence[Use]]] = None,
-        mod5: Seq | str | int | None = None,
-        mod3: Seq | str | int | None = None,
+        mod5: Seq | str | int | dict | None = None,
+        mod3: Seq | str | int | dict | None = None,
     ):
         # Don't deal with the sequence just yet.
         super().__init__(edges, name, color, stoic, None, domains, note, use, uses)
@@ -926,6 +934,8 @@ class BaseSSTSingleWithExtensions(BaseSSTSingle):
             self.mod5 = Domain(sequence=mod5)
         elif isinstance(mod5, int):
             self.mod5 = Domain(length=mod5)
+        elif isinstance(mod5, dict):
+            self.mod5 = Glue.from_dict(mod5)
         elif mod5 is None:
             self.mod5 = None
         else:
@@ -935,6 +945,8 @@ class BaseSSTSingleWithExtensions(BaseSSTSingle):
             self.mod3 = Domain(sequence=mod3)
         elif isinstance(mod3, int):
             self.mod3 = Domain(length=mod3)
+        elif isinstance(mod3, dict):
+            self.mod3 = Glue.from_dict(mod3)
         elif mod3 is None:
             self.mod3 = None
         else:

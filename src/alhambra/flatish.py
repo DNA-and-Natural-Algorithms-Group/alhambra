@@ -398,7 +398,7 @@ class FlatishHSeed9(Seed):
 
         xgtiles = []
         locs: list[tuple[int, int, str]] = []
-        bonds = [xgt.Bond("seed", 10)]
+        bonds = [xgt.Bond("seed", 100)]
 
         xgtiles.append(
             xgt.Tile([0, "seed", "seed", "seed"], "seed", stoic=0, color="white")
@@ -480,7 +480,7 @@ class FlatishVSeed9(Seed):
 
         xgtiles = []
         locs: list[tuple[int, int, str]] = []
-        bonds = [xgt.Bond("seed", 10)]
+        bonds = [xgt.Bond("seed", 100)]
 
         xgtiles.append(
             xgt.Tile(["seed", "seed", "seed", 0], "seed", stoic=0, color="white")
@@ -563,7 +563,7 @@ class FlatishNECornerSeed(Seed):
 
         xgtiles = []
         locs: list[tuple[int, int, str]] = []
-        bonds = [xgt.Bond("seed", 10)]
+        bonds = [xgt.Bond("seed", 100)]
 
         xgtiles.append(
             xgt.Tile(["seed", "seed", "seed", "seed"], "seed", stoic=0, color="white")
