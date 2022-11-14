@@ -425,7 +425,7 @@ class TileSet(Serializable):
         _include_out: bool = False,
         glues: XgrowGlueOpts | str | None = None,
         seed: str | int | Seed | None | Literal[False] = None,
-        seed_offset: tuple[int, int] = (0, 0),
+        seed_offset: tuple[int, int] | None = None,
         xgrow_seed: tuple[int, int, int | str] | None = None,
         **kwargs: Any,
     ) -> Any:  # FIXME
@@ -490,7 +490,7 @@ class TileSet(Serializable):
         self,
         glue_handling: XgrowGlueOpts | str | None = None,
         seed: str | int | Seed | None | Literal[False] = None,
-        seed_offset: tuple[int, int] = (0, 0),
+        seed_offset: tuple[int, int] | None = None,
         **kwargs,
     ):
         import rgrow as rg
@@ -500,13 +500,14 @@ class TileSet(Serializable):
             glue_handling=glue_handling, seed=seed, seed_offset=seed_offset, **kwargs
         )
 
-        return rg.TileSet.from_dict(d)
+        return rg.TileSet.from_dict(d)  # type: ignore
+        # (FIXME: rgrow needs a fix here)
 
     def to_rgrow_dict(
         self,
         glue_handling: XgrowGlueOpts | str | None = None,
         seed: str | int | Seed | None | Literal[False] = None,
-        seed_offset: tuple[int, int] = (0, 0),
+        seed_offset: tuple[int, int] | None = None,
         **kwargs,
     ):
         import rgrow as rg
@@ -533,6 +534,7 @@ class TileSet(Serializable):
             "canvas-type",
             "fission",
             "threshold",
+            "size",
         ]:
             if k in self.params:
                 d["options"][k] = self.params[k]
@@ -549,7 +551,7 @@ class TileSet(Serializable):
         self,
         glue_handling: XgrowGlueOpts | str | None = None,
         seed: str | int | Seed | None | Literal[False] = None,
-        seed_offset: tuple[int, int] = (0, 0),
+        seed_offset: tuple[int, int] | None = None,
     ) -> xgt.TileSet:
         "Convert Alhambra TileSet to an XGrow TileSet"
         import xgrow.tileset as xgt

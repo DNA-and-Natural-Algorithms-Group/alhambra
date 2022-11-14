@@ -29,7 +29,7 @@ class Seed(ABC):
     def to_xgrow(
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
-        offset: tuple[int, int] = (0, 0),
+        offset: tuple[int, int] | None = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         """Create xgrow implementation of the seed.
 
@@ -121,9 +121,12 @@ class DiagonalSESeed(Seed):
     def to_xgrow(
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
-        offset: tuple[int, int] = (0, 0),
+        offset: tuple[int, int] | None = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
+
+        if offset is None:
+            offset = (0, 0)
 
         xgtiles = []
         locs: list[tuple[int, int, str]] = []

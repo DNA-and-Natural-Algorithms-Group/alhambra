@@ -392,9 +392,12 @@ class FlatishHSeed9(Seed):
     def to_xgrow(
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
-        offset: tuple[int, int] = (0, 0),
+        offset: tuple[int, int] | None = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
+
+        if offset is None:
+            offset = (0, 0)
 
         xgtiles = []
         locs: list[tuple[int, int, str]] = []
@@ -474,9 +477,12 @@ class FlatishVSeed9(Seed):
     def to_xgrow(
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
-        offset: tuple[int, int] = (0, 0),
+        offset: tuple[int, int] | None = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
+
+        if offset is None:
+            offset = (0, 0)
 
         xgtiles = []
         locs: list[tuple[int, int, str]] = []
@@ -531,35 +537,46 @@ class FlatishNECornerSeed(Seed):
     hadapts: Sequence[tuple[Glue | str, FlatishSingleTile9]]
     corner: Sequence[FlatishSingleTile9]
     vadapts: Sequence[tuple[FlatishSingleTile9, Glue | str]]
+    sim_offset: tuple[int, int] = (0, 0)
 
     def to_dict(self, glues_as_refs: bool = False) -> dict:
         d: dict[str, Any] = {}
         d["hadapts"] = [[str(g), t.to_dict()] for g, t in self.hadapts]  # FIXME
         d["corner"] = [t.to_dict() for t in self.corner]
         d["vadapts"] = [[t.to_dict(), str(g)] for t, g in self.vadapts]  # FIXME
+        if self.sim_offset != (0, 0):
+            d["sim_offset"] = self.sim_offset
         d["type"] = self.__class__.__name__
         return d
 
     @classmethod
     def from_dict(cls, d: dict) -> FlatishNECornerSeed:
-        return cls(
-            [
+        args = {
+            "hadapts": [
                 (Glue(g), cast(FlatishSingleTile9, Tile.from_dict(t)))
                 for g, t in d["hadapts"]
             ],
-            [cast(FlatishSingleTile9, Tile.from_dict(t)) for t in d["corner"]],
-            [
+            "corner": [
+                cast(FlatishSingleTile9, Tile.from_dict(t)) for t in d["corner"]
+            ],
+            "vadapts": [
                 (cast(FlatishSingleTile9, Tile.from_dict(t)), Glue(g))
                 for t, g in d["vadapts"]
             ],
-        )
+        }
+        if "sim_offset" in d:
+            args["sim_offset"] = d["sim_offset"]
+        return cls(**args)  # type: ignore
 
     def to_xgrow(
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
-        offset: tuple[int, int] = (0, 0),
+        offset: tuple[int, int] | None = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
+
+        if offset is None:
+            offset = self.sim_offset
 
         xgtiles = []
         locs: list[tuple[int, int, str]] = []
@@ -742,8 +759,11 @@ class FlatishDiagonalSESeed10(DiagonalSESeed):
     def to_xgrow(
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
-        offset: tuple[int, int] = (0, 0),
+        offset: tuple[int, int] | None = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
+
+        if offset is None:
+            offset = (0, 0)
 
         offset = self._calculate_valid_offset(offset)
 
@@ -823,8 +843,11 @@ class FlatishDiagonalSESeed9(DiagonalSESeed):
     def to_xgrow(
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
-        offset: tuple[int, int] = (0, 0),
+        offset: tuple[int, int] | None = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
+
+        if offset is None:
+            offset = (0, 0)
 
         offset = self._calculate_valid_offset(offset)
 
