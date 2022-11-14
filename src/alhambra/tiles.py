@@ -935,7 +935,9 @@ class BaseSSTSingleWithExtensions(BaseSSTSingle):
         elif isinstance(mod5, int):
             self.mod5 = Domain(length=mod5)
         elif isinstance(mod5, dict):
-            self.mod5 = Glue.from_dict(mod5)
+            g = Glue.from_dict(mod5)
+            assert isinstance(g, SSGlue)
+            self.mod5 = g
         elif mod5 is None:
             self.mod5 = None
         else:
@@ -946,7 +948,9 @@ class BaseSSTSingleWithExtensions(BaseSSTSingle):
         elif isinstance(mod3, int):
             self.mod3 = Domain(length=mod3)
         elif isinstance(mod3, dict):
-            self.mod3 = Glue.from_dict(mod3)
+            g = Glue.from_dict(mod3)
+            assert isinstance(g, SSGlue)
+            self.mod3 = g
         elif mod3 is None:
             self.mod3 = None
         else:
@@ -1008,7 +1012,7 @@ class TileFactory:
     def __init__(self):
         self.types = {}
 
-    def register(self, c: Type[Tile], n: str = None) -> None:
+    def register(self, c: Type[Tile], n: Optional[str] = None) -> None:
         self.types[n if n is not None else c.__name__] = c
 
     def from_dict(self, d: dict[str, Any]) -> Tile:

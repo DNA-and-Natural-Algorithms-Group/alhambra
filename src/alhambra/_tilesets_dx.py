@@ -5,7 +5,16 @@ from __future__ import annotations
 from collections import Counter
 from datetime import datetime, timezone
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, Sequence, cast
+from typing import (
+    Optional,
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Iterable,
+    Literal,
+    Sequence,
+    cast,
+)
 from random import shuffle
 import stickydesign.multimodel as multimodel
 import numpy as np
@@ -383,7 +392,7 @@ def dx_plot_se_lv(
     self: TileSet,
     all_energetics: Sequence[stickydesign.Energetics] | None = None,
     energetics_names: Sequence[str] | None = None,
-    pltcmd: Callable[[Any], Any] = None,
+    pltcmd: Optional[Callable[[Any], Any]] = None,
     title: str | None = None,
     **kwargs,
 ):

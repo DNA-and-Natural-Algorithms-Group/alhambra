@@ -443,7 +443,7 @@ class DXGlue(Glue):
 
 
 class GlueList(Generic[GlueA], UpdateListD[GlueA]):
-    def merge_complements(self):
+    def merge_complements(self) -> None:
         newitems: dict[str, GlueA] = {}
         for v in self:
             c = v.complement

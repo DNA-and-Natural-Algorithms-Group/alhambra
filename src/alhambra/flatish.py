@@ -357,7 +357,7 @@ for ttype in [
     FlatishSingleTile10WithExtensions,
     FlatishSingleTile9WithExtensions,
 ]:
-    tile_factory.register(ttype)
+    tile_factory.register(cast(Type[Tile], ttype))
 
 
 T_FHS9 = TypeVar("T_FHS9", bound="FlatishHSeed9")

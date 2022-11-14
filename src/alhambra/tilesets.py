@@ -206,7 +206,9 @@ class GrowOrthogonalGlues(XgrowGlueOpts):
             k: v(temperature=temperature) for k, v in SD_ENERGETICS_CLASSES.items()
         }
 
-        sg = {}
+        sg: dict[
+            tuple[str, str, int], list[SSGlue]
+        ] = {}  # FIXME: should support DXGlue
         for g in allglues:
             k = (g.__class__.__name__, g.etype, g.dna_length)
             sg[k] = sg.get(k, [])
@@ -214,13 +216,13 @@ class GrowOrthogonalGlues(XgrowGlueOpts):
 
         sge = {
             k: (
-                [x.name for x in v],
+                [x.ident() for x in v],
                 sd.endarray([x.sequence.base_str.lower() for x in v], k[1]),
             )
             for k, v in sg.items()
         }
 
-        bonds = {}
+        bonds: dict[str, float] = {}
         for k, v in sge.items():
             m = sd_energetics[k[0]].matching_uniform(v[1]) / RT + alpha
             bonds |= {n: x for n, x in zip(v[0], m) if not n.endswith("*")}
@@ -273,7 +275,7 @@ class GrowFullGlues(XgrowGlueOpts):
             k: v(temperature=temperature) for k, v in SD_ENERGETICS_CLASSES.items()
         }
 
-        sg = {}
+        sg: dict[tuple[str, str, int], list[SSGlue]] = {}
         for g in allglues:
             k = (g.__class__.__name__, g.etype, g.dna_length)
             sg[k] = sg.get(k, [])
@@ -281,13 +283,13 @@ class GrowFullGlues(XgrowGlueOpts):
 
         sge = {
             k: (
-                [x.name for x in v],
+                [x.ident() for x in v],
                 sd.endarray([x.sequence.base_str.lower() for x in v], k[1]),
             )
             for k, v in sg.items()
         }
 
-        gluelinks = {}
+        gluelinks: dict[tuple[str, str], float] = {}
         for k, v in sge.items():
             glm = (
                 sd_energetics[k[0]]
@@ -558,7 +560,7 @@ class TileSet(Serializable):
         glue_handling = (
             XgrowGlueOpts.from_str(glue_handling)
             if isinstance(glue_handling, str)
-            else glue_handling
+            else cast(XgrowGlueOpts, glue_handling)
         )
 
         gluenamemap = glue_handling.glue_name_map(self)

@@ -277,7 +277,7 @@ def tileset_to_nuad_design(
 
 
 def group_strand_pairs_by_groups_and_complementary_domains(
-    design: "nc.Design", strands: "Optional[Iterable[nc.Strand]]" = None
+    design: "nc.Design", strands: Optional["Optional[Iterable[nc.Strand]]"] = None
 ) -> "Dict[Tuple[str, str, int], list[Tuple[nc.Strand, nc.Strand]]]":
     """
     Group pairs of strands by their groups (sorted) and number of complementary domains.

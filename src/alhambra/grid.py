@@ -3,7 +3,17 @@ from __future__ import annotations
 import dataclasses
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Literal, Protocol, Type, TypeVar, cast
+from typing import (
+    Optional,
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Literal,
+    Protocol,
+    Type,
+    TypeVar,
+    cast,
+)
 
 import numpy as np
 import scadnano
@@ -220,7 +230,7 @@ class LatticeFactory:
     def __init__(self):
         self.types = {}
 
-    def register(self, c: Type[Lattice], n: str = None):
+    def register(self, c: Type[Lattice], n: Optional[str] = None):
         self.types[n if n is not None else c.__name__] = c
 
     def from_dict(self, d: dict[str, Any]) -> Lattice:

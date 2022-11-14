@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Sequence, Type, TypeVar, cast
+from typing import Optional, TYPE_CHECKING, Any, Callable, Sequence, Type, TypeVar, cast
 
 import attrs
 
@@ -68,7 +68,7 @@ class SeedFactory:
     def __init__(self):
         self.types = {}
 
-    def register(self, c: Type[Seed], n: str = None):
+    def register(self, c: Type[Seed], n: Optional[str] = None):
         self.types[n if n is not None else c.__name__] = c
 
     def from_dict(self, d: dict[str, Any]) -> Seed:
