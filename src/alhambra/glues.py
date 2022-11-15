@@ -42,6 +42,15 @@ class Use(int, Enum):
     PERMANENT = 5
     UNSET = 6
 
+    @classmethod
+    def from_any(cls, other: str | Use | int) -> Use:
+        if isinstance(other, str):
+            return Use[other.upper()]
+        elif isinstance(other, Use):
+            return other
+        else:
+            return Use(other)
+
     def invert(self) -> Use:
         if self == Use.UNSET:
             raise ValueError

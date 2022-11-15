@@ -1,3 +1,9 @@
+## a15
+
+- Allow a default seed offset for simulations to be included in seed specifications (if
+  implemented by the seed class).
+- Preliminary support for DX tiles and older files.
+
 ## a14
 
 - Internal SVG drawing routines, removing drawSvg_svgy and lxml dependencies.

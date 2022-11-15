@@ -393,6 +393,7 @@ class FlatishHSeed9(Seed):
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
         offset: tuple[int, int] | None = None,
+        xgtiles: Optional[Sequence[xgt.Tile]] = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
 
@@ -478,6 +479,7 @@ class FlatishVSeed9(Seed):
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
         offset: tuple[int, int] | None = None,
+        xgtiles: Optional[Sequence[xgt.Tile]] = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
 
@@ -572,6 +574,7 @@ class FlatishNECornerSeed(Seed):
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
         offset: tuple[int, int] | None = None,
+        xgtiles: Optional[Sequence[xgt.Tile]] = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
 
@@ -760,6 +763,7 @@ class FlatishDiagonalSESeed10(DiagonalSESeed):
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
         offset: tuple[int, int] | None = None,
+        xgtiles: Optional[Sequence[xgt.Tile]] = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
 
         if offset is None:
@@ -844,6 +848,7 @@ class FlatishDiagonalSESeed9(DiagonalSESeed):
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
         offset: tuple[int, int] | None = None,
+        xgtiles: Optional[Sequence[xgt.Tile]] = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
 
         if offset is None:

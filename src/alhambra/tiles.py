@@ -207,19 +207,18 @@ class Tile:
         color: Optional[Color] = None,
         stoic: Optional[float] = None,
         note: Optional[str | dict[str, Any]] = None,
-        use: Sequence[Use] | None = None,
+        use: Sequence[Use | int | str] | None = None,
         fake: bool = False,
-        uses: Sequence[Sequence[Use]] | None = None,
+        uses: Sequence[Sequence[Use | int | str]] | None = None,
     ) -> None:
         if edges is None:
             raise ValueError
         self._edges = [(g if isinstance(g, Glue) else Glue(g)) for g in edges]
+        self.uses = []
         if use is not None:
-            self.use = use
+            self.uses += [[Use.from_any(x) for x in use]]
         if uses is not None:
-            self.uses = list(list(u) for u in uses)
-        else:
-            self.uses = []
+            self.uses += [[Use.from_any(x) for x in u] for u in uses]
         self.name = name
         self.color = color
         self.stoic = stoic
@@ -330,7 +329,7 @@ class Tile:
             del d["ends"]
         if "extra" in d:
             if "type" in d:
-                d["type"] += "_" + d["extra"]
+                d["type"] += "_" + d.pop("extra")
             else:
                 raise ValueError
 
@@ -1016,6 +1015,12 @@ class TileFactory:
         self.types[n if n is not None else c.__name__] = c
 
     def from_dict(self, d: dict[str, Any]) -> Tile:
+        if "ends" in d:  # old ends format
+            d["edges"] = d.pop("ends")
+        if "fullseqs" in d:  # old fullseqs format
+            d["sequences"] = d.pop("fullseqs")
+        if "input" in d:  # old input format
+            d["uses"] = [[3 - x for x in d.pop("input")]]  # FIXME
         if "edges" in d:
             for i in range(0, len(d["edges"])):
                 glue = d["edges"][i]
@@ -1112,11 +1117,35 @@ class TileList(Generic[SomeTile], UpdateListD[SomeTile]):
 
 class DAOETile(Tile):
     _edges: List[Glue]  # actually dxglue
+    _strand_sequences: List[str] | None
 
     def to_dict(self, refglues: set[str] = set()) -> dict[str, Any]:
         d = super().to_dict(refglues=refglues)
         d["type"] = self.__class__.__name__
         return d
+
+    def __init__(
+        self,
+        name: str,
+        sequence: str | None = None,
+        sequences: list[str] | None = None,
+        edges: List[Glue | str] | None = None,
+        label: str | None = None,
+        color: str | None = None,
+        **kwargs,
+    ):
+        if sequence:
+            assert not sequences
+            self._strand_sequences = sequence.split("+")
+        elif sequences:
+            self._strand_sequences = sequences
+        else:
+            self._strand_sequences = None
+
+        if label:
+            log.warning("label not currently handled")
+
+        super().__init__(name=name, edges=edges, color=color, **kwargs)
 
 
 class DAOESingle(SingleTile, DAOETile, metaclass=ABCMeta):
@@ -1148,6 +1177,7 @@ class DAOESingle5p(DAOESingle):
 
 
 tile_factory.register(DAOESingle5p, "tile_daoe_5up")
+tile_factory.register(DAOESingle5p, "tile_daoe_5up_2h")
 
 
 class DAOESingle3p(DAOESingle):
@@ -1166,6 +1196,7 @@ class DAOESingle3p(DAOESingle):
 
 
 tile_factory.register(DAOESingle3p, "tile_daoe_3up")
+tile_factory.register(DAOESingle3p, "tile_daoe_3up_2h")
 
 
 class DAOEHDouble3p(HDupleTile, DAOETile):
@@ -1174,6 +1205,8 @@ class DAOEHDouble3p(HDupleTile, DAOETile):
 
 tile_factory.register(DAOEHDouble3p)
 tile_factory.register(DAOEHDouble3p, "tile_daoe_doublehoriz_35up")
+tile_factory.register(DAOEHDouble3p, "tile_daoe_doublehoriz_35up_2h3h")  # FIXME
+tile_factory.register(DAOEHDouble3p, "tile_daoe_doublehoriz_35up_1h2i")  # FIXME
 
 
 class DAOEHDouble5p(HDupleTile, DAOETile):
@@ -1186,6 +1219,7 @@ class DAOEVDouble3p(VDupleTile, DAOETile):
 
 tile_factory.register(DAOEVDouble3p)
 tile_factory.register(DAOEVDouble3p, "tile_daoe_doublevert_35up")
+tile_factory.register(DAOEVDouble3p, "tile_daoe_doublevert_35up_4h5h")  # FIXME
 
 
 class DAOEVDouble5p(VDupleTile, DAOETile):

@@ -30,6 +30,7 @@ class Seed(ABC):
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
         offset: tuple[int, int] | None = None,
+        xgtiles: Optional[Sequence[xgt.Tile]] = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         """Create xgrow implementation of the seed.
 
@@ -79,8 +80,126 @@ class SeedFactory:
             raise ValueError
 
 
+from alhambra.tiles import log
+
+
+@attrs.define()
+class DXAdapter:
+    name: str | None = attrs.field(default=None)
+    edges: list[str] | None = attrs.field(default=None)
+    tilebase: str | None = attrs.field(default=None)
+    loc: int | None = attrs.field(default=None)
+    sequences: list[str] | None = attrs.field(default=None)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> DXAdapter:
+        if "ends" in d:
+            d["edges"] = d.pop("ends")
+        if "seqs" in d:
+            d["sequences"] = d.pop("seqs")
+        for k in d.keys():
+            if k not in ["name", "edges", "tilebase", "loc", "sequences"]:
+                log.warning(f"Unknown key {k} in DXAdapter.from_dict")
+        return cls(
+            name=d.get("name", None),
+            edges=d.get("edges", None),
+            tilebase=d.get("tilebase", None),
+            loc=d.get("loc", None),
+            sequences=d.get("sequences", None),
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "edges": self.edges,
+            "tilebase": self.tilebase,
+            "loc": self.loc,
+            "sequences": self.sequences,
+        }
+
+    def xgrow_edges(
+        self,
+        i: int,
+        xgtiles: Optional[Sequence[xgt.Tile]],
+        gluenamemap: Callable[[str], str],
+    ) -> list[str | int]:
+        if self.edges:
+            return cast(
+                list[str | int],
+                ["seed"] + [gluenamemap(e) for e in self.edges] + ["seed"],
+            )
+
+        assert xgtiles is not None
+        assert self.tilebase is not None
+        tile = [t for t in xgtiles if t.name == self.tilebase][0]
+        match tile.shape:
+            case "S":
+                glues_from_tile = tile.edges[1:3]  # FIXME
+            case "H":
+                glues_from_tile = tile.edges[2:4]
+            case "V":
+                glues_from_tile = tile.edges[2:4]
+            case _:
+                raise ValueError(f"Unknown tile shape {tile.shape}")
+        return ["seed"] + glues_from_tile + ["seed"]
+
+
+@attrs.define()
 class DXOrigamiSeed(Seed):
-    ...
+    adapters: list[DXAdapter] = attrs.field(factory=list)
+    use_adapters: list[str] | None = attrs.field(default=None)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> DXOrigamiSeed:
+        return cls(
+            adapters=[DXAdapter.from_dict(x) for x in d["adapters"]],
+            use_adapters=d.get("use_adapters", None),
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "type": "DXOrigamiSeed",
+            "adapters": [x.to_dict() for x in self.adapters],
+            "use_adapters": self.use_adapters,
+        }
+
+    def to_xgrow(
+        self,
+        gluenamemap: Callable[[str], str] = lambda x: x,
+        offset: tuple[int, int] | None = None,
+        xgtiles: Optional[Sequence[xgt.Tile]] = None,
+    ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
+        import xgrow.tileset as xgt
+
+        if offset is None:
+            offset = (0, 0)
+        ox, oy = offset
+        tiles: list[xgt.Tile] = []
+        tiles.append(
+            xgt.Tile([0, "seed", "seed", "seed"], "seed", stoic=0, color="white")
+        )
+        bonds = [xgt.Bond("seed", 100)]
+        initstate: xgt.InitState = xgt.InitState()
+
+        adapters = self.adapters
+
+        nadapts = len(adapters)
+        oy += nadapts + 2
+        ox = 2
+        for i, adapter in enumerate(adapters):
+            if self.use_adapters is not None and adapter.name not in self.use_adapters:
+                raise NotImplementedError
+            tile = xgt.Tile(
+                name=adapter.name or f"adapter_{i}",
+                edges=adapter.xgrow_edges(i, xgtiles, gluenamemap),
+                stoic=0,
+                color="brown",
+            )
+            tiles.append(tile)
+            initstate.append((ox + i, oy - i, adapter.name or f"adapter_{i}"))
+            if i != 0:
+                initstate.append((ox + i - 1, oy - i, "seed"))
+        return tiles, bonds, initstate
 
 
 def _convert_adapts(
@@ -122,6 +241,7 @@ class DiagonalSESeed(Seed):
         self,
         gluenamemap: Callable[[str], str] = lambda x: x,
         offset: tuple[int, int] | None = None,
+        xgtiles: Optional[Sequence[xgt.Tile]] = None,
     ) -> tuple[list[xgt.Tile], list[xgt.Bond], xgt.InitState]:
         import xgrow.tileset as xgt
 
@@ -158,6 +278,10 @@ class DiagonalSESeed(Seed):
 
 seed_factory = SeedFactory()
 
-seed_factory.register(DiagonalSESeed, "longrect")
+seed_factory.register(DiagonalSESeed)
 # seed_factory.register(DX_TallRect, "tallrect")
 # seed_factory.register(DX_TallRect)
+seed_factory.register(DXOrigamiSeed, "triangle_side2")
+seed_factory.register(DXOrigamiSeed, "longrect")
+seed_factory.register(DXOrigamiSeed, "tallrect")
+seed_factory.register(DXOrigamiSeed, "bigseed")

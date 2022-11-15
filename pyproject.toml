@@ -7,15 +7,19 @@ version_scheme = "no-guess-dev"
 write_to = "src/alhambra/_version.py"
 
 [tool.pytest.ini_options]
-# addopts = "--cov alhambra --cov-report term-missing --cov-report html"
+addopts = "--cov qslib --cov-report term-missing --verbose"
 norecursedirs = [
     "dist",
     "build",
     ".tox"]
 testpaths = ["tests"]
-
+pythonpath = [
+  "src"
+]
 [project]
 name = "alhambra"
+dynamic = ["version"]
+
 
 [tool.black]
 target_version = ["py310"]

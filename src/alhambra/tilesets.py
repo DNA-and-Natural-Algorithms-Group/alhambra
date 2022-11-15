@@ -5,6 +5,7 @@ import copy
 from io import TextIOWrapper
 import logging
 from os import PathLike
+from pathlib import Path
 import warnings
 from dataclasses import dataclass, field
 from typing import (
@@ -53,6 +54,10 @@ from .tiles import (
     TileSupportingScadnano,
     tile_factory,
 )
+
+import logging
+
+log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     import matplotlib.pyplot as plt
@@ -586,7 +591,7 @@ class TileSet(Serializable):
             initstate = None
         else:
             seed_tiles, seed_bonds, initstate = cast(Seed, seed).to_xgrow(
-                gluenamemap, offset=seed_offset
+                gluenamemap, offset=seed_offset, xgtiles=tiles
             )
 
         xgrow_tileset = xgt.TileSet(
@@ -722,7 +727,10 @@ class TileSet(Serializable):
         ts.tiles = TileList(Tile.from_dict(x) for x in d.get("tiles", []))
         ts.glues = GlueList(Glue.from_dict(x) for x in d.get("glues", []))
         ts.seeds = {k: seed_factory.from_dict(v) for k, v in d.get("seeds", {}).items()}
-        ts.guards = {k: v for k, v in d.get("guards", {}).items()}
+        try:
+            ts.guards = {k: v for k, v in d.get("guards", {}).items()}
+        except AttributeError:
+            log.warning("Failed to load guards.")
         if not ts.seeds and "seed" in d:
             ts.seeds = {0: seed_factory.from_dict(d["seed"])}
         ts.lattices = {
@@ -1131,15 +1139,35 @@ class TileSet(Serializable):
 
     @classmethod
     def from_file(
-        cls, path_or_stream: TextIOWrapper | str | PathLike[str]
+        cls,
+        path_or_stream: TextIOWrapper | str | PathLike[str],
+        format: Literal["json", "yaml", None] = None,
     ) -> "TileSet":
 
-        if isinstance(path_or_stream, (str, PathLike)):
-            stream = open(path_or_stream)
-        else:
-            stream = path_or_stream
+        if isinstance(path_or_stream, str) or isinstance(path_or_stream, PathLike):
+            p = Path(path_or_stream)
+            if format is None:
+                if p.suffix == ".json":
+                    format = "json"
+                elif p.suffix in [".yaml", ".yml"]:
+                    format = "yaml"
 
-        return cls.from_json(stream)
+            stream = p.open("r")
+
+        if format is None:
+            log.warning("No format specified, trying json, then yaml.")
+            try:
+                return cls.from_json(stream)
+            except:
+                stream.seek(0)
+                return cls.from_yaml(stream)
+
+        if format == "json":
+            return cls.from_json(stream)
+        elif format == "yaml":
+            return cls.from_yaml(stream)
+        else:
+            raise ValueError(f"Unknown format {format}")
 
     def to_file(self, path_or_stream: str | PathLike[str] | TextIOWrapper):
         if isinstance(path_or_stream, (str, PathLike)):
