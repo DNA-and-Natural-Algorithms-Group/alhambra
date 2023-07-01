@@ -735,7 +735,7 @@ lattice_factory.register(FlatishLattice)
 
 
 class FlatishDiagonalSESeed10(DiagonalSESeed):
-    adapters: Sequence[tuple[SSGlue, SSGlue]] = attrs.field(
+    adapters: list[tuple[SSGlue, SSGlue]] = attrs.field(
         converter=_convert_adapts, on_setattr=attrs.setters.convert
     )
     _lattice: ClassVar[Type[AbstractLatticeSupportingScadnano]] = FlatishLattice
@@ -822,7 +822,7 @@ class FlatishDiagonalSESeed10(DiagonalSESeed):
 
 
 class FlatishDiagonalSESeed9(DiagonalSESeed):
-    adapters: Sequence[tuple[SSGlue, SSGlue]] = attrs.field(
+    adapters: list[tuple[SSGlue, SSGlue]] = attrs.field(
         converter=_convert_adapts, on_setattr=attrs.setters.convert
     )
     _lattice = FlatishLattice

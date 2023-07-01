@@ -336,10 +336,15 @@ class TileSet(Serializable):
         glues: Iterable[Glue] = tuple(),
         seeds: Mapping[str | int, Seed] | None = None,
         *,
+        seed: Seed | None = None,
         lattices: Mapping[str | int, Lattice] | None = None,
         guards: Mapping[str | int, list[str]] = dict(),
         params: dict | None = None,
     ) -> None:
+        if seed is not None:
+            if seeds is not None:
+                raise ValueError("Cannot specify both seed and seeds")
+            seeds = {'default': seed}
         self.tiles = TileList(tiles)
         self.glues = GlueList(glues)
         self.seeds = dict(seeds) if seeds else dict()
@@ -530,9 +535,9 @@ class TileSet(Serializable):
             del d["options"]["k"]  # k value for xgrow is modified; FIXME
 
         for k in [
-            "concentration",
+            #"concentration",
             "alpha",
-            "temperature",
+            #"temperature",
             "model",
             "chunk_handling",
             "chunk_size",
@@ -551,6 +556,65 @@ class TileSet(Serializable):
                 d["options"].pop(k, None)
 
         return d
+
+    # def to_rgrow(
+    #     self,
+    #     glue_handling: XgrowGlueOpts | str | None = None,
+    #     seed: str | int | Seed | None | Literal[False] = None,
+    #     seed_offset: tuple[int, int] | None = None,
+    # ) -> xgt.TileSet:
+    #     "Convert Alhambra TileSet to an XGrow TileSet"
+    #     import rgrow as rg
+
+    #     if glue_handling is None:
+    #         glue_handling = self.params.get("glue-handling", "perfect")
+
+    #     glue_handling = (
+    #         XgrowGlueOpts.from_str(glue_handling)
+    #         if isinstance(glue_handling, str)
+    #         else cast(XgrowGlueOpts, glue_handling)
+    #     )
+
+    #     gluenamemap = glue_handling.glue_name_map(self)
+
+    #     self.tiles.refreshnames()
+    #     self.glues.refreshnames()
+    #     tiles = [t.to_xgrow(gluenamemap) for t in self.tiles]
+
+    #     bonds, rg_glues = glue_handling.calculate_gses(self)
+
+    #     if seed is None:
+    #         if self.seeds:
+    #             seed = next(iter(self.seeds.values()))
+    #         else:
+    #             seed = False
+    #     if seed is not False and (isinstance(seed, str) or isinstance(seed, int)):
+    #         seed = self.seeds[seed]
+    #     if seed is False:
+    #         seed_tiles: list[rg.Tile] = []
+    #         seed_bonds: list[rg.Bond] = []
+    #         initstate = None
+    #     else:
+    #         seed_tiles, seed_bonds, initstate = cast(Seed, seed).to_xgrow(
+    #             gluenamemap, offset=seed_offset, xgtiles=tiles
+    #         )
+
+    #     xgrow_tileset = rg.TileSet(
+    #         seed_tiles + tiles, seed_bonds + bonds, seed=initstate, glues=rg_glues
+    #     )
+
+    #     ggse = glue_handling.get_xgrow_gse(self)
+    #     if ggse is not None:
+    #         xgrow_tileset.gse = ggse
+
+    #     gconc = self.params.get("concentration", None)
+    #     galpha = self.params.get("alpha", None)
+    #     if gconc is not None and galpha is not None:
+    #         xgrow_tileset.gmc = galpha - np.log(gconc * 1e-9)
+    #         xgrow_tileset.kf = 1e6 * np.exp(galpha)
+    #         xgrow_tileset.alpha = galpha
+
+    #     return xgrow_tileset
 
     def to_xgrow(
         self,

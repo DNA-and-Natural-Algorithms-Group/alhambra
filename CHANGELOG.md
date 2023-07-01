@@ -1,3 +1,7 @@
+## a16
+
+- Add a seed parameter to set a single seed for a tileset.
+
 ## a15
 
 - Allow a default seed offset for simulations to be included in seed specifications (if
