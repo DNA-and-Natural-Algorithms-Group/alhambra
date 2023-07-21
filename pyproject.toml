@@ -16,10 +16,27 @@ testpaths = ["tests"]
 pythonpath = [
   "src"
 ]
+
 [project]
 name = "alhambra"
 dynamic = ["version"]
+description = "DNA Tile System Designer"
+license = {text = "BSD 3-Clause"}
+authors = [{name = "Constantine Evans", email = "const@costi.eu"}]
+readme = {file = "README.md", "content-type" = "text/markdown; charset=UTF-8"}
 
+classifiers = ["Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: BSD License",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Typing :: Typed"]
+requires-python = ">=3.9"
+
+[project.scripts]
+alhambra = "alhambra.scripts:alhambra"
 
 [tool.black]
 target_version = ["py310"]
