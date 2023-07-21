@@ -27,6 +27,7 @@ from typing import (
     overload,
     TYPE_CHECKING,
 )
+import scadnano
 
 from xgrow.xcolors import xcolors
 
@@ -35,6 +36,9 @@ from . import drawing
 if TYPE_CHECKING:
     from alhambra.tilesets import XgrowGlueOpts, TileSet
     import xgrow.tileset as xgt
+    from scadnano import (Modification, Modification3Prime, 
+                          Modification5Prime, ModificationInternal,
+                          Design, Strand)
 
 from .glues import Use
 
@@ -842,8 +846,8 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
         if self.name is not None:
             s.with_name(self.name)
 
-        if self.color is not None:
-            s.with_color(_scadnano_color(self.color))
+        if (x := _scadnano_color(self.color)) is not None:
+            s.with_color(x)
 
         # We generally don't want to assign complements here because (a) we will be assigning
         # sequences for every tile, and (b) in some cases, we will have intentional mismatches.
@@ -853,6 +857,62 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
 
 Domain = SSGlue
 
+
+@dataclass(init=False)
+class BaseSSTSingleWithMods(BaseSSTSingle):
+    mods: list[Modification5Prime | Modification3Prime | tuple[ModificationInternal, int]]
+
+    def to_dict(self, refglues: set[str] = set()) -> dict[str, Any]:
+        d =  super().to_dict(refglues)
+        d["type"] = self.__class__.__name__
+        d["mods"] = []
+        for mod in self.mods:
+            if isinstance(mod, (Modification3Prime, Modification5Prime)):
+                d["mods"].append(mod.to_json_serializable())
+            else:
+                d["mods"].append((mod[0].to_json_serializable(), mod[1]))
+        # FIXME: not round-trippable
+        return d
+
+
+    def __init__(
+        self,
+        edges: Optional[list[Union[str, Glue]]] = None,
+        name: Optional[str] = None,
+        color: Optional[Color] = None,
+        stoic: Optional[float] = None,
+        sequence: Optional[Seq] = None,
+        domains: Optional[list[Domain]] = None,
+        note: Optional[str] = None,
+        use: Optional[Sequence[Use]] = None,
+        uses: Optional[Sequence[Sequence[Use]]] = None,
+        mods: list[Modification5Prime | Modification3Prime | tuple[ModificationInternal, int]] | None = None,
+    ):
+        # Don't deal with the sequence just yet.
+        super().__init__(edges, name, color, stoic, None, domains, note, use, uses)
+
+        if mods is not None:
+            # TODO: check mods
+            self.mods = mods
+        else:
+            self.mods = []
+        
+        if sequence is not None:
+            self.sequence = sequence
+
+
+    def to_scadnano(self, design: Design, helix: int, offset: int) -> Strand:
+        s = super().to_scadnano(design, helix, offset)
+
+        for mod in self.mods:
+            if isinstance(mod, Modification3Prime):
+                s.modification_3p = mod
+            elif isinstance(mod, Modification5Prime):
+                s.modification_5p = mod
+            else: # TODO: use case eventually
+                s.modifications_int[mod[1]] = mod[0]
+
+        return s
 
 @dataclass(init=False)
 class BaseSSTSingleWithExtensions(BaseSSTSingle):
