@@ -64,7 +64,10 @@ if TYPE_CHECKING:
     import scadnano
     import xgrow.parseoutput
     import xgrow.tileset as xgt
-    import stickydesign as sd
+    import stickydesign as sd    
+    import alhambra_mixes as am
+    import alhambra_mixes.units as amu
+
 
 _gl = {
     EdgeLoc(D.N, (0, 0)): (0, 0, 10, 0),
@@ -315,11 +318,6 @@ class GrowFullGlues(XgrowGlueOpts):
         ]
 
 
-from alhambra_mixes import Mix, Q_, nM, ureg
-from alhambra_mixes.units import _parse_conc_required, _ratio
-from alhambra_mixes.logging import log as log_mix
-
-
 @dataclass(init=False)
 class TileSet(Serializable):
     "Class representing a tileset, whether abstract or sequence-level."
@@ -358,19 +356,23 @@ class TileSet(Serializable):
     @classmethod
     def from_mix(
         cls: Type[TileSet],
-        mix: Mix,
+        mix: am.Mix,
         tilesets_or_lists: TileSet | TileList | Iterable[TileSet | TileList],
         *,
         seed: bool | Seed = False,
-        base_conc: ureg.Quantity | str = Q_(100.0, nM),
+        base_conc: amu.ureg.Quantity | str | None = None,
     ) -> TileSet:
         """
-        Given some :any:`TileSet`\ s, or lists of :any:`Tile`\ s from which to
+        Given some :any:`TileSet`\\ s, or lists of :any:`Tile`\\ s from which to
         take tiles, generate an TileSet from the mix.
         """
 
         from .tiles import BaseSSTile
+        from alhambra_mixes.units import _parse_conc_required, _ratio, Q_, nM
+        from alhambra_mixes.logging import log as log_mix
 
+        if base_conc is None:
+            base_conc = Q_("100.0 nM")
         base_conc = _parse_conc_required(base_conc)
 
         newts = cls()
