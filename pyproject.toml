@@ -41,7 +41,6 @@ dependencies = [
     "peppercompiler >= 0.1.2",
     "ruamel.yaml >= 0.15.100",
     "cssutils",
-    "pandas",
     "openpyxl",
     "typing_extensions >= 4.1",
     "pint >= 0.19.2",
@@ -56,7 +55,9 @@ dependencies = [
 all = [
     "seaborn",
     "matplotlib",
-    "scadnano"
+    "scadnano",
+    "pandas",
+
     ]
 docs = [
     "numpydoc",
