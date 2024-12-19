@@ -763,16 +763,18 @@ def _scadnano_color(color: Optional[str]) -> Optional[scadnano.Color]:
 class BaseSSTSingle(SingleTile, BaseSSTile):
     """Base class for a standard-orientation SST single tile."""
 
-    _edges: List[Glue]
+    _edges: list[Glue]
+    _order: list[int]
+    "The edge (NESW) of each domain."
 
     @property
     def domains(self) -> List[SSGlue]:
         e = self.edges
-        return [e[i] for i in [1, 0, 3, 2]]  # type: ignore
+        return [e[i] for i in self._order]  # type: ignore
 
     @property
     def _base_edges(self) -> List[SSGlue]:
-        return [self._base_domains[i] for i in [1, 0, 3, 2]]
+        return [self._base_domains[i] for i in self._order]
 
     def _input_neighborhood_domains(
         self,
@@ -833,15 +835,13 @@ class BaseSSTSingle(SingleTile, BaseSSTile):
     def to_scadnano(
         self, design: scadnano.Design, helix: int, offset: int
     ) -> scadnano.Strand:
-        s = design.draw_strand(helix, offset + 21)
+        s = design.draw_strand(helix + self._scadnano_5p_offset[0], offset + self._scadnano_5p_offset[1])
 
-        for e in self.domains[0:2]:
-            s.move(-e.dna_length)
-            s.with_domain_name(e.ident())
-        s.cross(s.current_helix + 1)
-        for e in self.domains[2:]:
-            s.move(e.dna_length)
-            s.with_domain_name(e.ident())
+        for d, m in zip(self.domains, self._scadnano_moves, strict=True):
+            if m[0] != 0:
+                s.cross(s.current_helix + m[0])
+            s.move(m[1])
+            s.with_domain_name(d.ident())
 
         if self.name is not None:
             s.with_name(self.name)

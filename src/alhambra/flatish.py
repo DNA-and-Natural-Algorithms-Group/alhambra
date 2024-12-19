@@ -59,7 +59,13 @@ __all__ = [
     "FlatishVDupleTile9_E2",
     "FlatishVDupleTile10_E2",
     "FlatishSingleTile9",
+    "FlatishSingleTile9_NENick",
+    "FlatishSingleTile9_NWNick",
+    "FlatishSingleTile9_SWNick",
     "FlatishSingleTile10",
+    "FlatishSingleTile10_NENick",
+    "FlatishSingleTile10_NWNick",
+    "FlatishSingleTile10_SWNick",
     "FlatishNWCornerSeed"
 ]
 
@@ -95,15 +101,53 @@ def _reorder(seq: Sequence[T], ord: Sequence[int]) -> list[T]:
 class FlatishSingleTile9(BaseSSTSingle):
     "Flatish single tile, with domains (5'→3') of 12, 9, 11, and 10 nt.  North edge is 9nt."
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [12, 9, 11, 10]]
-    _scadnano_offsets = ((-1, -12), (-1, 9), (1, 11), (1, -10))
+    _scadnano_moves = ((0, -12), (0, -9), (1, 11), (0, 10))
     _scadnano_5p_offset = (0, 21)
+    _order = [1, 0, 3, 2]
 
+class FlatishSingleTile9_NENick(BaseSSTSingle):
+    _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [9, 11, 10, 12]]
+    _scadnano_moves = ((0, -9), (1, 11), (0, 10), (-1, -12))
+    _scadnano_5p_offset = (0, 9)
+    _order = [0, 3, 2, 1]
+
+class FlatishSingleTile9_NWNick(BaseSSTSingle):
+    _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [11, 10, 12, 9]]
+    _scadnano_moves = ((0, 11), (0, 10), (-1, -12), (0, -9))
+    _scadnano_5p_offset = (1, 0)
+    _order = [3, 2, 1, 0]
+
+class FlatishSingleTile9_SWNick(BaseSSTSingle):
+    _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [10, 12, 9, 11]]
+    _scadnano_moves = ((0, 10), (-1, -12), (0, -9), (1, 11))
+    _scadnano_5p_offset = (1, 11)
+    _order = [2, 1, 0, 3]
 
 class FlatishSingleTile10(BaseSSTSingle):
     "Flatish single tile, with domains (5'→3') of 11, 10, 12, and 9 nt. North edge is 10nt."
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [11, 10, 12, 9]]
-    _scadnano_offsets = ((-1, -11), (-1, 10), (1, 12), (1, -9))
+    _scadnano_moves = ((0, -11), (0, -10), (1, 12), (0, 9))
     _scadnano_5p_offset = (0, 21)
+    _order = [1, 0, 3, 2]
+
+class FlatishSingleTile10_NENick(BaseSSTSingle):
+    _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [10, 12, 9, 11]]
+    _scadnano_moves = ((0, -10), (1, 12), (0, 9), (-1, -11))
+    _scadnano_5p_offset = (0, 10)
+    _order = [0, 3, 2, 1]
+
+class FlatishSingleTile10_NWNick(BaseSSTSingle):
+    _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [12, 9, 11, 10]]
+    _scadnano_moves = ((0, 12), (0, 9), (-1, -11), (0, -10))
+    _scadnano_5p_offset = (1, 0)
+    _order = [3, 2, 1, 0]
+
+class FlatishSingleTile10_SWNick(BaseSSTSingle):
+    _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [9, 11, 10, 12]]
+    _scadnano_moves = ((0, 9), (-1, -11), (0, -10), (1, 12))
+    _scadnano_5p_offset = (1, 12)
+    _order = [2, 1, 0, 3]
+
 
 
 class FlatishSingleTile9WithExtensions(FlatishSingleTile9, BaseSSTSingleWithExtensions):
