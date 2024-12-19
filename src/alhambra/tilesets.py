@@ -1199,7 +1199,7 @@ class TileSet(Serializable):
         # * ADAPTERS / SEEDS
         # SEED stuff was here
 
-    def copy(self):
+    def copy(self) -> Self:
         """Return a full (deep) copy of the TileSet"""
         return copy.deepcopy(self)
 
