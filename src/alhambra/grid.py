@@ -134,7 +134,7 @@ class AbstractLatticeSupportingScadnano(AbstractLattice):
         tileset.glues.refreshnames()
         scl = self.to_scadnano_lattice()
         max_helix = max(helix for helix, offset in scl.positions) + 4
-        des = scadnano.Design(helices=[scadnano.Helix() for _ in range(0, max_helix)])
+        des = scadnano.Design(helices=[scadnano.Helix(**scl.helix_params.get(helix, {})) for helix in range(0, max_helix)])
 
         for (helix, offset), tilename in scl.positions.items():
             cast(TileSupportingScadnano, tileset.tiles[tilename]).to_scadnano(
@@ -144,6 +144,15 @@ class AbstractLatticeSupportingScadnano(AbstractLattice):
         if scl.seed is not None:
             scl.seed.to_scadnano(des, scl.seed_position[0], scl.seed_position[1])
 
+        # Trim scadnano helices (FIXME: probably should be a feature in scadnano)
+        for k in list(des.helices.keys()):
+            d = des.helices[k].domains
+            if not d:
+                del des.helices[k]
+            else:
+                des.helices[k].max_offset = max(d.end for d in d)
+                des.helices[k].min_offset = min(d.start for d in d)
+
         return des
 
 
@@ -152,6 +161,7 @@ class ScadnanoLattice(LatticeSupportingScadnano):
     positions: dict[tuple[int, int], str] = field(default_factory=lambda: {})
     seed: SeedSupportingScadnano | None = None
     seed_position: tuple[int, int] = (0, 0)
+    helix_params: dict[int, dict[str, Any]] = field(default_factory=lambda: {})
 
     def __getitem__(self, index: tuple[int, int]) -> str | None:
         return self.positions[index]

@@ -66,8 +66,31 @@ __all__ = [
     "FlatishSingleTile10_NENick",
     "FlatishSingleTile10_NWNick",
     "FlatishSingleTile10_SWNick",
-    "FlatishNWCornerSeed"
+    "FlatishNWCornerSeed",
+    "FlatishLattice"
 ]
+
+
+
+def flatgrid_hofromxy(
+    x: int, y: int, start_helix: int, start_o: int, p: Literal[9, 10] = 9
+) -> tuple[int, int]:
+    if p == 9:
+        pn = 0
+    elif p == 10:
+        pn = 1
+    else:
+        raise ValueError
+    sx = (pn + y) % 2
+    sy = (pn) % 2
+    return (
+        start_helix - y + x,
+        start_o
+        + 23 * (x // 2)
+        + 19 * (y // 2)
+        + (11 + sx) * (x % 2)
+        + (9 + sy) * (y % 2),
+    )
 
 
 def _add_domain_from_glue(
@@ -105,6 +128,8 @@ class FlatishSingleTile9(BaseSSTSingle):
     _scadnano_5p_offset = (0, 21)
     _order = [1, 0, 3, 2]
 
+FlatishSingleTile9_SENick = FlatishSingleTile9
+
 class FlatishSingleTile9_NENick(BaseSSTSingle):
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [9, 11, 10, 12]]
     _scadnano_moves = ((0, -9), (1, 11), (0, 10), (-1, -12))
@@ -129,6 +154,8 @@ class FlatishSingleTile10(BaseSSTSingle):
     _scadnano_moves = ((0, -11), (0, -10), (1, 12), (0, 9))
     _scadnano_5p_offset = (0, 21)
     _order = [1, 0, 3, 2]
+
+FlatishSingleTile10_SENick = FlatishSingleTile10
 
 class FlatishSingleTile10_NENick(BaseSSTSingle):
     _base_domains: ClassVar[list[SSGlue]] = [SSGlue(length=x) for x in [10, 12, 9, 11]]
@@ -936,10 +963,11 @@ class FlatishLattice(AbstractLatticeSupportingScadnano):
 
     def to_scadnano_lattice(self) -> ScadnanoLattice:
         sclat = ScadnanoLattice()
+        start_helix = self.grid.shape[1] - 1
         for ix, t in np.ndenumerate(self.grid):
             if not t:
                 continue
-            scpos = flatgrid_hofromxy(ix[0], ix[1], self.grid.shape[1], 0)
+            scpos = flatgrid_hofromxy(ix[0], ix[1], start_helix, 0)
             sclat[scpos] = t
 
         if (
@@ -949,8 +977,24 @@ class FlatishLattice(AbstractLatticeSupportingScadnano):
         ):
             sclat.seed = self.seed
             sclat.seed_position = self.seed.ho_from_seed_offset(
-                self.seed_offset, self.grid.shape[1]
+                self.seed_offset, start_helix
             )
+
+
+        sclat.helix_params = {
+            k: {
+                "major_tick_periodic_distances": [[9, 12], [11, 10], [12, 9], [10, 11]][(k - start_helix) % 4],
+            }
+            for k in range(self.grid.shape[0] + self.grid.shape[1] + 1)
+        }
+
+        for i, j in [(0, j) for j in range(self.grid.shape[1])]:
+            h, o = flatgrid_hofromxy(i, j, start_helix, 0)
+            sclat.helix_params[h]["major_tick_start"] = o
+        
+        for i, j in [(i, 0) for i in range(self.grid.shape[0])]:
+            h, o = flatgrid_hofromxy(i, j, start_helix, 0)
+            sclat.helix_params[h+1]["major_tick_start"] = o - 21
 
         return sclat
 
@@ -1128,27 +1172,6 @@ class FlatishDiagonalSESeed9(DiagonalSESeed):
             scaffold.cross(scaffold.current_helix - 1)
 
         return apse + bpse + [scaffold]
-
-
-def flatgrid_hofromxy(
-    x: int, y: int, start_helix: int, start_o: int, p: Literal[9, 10] = 9
-) -> tuple[int, int]:
-    if p == 9:
-        pn = 0
-    elif p == 10:
-        pn = 1
-    else:
-        raise ValueError
-    sx = (pn + y) % 2
-    sy = (pn) % 2
-    return (
-        start_helix - y + x,
-        start_o
-        + 23 * (x // 2)
-        + 19 * (y // 2)
-        + (11 + sx) * (x % 2)
-        + (9 + sy) * (y % 2),
-    )
 
 
 seed_factory.register(FlatishDiagonalSESeed10)
