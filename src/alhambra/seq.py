@@ -240,4 +240,26 @@ class Seq:
         return "".join(c for c in self.seq_str if c not in _PUNC)
 
     def __getitem__(self, ix: Union[int, slice]) -> Seq:
-        raise NotImplementedError("Seq getitem needs to handle whitespace.")
+        if isinstance(ix, slice):
+            # Convert sequence positions to string positions accounting for whitespace
+            base_pos = 0  # Position in sequence ignoring whitespace
+            str_pos = []  # Corresponding positions in full string
+            for i, c in enumerate(self.seq_str):
+                if c not in _PUNC:
+                    str_pos.append(i)
+                    base_pos += 1
+            
+            # Get start/stop indices in the full string
+            start = str_pos[ix.start] if ix.start is not None else 0
+            stop = str_pos[ix.stop-1]+1 if ix.stop is not None else len(self.seq_str)
+            
+            return Seq(self.seq_str[start:stop:ix.step])
+        else:
+            # For single index, count non-whitespace chars until we reach index
+            base_count = 0
+            for i, c in enumerate(self.seq_str):
+                if c not in _PUNC:
+                    if base_count == ix:
+                        return Seq(c)
+                    base_count += 1
+            raise IndexError("sequence index out of range")
