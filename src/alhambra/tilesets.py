@@ -106,6 +106,8 @@ class XgrowGlueOpts(ABC):
             return GrowPerfectGlues()
         elif glueopts == "orthogonal":
             return GrowOrthogonalGlues()
+        elif glueopts == "uniform":
+            return GrowUniformGlues()
         elif glueopts == "full":
             return GrowFullGlues()
         else:
@@ -236,6 +238,71 @@ class GrowOrthogonalGlues(XgrowGlueOpts):
             bonds |= {n: x for n, x in zip(v[0], m) if not n.endswith("*")}
 
         return xgbonds, [xgt.Glue(n, n + "*", v) for n, v in bonds.items()]
+
+
+@dataclass
+class GrowUniformGlues(XgrowGlueOpts):
+    temperature: float | None = None
+    alpha: float | None = None
+
+    def get_xgrow_gse(self, tileset: "TileSet") -> float | None:
+        return 1.0
+
+    def calculate_gses(
+        self, tileset: "TileSet"
+    ) -> tuple[list[xgt.Bond], list[xgt.Glue]]:
+        import xgrow.tileset as xgt
+        import stickydesign as sd
+
+        alpha = tileset.params["alpha"] if self.alpha is None else self.alpha
+        temperature = (
+            tileset.params["temperature"]
+            if self.temperature is None
+            else self.temperature
+        )
+
+        allglues = tileset.allglues
+
+        _generate_stickydesign_energetic_classes()
+
+        R = 1.9872041e-3  # kcal/mol/K
+        T_in_K = temperature + 273.15
+        RT = R * T_in_K
+
+        xgbonds = [xgt.Bond(g.name, 0) for g in allglues]
+        xgbonds.extend(
+            xgt.Bond(g.complement.name, 0)
+            for g in allglues
+            if g.complement.name not in allglues
+        )
+
+        sd_energetics = {
+            k: v(temperature=temperature) for k, v in SD_ENERGETICS_CLASSES.items()
+        }
+
+        sg: dict[
+            tuple[str, str, int], list[SSGlue]
+        ] = {}  # FIXME: should support DXGlue
+        for g in allglues:
+            k = (g.__class__.__name__, g.etype, g.dna_length)
+            sg[k] = sg.get(k, [])
+            sg[k].append(g)
+
+        sge = {
+            k: (
+                [x.ident() for x in v],
+                sd.endarray([x.sequence.base_str.lower() for x in v], k[1]),
+            )
+            for k, v in sg.items()
+        }
+
+        bonds: dict[str, float] = {}
+        for k, v in sge.items():
+            m = sd_energetics[k[0]].matching_uniform(v[1]) / RT + alpha
+            bonds |= {n: x for n, x in zip(v[0], m) if not n.endswith("*")}
+
+        avg = float(np.mean(list(bonds.values())))
+        return xgbonds, [xgt.Glue(n, n + "*", avg) for n in bonds]
 
 
 @dataclass
